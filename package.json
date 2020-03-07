@@ -16,7 +16,7 @@
   "description": "A JavaScript library to display Photo Sphere panoramas",
   "homepage": "https://photo-sphere-viewer.js.org",
   "dependencies": {
-    "three": ">= 0.85.0",
+    "three": ">= 0.97.0",
     "uevent": "~1.0.0",
     "dot": ">=1.0.3"
   },

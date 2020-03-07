@@ -477,19 +477,11 @@ PhotoSphereViewer.prototype._setTexture = function(texture) {
 PhotoSphereViewer.prototype._createScene = function() {
   this.raycaster = new THREE.Raycaster();
 
-  this.renderer = PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? new THREE.WebGLRenderer() : new THREE.CanvasRenderer();
+  this.renderer = new THREE.WebGLRenderer();
   this.renderer.setSize(this.prop.size.width, this.prop.size.height);
   this.renderer.setPixelRatio(PhotoSphereViewer.SYSTEM.pixelRatio);
 
-  var cameraDistance = PhotoSphereViewer.SPHERE_RADIUS;
-  if (this.prop.isCubemap) {
-    cameraDistance *= Math.sqrt(3);
-  }
-  if (this.config.fisheye) {
-    cameraDistance += PhotoSphereViewer.SPHERE_RADIUS;
-  }
-
-  this.camera = new THREE.PerspectiveCamera(this.config.default_fov, this.prop.size.width / this.prop.size.height, 1, cameraDistance);
+  this.camera = new THREE.PerspectiveCamera(this.config.default_fov, this.prop.size.width / this.prop.size.height, 1,  3 * PhotoSphereViewer.SPHERE_RADIUS);
   this.camera.position.set(0, 0, 0);
 
   this.scene = new THREE.Scene();
@@ -531,7 +523,6 @@ PhotoSphereViewer.prototype._createSphere = function(scale) {
 
   var material = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide, // needs to be DoubleSide for CanvasRenderer
-    overdraw: PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? 0 : 1
   });
 
   var mesh = new THREE.Mesh(geometry, material);
@@ -573,15 +564,11 @@ PhotoSphereViewer.prototype._createCubemap = function(scale) {
   for (var i = 0; i < 6; i++) {
     materials.push(new THREE.MeshBasicMaterial({
       side: THREE.BackSide,
-      overdraw: PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? 0 : 1
     }));
   }
 
   var mesh = new THREE.Mesh(geometry, materials);
-  mesh.position.x -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.position.y -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.position.z -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.applyMatrix(new THREE.Matrix4().makeScale(1, 1, -1));
+  mesh.scale.set(1, 1, -1);
 
   return mesh;
 };

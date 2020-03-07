@@ -106,7 +106,6 @@ PhotoSphereViewer.DEFAULTS = {
   caption: null,
   usexmpdata: true,
   pano_data: null,
-  webgl: true,
   min_fov: 30,
   max_fov: 90,
   default_fov: null,

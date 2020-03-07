@@ -122,9 +122,9 @@ function PhotoSphereViewer(options) {
     throw new PSVError('Canvas is not supported.');
   }
 
-  // additional scripts if webgl not supported/disabled
-  if ((!PhotoSphereViewer.SYSTEM.isWebGLSupported || !this.config.webgl) && !PSVUtils.checkTHREE('CanvasRenderer', 'Projector')) {
-    throw new PSVError('Missing Three.js components: CanvasRenderer, Projector. Get them from three.js-examples package.');
+  // must support webgl
+  if (!PhotoSphereViewer.SYSTEM.isWebGLSupported) {
+    throw new PSVError('WebGL is not supported.');
   }
 
   // longitude range must have two values
