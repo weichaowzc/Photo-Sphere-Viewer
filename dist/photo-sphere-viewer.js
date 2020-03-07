@@ -1,7 +1,7 @@
 /*!
- * Photo Sphere Viewer 3.5.1
+ * Photo Sphere Viewer 3.6.0
  * Copyright (c) 2014-2015 Jérémy Heleine
- * Copyright (c) 2015-2019 Damien "Mistic" Sorel
+ * Copyright (c) 2015-2020 Damien "Mistic" Sorel
  * Licensed under MIT (https://opensource.org/licenses/MIT)
  */
 (function(root, factory) {
@@ -141,9 +141,9 @@ function PhotoSphereViewer(options) {
     throw new PSVError('Canvas is not supported.');
   }
 
-  // additional scripts if webgl not supported/disabled
-  if ((!PhotoSphereViewer.SYSTEM.isWebGLSupported || !this.config.webgl) && !PSVUtils.checkTHREE('CanvasRenderer', 'Projector')) {
-    throw new PSVError('Missing Three.js components: CanvasRenderer, Projector. Get them from three.js-examples package.');
+  // must support webgl
+  if (!PhotoSphereViewer.SYSTEM.isWebGLSupported) {
+    throw new PSVError('WebGL is not supported.');
   }
 
   // longitude range must have two values
@@ -1092,19 +1092,11 @@ PhotoSphereViewer.prototype._setTexture = function(texture) {
 PhotoSphereViewer.prototype._createScene = function() {
   this.raycaster = new THREE.Raycaster();
 
-  this.renderer = PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? new THREE.WebGLRenderer() : new THREE.CanvasRenderer();
+  this.renderer = new THREE.WebGLRenderer();
   this.renderer.setSize(this.prop.size.width, this.prop.size.height);
   this.renderer.setPixelRatio(PhotoSphereViewer.SYSTEM.pixelRatio);
 
-  var cameraDistance = PhotoSphereViewer.SPHERE_RADIUS;
-  if (this.prop.isCubemap) {
-    cameraDistance *= Math.sqrt(3);
-  }
-  if (this.config.fisheye) {
-    cameraDistance += PhotoSphereViewer.SPHERE_RADIUS;
-  }
-
-  this.camera = new THREE.PerspectiveCamera(this.config.default_fov, this.prop.size.width / this.prop.size.height, 1, cameraDistance);
+  this.camera = new THREE.PerspectiveCamera(this.config.default_fov, this.prop.size.width / this.prop.size.height, 1,  3 * PhotoSphereViewer.SPHERE_RADIUS);
   this.camera.position.set(0, 0, 0);
 
   this.scene = new THREE.Scene();
@@ -1146,7 +1138,6 @@ PhotoSphereViewer.prototype._createSphere = function(scale) {
 
   var material = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide, // needs to be DoubleSide for CanvasRenderer
-    overdraw: PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? 0 : 1
   });
 
   var mesh = new THREE.Mesh(geometry, material);
@@ -1188,15 +1179,11 @@ PhotoSphereViewer.prototype._createCubemap = function(scale) {
   for (var i = 0; i < 6; i++) {
     materials.push(new THREE.MeshBasicMaterial({
       side: THREE.BackSide,
-      overdraw: PhotoSphereViewer.SYSTEM.isWebGLSupported && this.config.webgl ? 0 : 1
     }));
   }
 
   var mesh = new THREE.Mesh(geometry, materials);
-  mesh.position.x -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.position.y -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.position.z -= PhotoSphereViewer.SPHERE_RADIUS * scale;
-  mesh.applyMatrix(new THREE.Matrix4().makeScale(1, 1, -1));
+  mesh.scale.set(1, 1, -1);
 
   return mesh;
 };
@@ -1499,7 +1486,6 @@ PhotoSphereViewer.DEFAULTS = {
   caption: null,
   usexmpdata: true,
   pano_data: null,
-  webgl: true,
   min_fov: 30,
   max_fov: 90,
   default_fov: null,
