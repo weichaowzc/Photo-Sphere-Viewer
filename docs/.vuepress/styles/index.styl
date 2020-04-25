@@ -1,0 +1,24 @@
+@import '~photo-sphere-viewer-stylesheet';
+
+.sidebar a:not(.active):not(:hover), .navbar a:not(.active):not(:hover) {
+  color: inherit !important;
+}
+
+.sidebar a:hover, .navbar a:hover {
+  text-decoration: none !important;
+}
+
+.theme-default-content:not(.custom) {
+  max-width: 940px;
+}
+
+.md-theme-default a:not(.md-button):hover,
+.el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active,
+.el-tabs--border-card > .el-tabs__header .el-tabs__item:not(.is-disabled):hover{
+    color: $accentColor;
+}
+
+.site-name .md-badge {
+  position: static;
+  display: inline;
+}
