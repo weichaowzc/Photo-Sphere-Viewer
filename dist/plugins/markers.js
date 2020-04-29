@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.0
+* Photo Sphere Viewer 4.0.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -70,6 +70,7 @@
    * @todo Get "visual center" (https://blog.mapbox.com/a-new-algorithm-for-finding-a-visual-center-of-a-polygon-7c77e6492fbc)
    * @param {number[][]} polygon
    * @returns {number[]}
+   * @private
    */
 
   function getPolygonCenter(polygon) {
@@ -82,6 +83,7 @@
    * @summary Computes the middle point of a polyline
    * @param {number[][]} polyline
    * @returns {number[]}
+   * @private
    */
 
   function getPolylineCenter(polyline) {

@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.0
+* Photo Sphere Viewer 4.0.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,10 @@
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'uevent'], factory) :
   (global = global || self, factory(global.PhotoSphereViewer = {}, global.THREE, global.uEvent));
 }(this, (function (exports, THREE, uevent) { 'use strict';
+
+  /**
+   * @namespace PSV.CONSTANTS
+   */
 
   /**
    * @summary Number of pixels bellow which a mouse move will be considered as a click
@@ -627,6 +631,7 @@
   }
   /**
    * Returns the distance between two points on a sphere of radius one
+   * @memberOf PSV.utils
    * @param {number[]} p1
    * @param {number[]} p2
    * @returns {number}
@@ -4691,7 +4696,7 @@
       /* eslint-enable */
 
 
-      if (!getClosest(evt.target, '.psv-navbar')) {
+      if (!getClosest(evt.target, '.psv-navbar') && !getClosest(evt.target, '.psv-panel')) {
         /* eslint-disable */
         switch (evt.type) {
           // @formatter:off
