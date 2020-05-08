@@ -64,7 +64,7 @@ export default class StereoPlugin extends AbstractPlugin {
      * @readonly
      * @private
      */
-    this.gyroscope = psv.getPlugin(GyroscopePlugin);
+    this.gyroscope = GyroscopePlugin ? psv.getPlugin(GyroscopePlugin) : null;
 
     if (!this.gyroscope) {
       throw new PSVError('Stereo plugin requires the gyroscope plugin');
@@ -124,7 +124,7 @@ export default class StereoPlugin extends AbstractPlugin {
    * @returns {boolean}
    */
   isEnabled() {
-    return !!this.prop.stereoEffect;
+    return !!this.prop.renderer;
   }
 
   /**
@@ -164,7 +164,7 @@ export default class StereoPlugin extends AbstractPlugin {
        * @summary Triggered when the stereo view is enabled/disabled
        * @param {boolean} enabled
        */
-      this.trigger(StereoPlugin.EVENTS.STEREO_UPATED, true);
+      this.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, true);
 
       this.psv.notification.show({
         content: this.psv.config.lang.stereoNotification,
@@ -198,7 +198,7 @@ export default class StereoPlugin extends AbstractPlugin {
       this.psv.exitFullscreen();
       this.gyroscope.stop();
 
-      this.trigger(StereoPlugin.EVENTS.STEREO_UPATED, false);
+      this.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, false);
     }
   }
 

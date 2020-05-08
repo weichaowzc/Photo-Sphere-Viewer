@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.2
+* Photo Sphere Viewer 4.0.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -206,7 +206,7 @@
        * @private
        */
 
-      _this.gyroscope = psv.getPlugin(GyroscopePlugin);
+      _this.gyroscope = GyroscopePlugin ? psv.getPlugin(GyroscopePlugin) : null;
 
       if (!_this.gyroscope) {
         throw new photoSphereViewer.PSVError('Stereo plugin requires the gyroscope plugin');
@@ -272,7 +272,7 @@
     ;
 
     _proto.isEnabled = function isEnabled() {
-      return !!this.prop.stereoEffect;
+      return !!this.prop.renderer;
     }
     /**
      * @summary Enables the stereo view
@@ -320,7 +320,7 @@
          */
 
 
-        _this2.trigger(StereoPlugin.EVENTS.STEREO_UPATED, true);
+        _this2.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, true);
 
         _this2.psv.notification.show({
           content: _this2.psv.config.lang.stereoNotification,
@@ -358,7 +358,7 @@
 
         this.psv.exitFullscreen();
         this.gyroscope.stop();
-        this.trigger(StereoPlugin.EVENTS.STEREO_UPATED, false);
+        this.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, false);
       }
     }
     /**

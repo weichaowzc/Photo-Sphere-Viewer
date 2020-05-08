@@ -259,11 +259,6 @@ export class Viewer extends EventEmitter {
       setTimeout(() => {
         this.refreshUi('init');
 
-        /**
-         * @event ready
-         * @memberof PSV
-         * @summary Triggered when the panorama image has been loaded and the viewer is ready to perform the first render
-         */
         this.trigger(EVENTS.READY);
       }, 0);
     });
@@ -418,14 +413,8 @@ export class Viewer extends EventEmitter {
       this.prop.size.height = Math.round(this.container.clientHeight);
       this.prop.aspect = this.prop.size.width / this.prop.size.height;
       this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
-      this.needsUpdate();
 
-      /**
-       * @event size-updated
-       * @memberof PSV
-       * @summary Triggered when the viewer size changes
-       * @param {PSV.Size} size
-       */
+      this.needsUpdate();
       this.trigger(EVENTS.SIZE_UPDATED, this.getSize());
       this.__resizeRefresh();
     }
@@ -434,22 +423,22 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Loads a new panorama file
    * @description Loads a new panorama file, optionally changing the camera position/zoom and activating the transition animation.<br>
-   * If the "options" parameter is not defined, the camera will not move and the ongoing animation will continue
+   * If the "options" parameter is not defined, the camera will not move and the ongoing animation will continue.<br>
+   * If another loading is already in progress it will be aborted.
    * @param {string|string[]|PSV.Cubemap} path - URL of the new panorama file
    * @param {PSV.PanoramaOptions} [options]
    * @returns {Promise}
-   * @throws {PSV.PSVError} when another panorama is already loading
    */
   setPanorama(path, options = {}) {
     if (this.prop.loadingPromise !== null) {
-      return Promise.reject(new PSVError('Loading already in progress'));
+      this.textureLoader.abortLoading();
     }
 
     if (!this.prop.isReady) {
-      if (!('longitude' in options)) {
+      if (!('longitude' in options) && !this.prop.isCubemap) {
         options.longitude = this.config.defaultLong;
       }
-      if (!('latitude' in options)) {
+      if (!('latitude' in options) && !this.prop.isCubemap) {
         options.latitude = this.config.defaultLat;
       }
       if (!('zoom' in options)) {
@@ -481,11 +470,26 @@ export class Viewer extends EventEmitter {
 
     this.config.panorama = path;
 
-    const done = () => {
+    const done = (err) => {
+      if (err && err.type === 'abort') {
+        console.warn(err);
+      }
+      else if (err) {
+        this.showError(this.config.lang.loadError);
+        console.error(err);
+      }
+
       this.loader.hide();
       this.renderer.show();
 
       this.prop.loadingPromise = null;
+
+      if (err) {
+        return Promise.reject(err);
+      }
+      else {
+        return true;
+      }
     };
 
     if (!options.transition || !this.prop.ready) {
@@ -507,7 +511,6 @@ export class Viewer extends EventEmitter {
             this.rotate(options);
           }
         })
-        .catch(e => console.error(e))
         .then(done, done);
     }
     else {
@@ -521,7 +524,6 @@ export class Viewer extends EventEmitter {
 
           return this.renderer.transition(textureData, options);
         })
-        .catch(e => console.error(e))
         .then(done, done);
     }
 
@@ -586,12 +588,6 @@ export class Viewer extends EventEmitter {
     this.needsUpdate();
     this.refreshUi('set options');
 
-    /**
-     * @event config-changed
-     * @memberOf PSV
-     * @summary Triggered after a call to setOption/setOptions
-     * @param {string[]} name of changed options
-     */
     this.trigger(EVENTS.CONFIG_CHANGED, Object.keys(options));
   }
 
@@ -629,12 +625,6 @@ export class Viewer extends EventEmitter {
 
     this.on(EVENTS.BEFORE_RENDER, this.prop.autorotateCb);
 
-    /**
-     * @event autorotate
-     * @memberof PSV
-     * @summary Triggered when the automatic rotation is enabled/disabled
-     * @param {boolean} enabled
-     */
     this.trigger(EVENTS.AUTOROTATE, true);
   }
 
@@ -658,6 +648,7 @@ export class Viewer extends EventEmitter {
 
   /**
    * @summary Starts or stops the automatic rotation
+   * @fires PSV.autorotate
    */
   toggleAutorotate() {
     if (this.isAutorotateEnabled()) {
@@ -691,27 +682,15 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Rotates the view to specific longitude and latitude
    * @param {PSV.ExtendedPosition} position
+   * @fires PSV.before-rotate
    * @fires PSV.position-updated
    */
   rotate(position) {
-    /**
-     * @event before-rotate
-     * @memberOf PSV
-     * @summary Triggered before a rotate operation, can be cancelled
-     * @param {PSV.ExtendedPosition}
-     */
     const e = this.trigger(EVENTS.BEFORE_ROTATE, position);
     if (e.isDefaultPrevented()) {
       return;
     }
 
-    /**
-     * @event get-rotate-position
-     * @memberof PSV
-     * @param {Position} position
-     * @returns {Position}
-     * @summary Called to alter the target position of a rotation
-     */
     const cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
 
     if (this.prop.position.longitude !== cleanPosition.longitude || this.prop.position.latitude !== cleanPosition.latitude) {
@@ -720,12 +699,6 @@ export class Viewer extends EventEmitter {
 
       this.needsUpdate();
 
-      /**
-       * @event position-updated
-       * @memberof PSV
-       * @summary Triggered when the view longitude and/or latitude changes
-       * @param {PSV.Position} position
-       */
       this.trigger(EVENTS.POSITION_UPDATED, this.getPosition());
     }
   }
@@ -746,13 +719,6 @@ export class Viewer extends EventEmitter {
 
     // clean/filter position and compute duration
     if (positionProvided) {
-      /**
-       * @event get-animate-position
-       * @memberof PSV
-       * @param {Position} position
-       * @returns {Position}
-       * @summary Called to alter the target position of an animation
-       */
       const cleanPosition = this.change(CHANGE_EVENTS.GET_ANIMATE_POSITION, this.dataHelper.cleanPosition(options));
 
       // longitude offset for shortest arc
@@ -837,15 +803,7 @@ export class Viewer extends EventEmitter {
       this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
 
       this.needsUpdate();
-
-      /**
-       * @event zoom-updated
-       * @memberof PSV
-       * @summary Triggered when the zoom level changes
-       * @param {number} zoomLevel
-       */
       this.trigger(EVENTS.ZOOM_UPDATED, this.getZoomLevel());
-
       this.rotate(this.prop.position);
     }
   }
@@ -883,6 +841,7 @@ export class Viewer extends EventEmitter {
 
   /**
    * @summary Enters the fullscreen mode
+   * @fires PSV.fullscreen-updated
    */
   enterFullscreen() {
     if (SYSTEM.fullscreenEvent) {
@@ -890,13 +849,14 @@ export class Viewer extends EventEmitter {
     }
     else {
       this.container.classList.add('psv-container--fullscreen');
-      this.prop.fullscreen = true;
       this.autoSize();
+      this.eventsHandler.__fullscreenToggled(true);
     }
   }
 
   /**
    * @summary Exits the fullscreen mode
+   * @fires PSV.fullscreen-updated
    */
   exitFullscreen() {
     if (this.isFullscreenEnabled()) {
@@ -905,14 +865,15 @@ export class Viewer extends EventEmitter {
       }
       else {
         this.container.classList.remove('psv-container--fullscreen');
-        this.prop.fullscreen = false;
         this.autoSize();
+        this.eventsHandler.__fullscreenToggled(false);
       }
     }
   }
 
   /**
    * @summary Enters or exits the fullscreen mode
+   * @fires PSV.fullscreen-updated
    */
   toggleFullscreen() {
     if (!this.isFullscreenEnabled()) {
@@ -945,11 +906,6 @@ export class Viewer extends EventEmitter {
     this.stopAutorotate();
     this.stopAnimation();
 
-    /**
-     * @event stop-all
-     * @memberof PSV
-     * @summary Triggered when all current animations are stopped
-     */
     this.trigger(EVENTS.STOP_ALL);
   }
 

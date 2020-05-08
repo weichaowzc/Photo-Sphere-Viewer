@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.2
+* Photo Sphere Viewer 4.0.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -11,19 +11,19 @@
 }(this, (function (exports, THREE, uevent) { 'use strict';
 
   /**
-   * @namespace PSV.CONSTANTS
+   * @namespace PSV.constants
    */
 
   /**
    * @summary Number of pixels bellow which a mouse move will be considered as a click
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
   var MOVE_THRESHOLD = 4;
   /**
    * @summary Delay in milliseconds between two clicks to consider a double click
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -31,7 +31,7 @@
   var DBLCLICK_DELAY = 300;
   /**
    * @summary Delay in milliseconds to emulate a long touch
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -39,7 +39,7 @@
   var LONGTOUCH_DELAY = 500;
   /**
    * @summary Time size of the mouse position history used to compute inertia
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -47,7 +47,7 @@
   var INERTIA_WINDOW = 300;
   /**
    * @summary Radius of the THREE.SphereGeometry, Half-length of the THREE.BoxGeometry
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -55,7 +55,7 @@
   var SPHERE_RADIUS = 100;
   /**
    * @summary Number of vertice of the THREE.SphereGeometry
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -63,7 +63,7 @@
   var SPHERE_VERTICES = 64;
   /**
    * @summary Number of vertices of each side of the THREE.BoxGeometry
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
@@ -71,7 +71,7 @@
   var CUBE_VERTICES = 8;
   /**
    * @summary Order of cube textures for arrays
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {number[]}
    * @constant
    */
@@ -79,7 +79,7 @@
   var CUBE_MAP = [0, 2, 4, 5, 3, 1];
   /**
    * @summary Order of cube textures for maps
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {string[]}
    * @constant
    */
@@ -87,7 +87,7 @@
   var CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
   /**
    * @summary Property name added to buttons list
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {string}
    * @constant
    */
@@ -95,7 +95,7 @@
   var BUTTON_DATA = 'psvButton';
   /**
    * @summary Property name added to viewer element
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @type {string}
    * @constant
    */
@@ -103,7 +103,7 @@
   var VIEWER_DATA = 'photoSphereViewer';
   /**
    * @summary Available actions
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @enum {string}
    * @constant
    */
@@ -118,50 +118,213 @@
     TOGGLE_AUTOROTATE: 'toggleAutorotate'
   };
   /**
-   * @summary Available events
-   * @memberOf PSV.CONSTANTS
+   * @summary Available events names
+   * @memberOf PSV.constants
    * @enum {string}
    * @constant
    */
 
   var EVENTS = {
+    /**
+     * @event autorotate
+     * @memberof PSV
+     * @summary Triggered when the automatic rotation is enabled/disabled
+     * @param {boolean} enabled
+     */
     AUTOROTATE: 'autorotate',
+
+    /**
+     * @event before-render
+     * @memberof PSV
+     * @summary Triggered before a render, used to modify the view
+     * @param {number} timestamp - time provided by requestAnimationFrame
+     */
     BEFORE_RENDER: 'before-render',
+
+    /**
+     * @event before-rotate
+     * @memberOf PSV
+     * @summary Triggered before a rotate operation, can be cancelled
+     * @param {PSV.ExtendedPosition}
+     */
     BEFORE_ROTATE: 'before-rotate',
+
+    /**
+     * @event click
+     * @memberof PSV
+     * @summary Triggered when the user clicks on the viewer (everywhere excluding the navbar and the side panel)
+     * @param {PSV.ClickData} data
+     */
     CLICK: 'click',
+
+    /**
+     * @event close-panel
+     * @memberof PSV
+     * @summary Trigered when the panel is closed
+     * @param {string} [id]
+     */
     CLOSE_PANEL: 'close-panel',
+
+    /**
+     * @event config-changed
+     * @memberOf PSV
+     * @summary Triggered after a call to setOption/setOptions
+     * @param {string[]} name of changed options
+     */
     CONFIG_CHANGED: 'config-changed',
+
+    /**
+     * @event dblclick
+     * @memberof PSV
+     * @summary Triggered when the user double clicks on the viewer. The simple `click` event is always fired before `dblclick`
+     * @param {PSV.ClickData} data
+     */
     DOUBLE_CLICK: 'dblclick',
+
+    /**
+     * @event fullscreen-updated
+     * @memberof PSV
+     * @summary Triggered when the fullscreen mode is enabled/disabled
+     * @param {boolean} enabled
+     */
     FULLSCREEN_UPDATED: 'fullscreen-updated',
+
+    /**
+     * @event hide-notification
+     * @memberof PSV
+     * @summary Trigered when the notification is hidden
+     */
     HIDE_NOTIFICATION: 'hide-notification',
+
+    /**
+     * @event hide-overlay
+     * @memberof PSV
+     * @summary Trigered when the overlay is hidden
+     * @param {string} [id]
+     */
     HIDE_OVERLAY: 'hide-overlay',
+
+    /**
+     * @event hide-tooltip
+     * @memberof PSV
+     * @summary Trigered when the tooltip is hidden
+     * @param {*} Data associated to this tooltip
+     */
     HIDE_TOOLTIP: 'hide-tooltip',
+
+    /**
+     * @event open-panel
+     * @memberof PSV
+     * @summary Triggered when the panel is opened
+     * @param {string} [id]
+     */
     OPEN_PANEL: 'open-panel',
+
+    /**
+     * @event panorama-loaded
+     * @memberof PSV
+     * @summary Triggered when a panorama image has been loaded
+     */
     PANORAMA_LOADED: 'panorama-loaded',
+
+    /**
+     * @event position-updated
+     * @memberof PSV
+     * @summary Triggered when the view longitude and/or latitude changes
+     * @param {PSV.Position} position
+     */
     POSITION_UPDATED: 'position-updated',
+
+    /**
+     * @event ready
+     * @memberof PSV
+     * @summary Triggered when the panorama image has been loaded and the viewer is ready to perform the first render
+     */
     READY: 'ready',
+
+    /**
+     * @event render
+     * @memberof PSV
+     * @summary Triggered on each viewer render, **this event is triggered very often**
+     */
     RENDER: 'render',
+
+    /**
+     * @event show-notification
+     * @memberof PSV
+     * @summary Trigered when the notification is shown
+     */
     SHOW_NOTIFICATION: 'show-notification',
+
+    /**
+     * @event show-overlay
+     * @memberof PSV
+     * @summary Trigered when the overlay is shown
+     * @param {string} [id]
+     */
     SHOW_OVERLAY: 'show-overlay',
+
+    /**
+     * @event show-tooltip
+     * @memberof PSV
+     * @summary Trigered when the tooltip is shown
+     * @param {*} Data associated to this tooltip
+     * @param {PSV.components.Tooltip} Instance of the tooltip
+     */
     SHOW_TOOLTIP: 'show-tooltip',
+
+    /**
+     * @event size-updated
+     * @memberof PSV
+     * @summary Triggered when the viewer size changes
+     * @param {PSV.Size} size
+     */
     SIZE_UPDATED: 'size-updated',
+
+    /**
+     * @event stop-all
+     * @memberof PSV
+     * @summary Triggered when all current animations are stopped
+     */
     STOP_ALL: 'stop-all',
+
+    /**
+     * @event zoom-updated
+     * @memberof PSV
+     * @summary Triggered when the zoom level changes
+     * @param {number} zoomLevel
+     */
     ZOOM_UPDATED: 'zoom-updated'
   };
   /**
-   * @summary Available change events
-   * @memberOf PSV.CONSTANTS
+   * @summary Available change events names
+   * @memberOf PSV.constants
    * @enum {string}
    * @constant
    */
 
   var CHANGE_EVENTS = {
+    /**
+     * @event get-animate-position
+     * @memberof PSV
+     * @param {Position} position
+     * @returns {Position}
+     * @summary Called to alter the target position of an animation
+     */
     GET_ANIMATE_POSITION: 'get-animate-position',
+
+    /**
+     * @event get-rotate-position
+     * @memberof PSV
+     * @param {Position} position
+     * @returns {Position}
+     * @summary Called to alter the target position of a rotation
+     */
     GET_ROTATE_POSITION: 'get-rotate-position'
   };
   /**
    * @summary Internal identifiers for various stuff
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @enum {string}
    * @constant
    */
@@ -176,7 +339,7 @@
 
   /**
    * @summary Collection of easing functions
-   * @memberOf PSV.CONSTANTS
+   * @memberOf PSV.constants
    * @see {@link https://gist.github.com/frederickk/6165768}
    * @type {Object<string, Function>}
    * @constant
@@ -361,7 +524,11 @@
 
   function getClosest(el, selector) {
     var matches = el.matches || el.msMatchesSelector;
-    var test = el;
+    var test = el; // When el is document or window, the matches does not exist
+
+    if (!matches) {
+      return null;
+    }
 
     do {
       if (matches.bind(test)(selector)) {
@@ -3737,12 +3904,6 @@
       this.content.innerHTML = config.content;
       this.prop.visible = true;
       this.container.classList.add('psv-notification--visible');
-      /**
-       * @event show-notification
-       * @memberof PSV
-       * @summary Trigered when the notification is shown
-       */
-
       this.psv.trigger(EVENTS.SHOW_NOTIFICATION);
 
       if (config.timeout) {
@@ -3761,12 +3922,6 @@
       if (this.prop.visible) {
         this.container.classList.remove('psv-notification--visible');
         this.prop.visible = false;
-        /**
-         * @event hide-notification
-         * @memberof PSV
-         * @summary Trigered when the notification is hidden
-         */
-
         this.psv.trigger(EVENTS.HIDE_NOTIFICATION);
       }
     };
@@ -3912,13 +4067,6 @@
       this.subtext.innerHTML = config.subtext || '';
 
       _AbstractComponent.prototype.show.call(this);
-      /**
-       * @event show-overlay
-       * @memberof PSV
-       * @summary Trigered when the overlay is shown
-       * @param {string} [id]
-       */
-
 
       this.psv.trigger(EVENTS.SHOW_OVERLAY, config.id);
     }
@@ -3936,13 +4084,6 @@
         _AbstractComponent.prototype.hide.call(this);
 
         this.prop.contentId = undefined;
-        /**
-         * @event hide-overlay
-         * @memberof PSV
-         * @summary Trigered when the overlay is hidden
-         * @param {string} [id]
-         */
-
         this.psv.trigger(EVENTS.HIDE_OVERLAY, contentId);
       }
     };
@@ -4143,13 +4284,6 @@
         this.prop.clickHandler = config.clickHandler;
         this.content.addEventListener('click', config.clickHandler);
       }
-      /**
-       * @event open-panel
-       * @memberof PSV
-       * @summary Triggered when the panel is opened
-       * @param {string} [id]
-       */
-
 
       this.psv.trigger(EVENTS.OPEN_PANEL, config.id);
     }
@@ -4172,13 +4306,6 @@
           this.content.removeEventListener('click', this.prop.clickHandler);
           this.prop.clickHandler = null;
         }
-        /**
-         * @event close-panel
-         * @memberof PSV
-         * @summary Trigered when the panel is closed
-         * @param {string} [id]
-         */
-
 
         this.psv.trigger(EVENTS.CLOSE_PANEL, contentId);
       }
@@ -5022,13 +5149,14 @@
     }
     /**
      * @summary Handles fullscreen events
+     * @param {boolean} [force] force state
      * @fires PSV.fullscreen-updated
-     * @private
+     * @package
      */
     ;
 
-    _proto.__fullscreenToggled = function __fullscreenToggled() {
-      this.prop.fullscreen = isFullscreenEnabled(this.psv.container);
+    _proto.__fullscreenToggled = function __fullscreenToggled(force) {
+      this.prop.fullscreen = force !== undefined ? force : isFullscreenEnabled(this.psv.container);
 
       if (this.config.keyboard) {
         if (this.prop.fullscreen) {
@@ -5037,13 +5165,6 @@
           this.psv.stopKeyboardControl();
         }
       }
-      /**
-       * @event fullscreen-updated
-       * @memberof PSV
-       * @summary Triggered when the fullscreen mode is enabled/disabled
-       * @param {boolean} enabled
-       */
-
 
       this.psv.trigger(EVENTS.FULLSCREEN_UPDATED, this.prop.fullscreen);
     }
@@ -5220,12 +5341,6 @@
         }
 
         if (!this.state.dblclickTimeout) {
-          /**
-           * @event click
-           * @memberof PSV
-           * @summary Triggered when the user clicks on the viewer (everywhere excluding the navbar and the side panel)
-           * @param {PSV.ClickData} data
-           */
           this.psv.trigger(EVENTS.CLICK, data);
           this.state.dblclickData = clone(data);
           this.state.dblclickTimeout = setTimeout(function () {
@@ -5234,12 +5349,6 @@
           }, DBLCLICK_DELAY);
         } else {
           if (Math.abs(this.state.dblclickData.clientX - data.clientX) < MOVE_THRESHOLD && Math.abs(this.state.dblclickData.clientY - data.clientY) < MOVE_THRESHOLD) {
-            /**
-             * @event dblclick
-             * @memberof PSV
-             * @summary Triggered when the user double clicks on the viewer. The simple `click` event is always fired before `dblclick`
-             * @param {PSV.ClickData} data
-             */
             this.psv.trigger(EVENTS.DOUBLE_CLICK, this.state.dblclickData);
           }
 
@@ -5491,12 +5600,6 @@
     _proto.__renderLoop = function __renderLoop(timestamp) {
       var _this2 = this;
 
-      /**
-       * @event before-render
-       * @memberof PSV
-       * @summary Triggered before a render, used to modify the view
-       * @param {number} timestamp - time provided by requestAnimationFrame
-       */
       this.psv.trigger(EVENTS.BEFORE_RENDER, timestamp);
 
       if (this.prop.needsUpdate) {
@@ -5529,12 +5632,6 @@
       this.camera.fov = this.prop.vFov;
       this.camera.updateProjectionMatrix();
       this.renderer.render(this.scene, this.camera);
-      /**
-       * @event render
-       * @memberof PSV
-       * @summary Triggered on each viewer render, **this event is triggered very often**
-       */
-
       this.psv.trigger(EVENTS.RENDER);
     }
     /**
@@ -5571,12 +5668,6 @@
       }
 
       this.psv.needsUpdate();
-      /**
-       * @event panorama-loaded
-       * @memberof PSV
-       * @summary Triggered when a panorama image has been loaded
-       */
-
       this.psv.trigger(EVENTS.PANORAMA_LOADED);
     }
     /**
@@ -5838,7 +5929,17 @@
      * @param {PSV.Viewer} psv
      */
     function TextureLoader(psv) {
-      return _AbstractService.call(this, psv) || this;
+      var _this;
+
+      _this = _AbstractService.call(this, psv) || this;
+      /**
+       * @summary Current HTTP requests
+       * @type {XMLHttpRequest[]}
+       * @private
+       */
+
+      _this.requests = [];
+      return _this;
     }
     /**
      * @override
@@ -5848,6 +5949,8 @@
     var _proto = TextureLoader.prototype;
 
     _proto.destroy = function destroy() {
+      this.abortLoading();
+
       _AbstractService.prototype.destroy.call(this);
     }
     /**
@@ -5891,6 +5994,16 @@
       }
     }
     /**
+     * @summary Cancels current HTTP requests
+     */
+    ;
+
+    _proto.abortLoading = function abortLoading() {
+      [].concat(this.requests).forEach(function (r) {
+        return r.abort();
+      });
+    }
+    /**
      * @summary Loads a Blob with FileLoader
      * @param {string} url
      * @param {function(number)} [onProgress]
@@ -5900,19 +6013,22 @@
     ;
 
     _proto.__loadFile = function __loadFile(url, onProgress) {
-      var _this = this;
+      var _this2 = this;
 
       return new Promise(function (resolve, reject) {
         var progress = 0;
         onProgress && onProgress(progress);
         var loader = new THREE.FileLoader();
 
-        if (_this.config.withCredentials) {
+        if (_this2.config.withCredentials) {
           loader.setWithCredentials(true);
         }
 
         loader.setResponseType('blob');
-        loader.load(url, function (result) {
+        var request = loader.load(url, function (result) {
+          var rIdx = _this2.requests.indexOf(request);
+
+          if (rIdx !== -1) _this2.requests.splice(rIdx, 1);
           progress = 100;
           onProgress && onProgress(progress);
           resolve(result);
@@ -5925,7 +6041,16 @@
               onProgress && onProgress(progress);
             }
           }
-        }, reject);
+        }, function (err) {
+          var rIdx = _this2.requests.indexOf(request);
+
+          if (rIdx !== -1) _this2.requests.splice(rIdx, 1);
+          reject(err);
+        }); // when we hit the cache, the result is the cache value
+
+        if (request instanceof XMLHttpRequest) {
+          _this2.requests.push(request);
+        }
       });
     }
     /**
@@ -5983,7 +6108,7 @@
     ;
 
     _proto.__loadEquirectangularTexture = function __loadEquirectangularTexture(panorama, newPanoData) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (this.prop.isCubemap === true) {
         throw new PSVError('The viewer was initialized with an cubemap, cannot switch to equirectangular panorama.');
@@ -5991,15 +6116,15 @@
 
       this.prop.isCubemap = false;
       return (newPanoData || !this.config.useXmpData ? this.__loadImage(panorama, function (p) {
-        return _this2.psv.loader.setProgress(p);
+        return _this3.psv.loader.setProgress(p);
       }).then(function (img) {
         return {
           img: img
         };
       }) : this.__loadXMP(panorama, function (p) {
-        return _this2.psv.loader.setProgress(p);
+        return _this3.psv.loader.setProgress(p);
       }).then(function (xmpPanoData) {
-        return _this2.__loadImage(panorama).then(function (img) {
+        return _this3.__loadImage(panorama).then(function (img) {
           return {
             img: img,
             xmpPanoData: xmpPanoData
@@ -6021,16 +6146,12 @@
           logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
         }
 
-        var texture = _this2.__createEquirectangularTexture(img, panoData);
+        var texture = _this3.__createEquirectangularTexture(img, panoData);
 
         return {
           texture: texture,
           panoData: panoData
         };
-      }).catch(function (e) {
-        _this2.psv.showError(_this2.config.lang.loadError);
-
-        return Promise.reject(e);
       });
     }
     /**
@@ -6044,10 +6165,10 @@
     ;
 
     _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
-      var _this3 = this;
+      var _this4 = this;
 
       return this.__loadFile(panorama, onProgress).then(function (blob) {
-        return _this3.__loadBlobAsString(blob);
+        return _this4.__loadBlobAsString(blob);
       }).then(function (binary) {
         var a = binary.indexOf('<x:xmpmeta');
         var b = binary.indexOf('</x:xmpmeta>');
@@ -6121,7 +6242,7 @@
     ;
 
     _proto.__loadCubemapTexture = function __loadCubemapTexture(panorama) {
-      var _this4 = this;
+      var _this5 = this;
 
       if (this.prop.isCubemap === false) {
         throw new PSVError('The viewer was initialized with an equirectangular panorama, cannot switch to cubemap.');
@@ -6136,12 +6257,12 @@
       var progress = [0, 0, 0, 0, 0, 0];
 
       var _loop = function _loop(i) {
-        promises.push(_this4.__loadImage(panorama[i], function (p) {
+        promises.push(_this5.__loadImage(panorama[i], function (p) {
           progress[i] = p;
 
-          _this4.psv.loader.setProgress(sum(progress) / 6);
+          _this5.psv.loader.setProgress(sum(progress) / 6);
         }).then(function (img) {
-          return _this4.__createCubemapTexture(img);
+          return _this5.__createCubemapTexture(img);
         }));
       };
 
@@ -6153,10 +6274,6 @@
         return {
           texture: texture
         };
-      }).catch(function (e) {
-        _this4.psv.showError(_this4.config.lang.loadError);
-
-        return Promise.reject(e);
       });
     }
     /**
@@ -6372,14 +6489,6 @@
       this.move(config);
       this.prop.data = config.data;
       this.prop.state = STATE.SHOWING;
-      /**
-       * @event show-tooltip
-       * @memberof PSV
-       * @summary Trigered when the tooltip is shown
-       * @param {*} Data associated to this tooltip
-       * @param {PSV.components.Tooltip} Instance of the tooltip
-       */
-
       this.psv.trigger(EVENTS.SHOW_TOOLTIP, this.prop.data, this);
     }
     /**
@@ -6475,13 +6584,6 @@
     _proto.hide = function hide() {
       this.container.classList.remove('psv-tooltip--visible');
       this.prop.state = STATE.HIDING;
-      /**
-       * @event hide-tooltip
-       * @memberof PSV
-       * @summary Trigered when the tooltip is hidden
-       * @param {*} Data associated to this tooltip
-       */
-
       this.psv.trigger(EVENTS.HIDE_TOOLTIP, this.prop.data);
     }
     /**
@@ -6884,12 +6986,6 @@
         _this.prop.ready = true;
         setTimeout(function () {
           _this.refreshUi('init');
-          /**
-           * @event ready
-           * @memberof PSV
-           * @summary Triggered when the panorama image has been loaded and the viewer is ready to perform the first render
-           */
-
 
           _this.trigger(EVENTS.READY);
         }, 0);
@@ -7055,13 +7151,6 @@
         this.prop.aspect = this.prop.size.width / this.prop.size.height;
         this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
         this.needsUpdate();
-        /**
-         * @event size-updated
-         * @memberof PSV
-         * @summary Triggered when the viewer size changes
-         * @param {PSV.Size} size
-         */
-
         this.trigger(EVENTS.SIZE_UPDATED, this.getSize());
 
         this.__resizeRefresh();
@@ -7070,11 +7159,11 @@
     /**
      * @summary Loads a new panorama file
      * @description Loads a new panorama file, optionally changing the camera position/zoom and activating the transition animation.<br>
-     * If the "options" parameter is not defined, the camera will not move and the ongoing animation will continue
+     * If the "options" parameter is not defined, the camera will not move and the ongoing animation will continue.<br>
+     * If another loading is already in progress it will be aborted.
      * @param {string|string[]|PSV.Cubemap} path - URL of the new panorama file
      * @param {PSV.PanoramaOptions} [options]
      * @returns {Promise}
-     * @throws {PSV.PSVError} when another panorama is already loading
      */
     ;
 
@@ -7086,15 +7175,15 @@
       }
 
       if (this.prop.loadingPromise !== null) {
-        return Promise.reject(new PSVError('Loading already in progress'));
+        this.textureLoader.abortLoading();
       }
 
       if (!this.prop.isReady) {
-        if (!('longitude' in options)) {
+        if (!('longitude' in options) && !this.prop.isCubemap) {
           options.longitude = this.config.defaultLong;
         }
 
-        if (!('latitude' in options)) {
+        if (!('latitude' in options) && !this.prop.isCubemap) {
           options.latitude = this.config.defaultLat;
         }
 
@@ -7129,12 +7218,26 @@
       this.hideError();
       this.config.panorama = path;
 
-      var done = function done() {
+      var done = function done(err) {
+        if (err && err.type === 'abort') {
+          console.warn(err);
+        } else if (err) {
+          _this3.showError(_this3.config.lang.loadError);
+
+          console.error(err);
+        }
+
         _this3.loader.hide();
 
         _this3.renderer.show();
 
         _this3.prop.loadingPromise = null;
+
+        if (err) {
+          return Promise.reject(err);
+        } else {
+          return true;
+        }
       };
 
       if (!options.transition || !this.prop.ready) {
@@ -7156,8 +7259,6 @@
           if (positionProvided) {
             _this3.rotate(options);
           }
-        }).catch(function (e) {
-          return console.error(e);
         }).then(done, done);
       } else {
         if (options.showLoader) {
@@ -7168,8 +7269,6 @@
           _this3.loader.hide();
 
           return _this3.renderer.transition(textureData, options);
-        }).catch(function (e) {
-          return console.error(e);
         }).then(done, done);
       }
 
@@ -7237,13 +7336,6 @@
       });
       this.needsUpdate();
       this.refreshUi('set options');
-      /**
-       * @event config-changed
-       * @memberOf PSV
-       * @summary Triggered after a call to setOption/setOptions
-       * @param {string[]} name of changed options
-       */
-
       this.trigger(EVENTS.CONFIG_CHANGED, Object.keys(options));
     }
     /**
@@ -7285,13 +7377,6 @@
       }();
 
       this.on(EVENTS.BEFORE_RENDER, this.prop.autorotateCb);
-      /**
-       * @event autorotate
-       * @memberof PSV
-       * @summary Triggered when the automatic rotation is enabled/disabled
-       * @param {boolean} enabled
-       */
-
       this.trigger(EVENTS.AUTOROTATE, true);
     }
     /**
@@ -7314,6 +7399,7 @@
     }
     /**
      * @summary Starts or stops the automatic rotation
+     * @fires PSV.autorotate
      */
     ;
 
@@ -7349,30 +7435,17 @@
     /**
      * @summary Rotates the view to specific longitude and latitude
      * @param {PSV.ExtendedPosition} position
+     * @fires PSV.before-rotate
      * @fires PSV.position-updated
      */
     ;
 
     _proto.rotate = function rotate(position) {
-      /**
-       * @event before-rotate
-       * @memberOf PSV
-       * @summary Triggered before a rotate operation, can be cancelled
-       * @param {PSV.ExtendedPosition}
-       */
       var e = this.trigger(EVENTS.BEFORE_ROTATE, position);
 
       if (e.isDefaultPrevented()) {
         return;
       }
-      /**
-       * @event get-rotate-position
-       * @memberof PSV
-       * @param {Position} position
-       * @returns {Position}
-       * @summary Called to alter the target position of a rotation
-       */
-
 
       var cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
 
@@ -7380,13 +7453,6 @@
         this.prop.position.longitude = cleanPosition.longitude;
         this.prop.position.latitude = cleanPosition.latitude;
         this.needsUpdate();
-        /**
-         * @event position-updated
-         * @memberof PSV
-         * @summary Triggered when the view longitude and/or latitude changes
-         * @param {PSV.Position} position
-         */
-
         this.trigger(EVENTS.POSITION_UPDATED, this.getPosition());
       }
     }
@@ -7408,13 +7474,6 @@
       var duration; // clean/filter position and compute duration
 
       if (positionProvided) {
-        /**
-         * @event get-animate-position
-         * @memberof PSV
-         * @param {Position} position
-         * @returns {Position}
-         * @summary Called to alter the target position of an animation
-         */
         var cleanPosition = this.change(CHANGE_EVENTS.GET_ANIMATE_POSITION, this.dataHelper.cleanPosition(options)); // longitude offset for shortest arc
 
         var tOffset = getShortestArc(this.prop.position.longitude, cleanPosition.longitude);
@@ -7509,13 +7568,6 @@
         this.prop.vFov = this.dataHelper.zoomLevelToFov(this.prop.zoomLvl);
         this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
         this.needsUpdate();
-        /**
-         * @event zoom-updated
-         * @memberof PSV
-         * @summary Triggered when the zoom level changes
-         * @param {number} zoomLevel
-         */
-
         this.trigger(EVENTS.ZOOM_UPDATED, this.getZoomLevel());
         this.rotate(this.prop.position);
       }
@@ -7558,6 +7610,7 @@
     }
     /**
      * @summary Enters the fullscreen mode
+     * @fires PSV.fullscreen-updated
      */
     ;
 
@@ -7566,12 +7619,14 @@
         requestFullscreen(this.container);
       } else {
         this.container.classList.add('psv-container--fullscreen');
-        this.prop.fullscreen = true;
         this.autoSize();
+
+        this.eventsHandler.__fullscreenToggled(true);
       }
     }
     /**
      * @summary Exits the fullscreen mode
+     * @fires PSV.fullscreen-updated
      */
     ;
 
@@ -7581,13 +7636,15 @@
           exitFullscreen();
         } else {
           this.container.classList.remove('psv-container--fullscreen');
-          this.prop.fullscreen = false;
           this.autoSize();
+
+          this.eventsHandler.__fullscreenToggled(false);
         }
       }
     }
     /**
      * @summary Enters or exits the fullscreen mode
+     * @fires PSV.fullscreen-updated
      */
     ;
 
@@ -7623,12 +7680,6 @@
     _proto.__stopAll = function __stopAll() {
       this.stopAutorotate();
       this.stopAnimation();
-      /**
-       * @event stop-all
-       * @memberof PSV
-       * @summary Triggered when all current animations are stopped
-       */
-
       this.trigger(EVENTS.STOP_ALL);
     };
 
