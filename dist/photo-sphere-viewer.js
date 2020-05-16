@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.3
+* Photo Sphere Viewer 4.0.4
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -2351,11 +2351,10 @@
    * @memberOf PSV
    * @property {boolean} loaded - Indicates if the system has been loaded yet
    * @property {Function} load - Loads the system if not already loaded
-   * @property {Function} checkTHREE - Checks if one or more THREE modules are available
    * @property {number} pixelRatio
    * @property {boolean} isWebGLSupported
-   * @property {boolean} isCanvasSupported
    * @property {number} maxTextureWidth
+   * @property {number} maxCanvasWidth
    * @property {string} mouseWheelEvent
    * @property {string} fullscreenEvent
    * @property {Promise<boolean>} isTouchEnabled
@@ -2364,9 +2363,9 @@
     loaded: false,
     pixelRatio: 1,
     isWebGLSupported: false,
-    isCanvasSupported: false,
     isTouchEnabled: null,
     maxTextureWidth: 0,
+    maxCanvasWidth: 0,
     mouseWheelEvent: null,
     fullscreenEvent: null
   };
@@ -2376,27 +2375,17 @@
 
   SYSTEM.load = function () {
     if (!SYSTEM.loaded) {
+      var ctx = getWebGLCtx();
       SYSTEM.loaded = true;
       SYSTEM.pixelRatio = window.devicePixelRatio || 1;
-      SYSTEM.isWebGLSupported = isWebGLSupported();
-      SYSTEM.isCanvasSupported = isCanvasSupported();
+      SYSTEM.isWebGLSupported = ctx != null;
       SYSTEM.isTouchEnabled = isTouchEnabled();
-      SYSTEM.maxTextureWidth = SYSTEM.isWebGLSupported ? getMaxTextureWidth() : 4096;
+      SYSTEM.maxTextureWidth = getMaxTextureWidth(ctx);
+      SYSTEM.maxCanvasWidth = getMaxCanvasWidth(SYSTEM.maxTextureWidth);
       SYSTEM.mouseWheelEvent = getMouseWheelEvent();
       SYSTEM.fullscreenEvent = getFullscreenEvent();
     }
   };
-  /**
-   * @summary Detects if canvas is supported
-   * @returns {boolean}
-   * @private
-   */
-
-
-  function isCanvasSupported() {
-    var canvas = document.createElement('canvas');
-    return !!(canvas.getContext && canvas.getContext('2d'));
-  }
   /**
    * @summary Tries to return a canvas webgl context
    * @returns {WebGLRenderingContext}
@@ -2416,7 +2405,7 @@
     if (names.some(function (name) {
       try {
         context = canvas.getContext(name);
-        return true;
+        return context !== null;
       } catch (e) {
         return false;
       }
@@ -2425,16 +2414,6 @@
     } else {
       return null;
     }
-  }
-  /**
-   * @summary Detects if WebGL is supported
-   * @returns {boolean}
-   * @private
-   */
-
-
-  function isWebGLSupported() {
-    return 'WebGLRenderingContext' in window && getWebGLCtx() !== null;
   }
   /**
    * @summary Detects if the user is using a touch screen
@@ -2467,14 +2446,44 @@
    */
 
 
-  function getMaxTextureWidth() {
-    var ctx = getWebGLCtx();
-
+  function getMaxTextureWidth(ctx) {
     if (ctx !== null) {
       return ctx.getParameter(ctx.MAX_TEXTURE_SIZE);
     } else {
       return 0;
     }
+  }
+  /**
+   * @summary Gets max canvas width supported by the browser.
+   * We only test powers of 2 and height = width / 2 because that's what we need to generate WebGL textures
+   * @param maxWidth
+   * @return {number}
+   * @private
+   */
+
+
+  function getMaxCanvasWidth(maxWidth) {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = maxWidth;
+    canvas.height = maxWidth / 2;
+
+    while (canvas.width > 1024) {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 1, 1);
+
+      try {
+        if (ctx.getImageData(0, 0, 1, 1).data[0] === 255) {
+          return canvas.width;
+        }
+      } catch (e) {// continue
+      }
+
+      canvas.width /= 2;
+      canvas.height /= 2;
+    }
+
+    return 0;
   }
   /**
    * @summary Gets the event name for mouse wheel
@@ -5956,7 +5965,7 @@
     /**
      * @summary Loads the panorama texture(s)
      * @param {string|string[]|PSV.Cubemap} panorama
-     * @param {PSV.PanoData} [newPanoData]
+     * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
      * @package
@@ -6100,7 +6109,7 @@
     /**
      * @summary Loads the sphere texture
      * @param {string} panorama
-     * @param {PSV.PanoData} [newPanoData]
+     * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
      * @private
@@ -6110,6 +6119,7 @@
     _proto.__loadEquirectangularTexture = function __loadEquirectangularTexture(panorama, newPanoData) {
       var _this3 = this;
 
+      /* eslint no-shadow: ["error", {allow: ["newPanoData"]}] */
       if (this.prop.isCubemap === true) {
         throw new PSVError('The viewer was initialized with an cubemap, cannot switch to equirectangular panorama.');
       }
@@ -6119,21 +6129,28 @@
         return _this3.psv.loader.setProgress(p);
       }).then(function (img) {
         return {
-          img: img
+          img: img,
+          newPanoData: newPanoData
         };
       }) : this.__loadXMP(panorama, function (p) {
         return _this3.psv.loader.setProgress(p);
-      }).then(function (xmpPanoData) {
+      }).then(function (newPanoData) {
         return _this3.__loadImage(panorama).then(function (img) {
           return {
             img: img,
-            xmpPanoData: xmpPanoData
+            newPanoData: newPanoData
           };
         });
       })).then(function (_ref) {
         var img = _ref.img,
-            xmpPanoData = _ref.xmpPanoData;
-        var panoData = newPanoData || xmpPanoData || {
+            newPanoData = _ref.newPanoData;
+
+        if (typeof newPanoData === 'function') {
+          // eslint-disable-next-line no-param-reassign
+          newPanoData = newPanoData(img);
+        }
+
+        var panoData = newPanoData || {
           fullWidth: img.width,
           fullHeight: img.height,
           croppedWidth: img.width,
@@ -6204,19 +6221,18 @@
     ;
 
     _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
-      var texture;
-      var ratio = Math.min(panoData.fullWidth, SYSTEM.maxTextureWidth) / panoData.fullWidth; // resize image / fill cropped parts with black
+      var texture; // resize image / fill cropped parts with black
 
-      if (ratio !== 1 || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
-        var resizedPanoData = clone(panoData);
+      if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
+        var resizedPanoData = _extends({}, panoData);
+
+        var ratio = SYSTEM.maxCanvasWidth / panoData.fullWidth;
         resizedPanoData.fullWidth *= ratio;
         resizedPanoData.fullHeight *= ratio;
         resizedPanoData.croppedWidth *= ratio;
         resizedPanoData.croppedHeight *= ratio;
         resizedPanoData.croppedX *= ratio;
         resizedPanoData.croppedY *= ratio;
-        img.width = resizedPanoData.croppedWidth;
-        img.height = resizedPanoData.croppedHeight;
         var buffer = document.createElement('canvas');
         buffer.width = resizedPanoData.fullWidth;
         buffer.height = resizedPanoData.fullHeight;
@@ -6285,11 +6301,11 @@
     ;
 
     _proto.__createCubemapTexture = function __createCubemapTexture(img) {
-      var texture;
-      var ratio = Math.min(img.width, SYSTEM.maxTextureWidth / 2) / img.width; // resize image
+      var texture; // resize image
 
-      if (ratio !== 1) {
+      if (img.width > SYSTEM.maxTextureWidth) {
         var buffer = document.createElement('canvas');
+        var ratio = SYSTEM.maxCanvasWidth / img.width;
         buffer.width = img.width * ratio;
         buffer.height = img.height * ratio;
         var ctx = buffer.getContext('2d');
@@ -6766,15 +6782,14 @@
       var _this;
 
       _this = _EventEmitter.call(this) || this;
-      SYSTEM.load(); // must support canvas
-
-      if (!SYSTEM.isCanvasSupported) {
-        throw new PSVError('Canvas is not supported.');
-      } // must support WebGL
-
+      SYSTEM.load(); // must support WebGL
 
       if (!SYSTEM.isWebGLSupported) {
         throw new PSVError('WebGL is not supported.');
+      }
+
+      if (SYSTEM.maxCanvasWidth === 0 || SYSTEM.maxTextureWidth === 0) {
+        throw new PSVError('Unable to detect system capabilities');
       }
       /**
        * @summary Internal properties

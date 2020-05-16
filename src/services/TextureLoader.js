@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CUBE_HASHMAP, CUBE_MAP } from '../data/constants';
 import { SYSTEM } from '../data/system';
 import { PSVError } from '../PSVError';
-import { clone, getXMPValue, logWarn, sum } from '../utils';
+import { getXMPValue, logWarn, sum } from '../utils';
 import { AbstractService } from './AbstractService';
 
 /**
@@ -37,7 +37,7 @@ export class TextureLoader extends AbstractService {
   /**
    * @summary Loads the panorama texture(s)
    * @param {string|string[]|PSV.Cubemap} panorama
-   * @param {PSV.PanoData} [newPanoData]
+   * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
    * @returns {Promise.<PSV.TextureData>}
    * @throws {PSV.PSVError} when the image cannot be loaded
    * @package
@@ -173,12 +173,13 @@ export class TextureLoader extends AbstractService {
   /**
    * @summary Loads the sphere texture
    * @param {string} panorama
-   * @param {PSV.PanoData} [newPanoData]
+   * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
    * @returns {Promise.<PSV.TextureData>}
    * @throws {PSV.PSVError} when the image cannot be loaded
    * @private
    */
   __loadEquirectangularTexture(panorama, newPanoData) {
+    /* eslint no-shadow: ["error", {allow: ["newPanoData"]}] */
     if (this.prop.isCubemap === true) {
       throw new PSVError('The viewer was initialized with an cubemap, cannot switch to equirectangular panorama.');
     }
@@ -188,12 +189,17 @@ export class TextureLoader extends AbstractService {
     return (
       newPanoData || !this.config.useXmpData
         ? this.__loadImage(panorama, p => this.psv.loader.setProgress(p))
-          .then(img => ({ img }))
+          .then(img => ({ img, newPanoData }))
         : this.__loadXMP(panorama, p => this.psv.loader.setProgress(p))
-          .then(xmpPanoData => this.__loadImage(panorama).then(img => ({ img, xmpPanoData })))
+          .then(newPanoData => this.__loadImage(panorama).then(img => ({ img, newPanoData })))
     )
-      .then(({ img, xmpPanoData }) => {
-        const panoData = newPanoData || xmpPanoData || {
+      .then(({ img, newPanoData }) => {
+        if (typeof newPanoData === 'function') {
+          // eslint-disable-next-line no-param-reassign
+          newPanoData = newPanoData(img);
+        }
+
+        const panoData = newPanoData || {
           fullWidth    : img.width,
           fullHeight   : img.height,
           croppedWidth : img.width,
@@ -260,14 +266,14 @@ export class TextureLoader extends AbstractService {
   __createEquirectangularTexture(img, panoData) {
     let texture;
 
-    const ratio = Math.min(panoData.fullWidth, SYSTEM.maxTextureWidth) / panoData.fullWidth;
-
     // resize image / fill cropped parts with black
-    if (ratio !== 1
+    if (panoData.fullWidth > SYSTEM.maxTextureWidth
       || panoData.croppedWidth !== panoData.fullWidth
       || panoData.croppedHeight !== panoData.fullHeight
     ) {
-      const resizedPanoData = clone(panoData);
+      const resizedPanoData = { ...panoData };
+
+      const ratio = SYSTEM.maxCanvasWidth / panoData.fullWidth;
 
       resizedPanoData.fullWidth *= ratio;
       resizedPanoData.fullHeight *= ratio;
@@ -275,9 +281,6 @@ export class TextureLoader extends AbstractService {
       resizedPanoData.croppedHeight *= ratio;
       resizedPanoData.croppedX *= ratio;
       resizedPanoData.croppedY *= ratio;
-
-      img.width = resizedPanoData.croppedWidth;
-      img.height = resizedPanoData.croppedHeight;
 
       const buffer = document.createElement('canvas');
       buffer.width = resizedPanoData.fullWidth;
@@ -345,11 +348,11 @@ export class TextureLoader extends AbstractService {
   __createCubemapTexture(img) {
     let texture;
 
-    const ratio = Math.min(img.width, SYSTEM.maxTextureWidth / 2) / img.width;
-
     // resize image
-    if (ratio !== 1) {
+    if (img.width > SYSTEM.maxTextureWidth) {
       const buffer = document.createElement('canvas');
+      const ratio = SYSTEM.maxCanvasWidth / img.width;
+
       buffer.width = img.width * ratio;
       buffer.height = img.height * ratio;
 
