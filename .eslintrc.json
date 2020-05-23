@@ -91,12 +91,18 @@
         "exceptAfterSingleLine": true
       }
     ],
+    "no-restricted-syntax": [
+      "error",
+      "ForInStatement",
+      "LabeledStatement",
+      "WithStatement"
+    ],
     "import/no-unresolved": [
       "error",
       {
         "ignore": [
           "^photo-sphere-viewer$",
-          "^photo-sphere-viewer\/plugins\/([a-z-]+)$"
+          "^photo-sphere-viewer\/dist\/plugins\/([a-z-]+)$"
         ]
       }
     ]

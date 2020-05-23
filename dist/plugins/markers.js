@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.4
+* Photo Sphere Viewer 4.0.5
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -809,7 +809,7 @@
   MarkersButton.id = 'markers';
   MarkersButton.icon = pin;
 
-  var pinList = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"9 9 81 81\"><path d=\"M37.5 90S9.9 51.9 9.9 36.6 22.2 9 37.5 9s27.6 12.4 27.6 27.6S37.5 90 37.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11zM86.7 55H70c-1.8 0-3.3-1.5-3.3-3.3s1.5-3.3 3.3-3.3h16.7c1.8 0 3.3 1.5 3.3 3.3S88.5 55 86.7 55zm0-25h-15a3.3 3.3 0 0 1-3.3-3.3c0-1.8 1.5-3.3 3.3-3.3h15c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3zM56.5 73h30c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3h-30a3.3 3.3 0 0 1-3.3-3.3 3.2 3.2 0 0 1 3.3-3.3z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
+  var icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"9 9 81 81\"><path fill=\"currentColor\" d=\"M37.5 90S9.9 51.9 9.9 36.6 22.2 9 37.5 9s27.6 12.4 27.6 27.6S37.5 90 37.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11zM86.7 55H70c-1.8 0-3.3-1.5-3.3-3.3s1.5-3.3 3.3-3.3h16.7c1.8 0 3.3 1.5 3.3 3.3S88.5 55 86.7 55zm0-25h-15a3.3 3.3 0 0 1-3.3-3.3c0-1.8 1.5-3.3 3.3-3.3h15c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3zM56.5 73h30c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3h-30a3.3 3.3 0 0 1-3.3-3.3 3.2 3.2 0 0 1 3.3-3.3z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
 
   /**
    * @summary Navigation bar markers list button class
@@ -900,7 +900,7 @@
     return MarkersListButton;
   }(photoSphereViewer.AbstractButton);
   MarkersListButton.id = 'markersList';
-  MarkersListButton.icon = pinList;
+  MarkersListButton.icon = icon;
 
   /**
    * @typedef {Object} PSV.plugins.MarkersPlugin.Options
@@ -1974,7 +1974,7 @@
   MarkersPlugin.ID_PANEL_MARKERS_LIST = 'markersList';
 
   MarkersPlugin.MARKERS_LIST_TEMPLATE = function (markers, title, dataKey) {
-    return "\n<div class=\"psv-markers-list-container\">\n  <h1 class=\"psv-markers-list-title\">" + title + "</h1>\n  <ul class=\"psv-markers-list\">\n    " + markers.map(function (marker) {
+    return "\n<div class=\"psv-markers-list-container\">\n  <h1 class=\"psv-markers-list-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-markers-list\">\n    " + markers.map(function (marker) {
       return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-markers-list-item " + (marker.config.className || '') + "\">\n      " + (marker.type === 'image' ? "<img class=\"psv-markers-list-image\" src=\"" + marker.config.image + "\"/>" : '') + "\n      <p class=\"psv-markers-list-name\">" + marker.getListContent() + "</p>\n    </li>\n    ";
     }).join('') + "\n  </ul>\n</div>\n";
   };

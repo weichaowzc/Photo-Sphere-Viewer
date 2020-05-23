@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.4
+* Photo Sphere Viewer 4.0.5
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1288,8 +1288,9 @@
 
   /**
    * @callback OnTick
+   * @summary Function called for each animation frame with computed properties
    * @memberOf PSV.Animation
-   * @param {Object[]} properties - current values
+   * @param {Object.<string, number>} properties - current values
    * @param {float} progress - 0 to 1
    */
 
@@ -1312,7 +1313,7 @@
   var Animation = /*#__PURE__*/function () {
     /**
      * @param {Object} options
-     * @param {Object[]} options.properties
+     * @param {Object.<string, Object>} options.properties
      * @param {number} options.properties[].start
      * @param {number} options.properties[].end
      * @param {number} options.duration
@@ -4284,6 +4285,12 @@
 
       this.prop.contentId = config.id;
       this.prop.visible = true;
+
+      if (this.prop.clickHandler) {
+        this.content.removeEventListener('click', this.prop.clickHandler);
+        this.prop.clickHandler = null;
+      }
+
       this.content.innerHTML = config.content;
       this.content.scrollTop = 0;
       this.container.classList.add('psv-panel--open');
@@ -5965,7 +5972,7 @@
     /**
      * @summary Loads the panorama texture(s)
      * @param {string|string[]|PSV.Cubemap} panorama
-     * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
      * @package
@@ -6109,7 +6116,7 @@
     /**
      * @summary Loads the sphere texture
      * @param {string} panorama
-     * @param {PSV.PanoData | function<Image, PSV.PanoData>} [newPanoData]
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
      * @private
@@ -7084,7 +7091,7 @@
     ;
 
     _proto.getPlugin = function getPlugin(pluginId) {
-      return this.plugins[typeof pluginId === 'function' ? pluginId.id : pluginId];
+      return pluginId ? this.plugins[typeof pluginId === 'function' ? pluginId.id : pluginId] : null;
     }
     /**
      * @summary Returns the current position of the camera
@@ -7193,7 +7200,7 @@
         this.textureLoader.abortLoading();
       }
 
-      if (!this.prop.isReady) {
+      if (!this.prop.ready) {
         if (!('longitude' in options) && !this.prop.isCubemap) {
           options.longitude = this.config.defaultLong;
         }

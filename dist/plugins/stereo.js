@@ -1,12 +1,12 @@
 /*!
-* Photo Sphere Viewer 4.0.4
+* Photo Sphere Viewer 4.0.5
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('photo-sphere-viewer/plugins/gyroscope'), require('three')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'photo-sphere-viewer/plugins/gyroscope', 'three'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope'), require('three')) :
+  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope', 'three'], factory) :
   (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = factory(global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin, global.THREE)));
 }(this, (function (photoSphereViewer, GyroscopePlugin, THREE) { 'use strict';
 
@@ -209,7 +209,7 @@
       _this.gyroscope = GyroscopePlugin ? psv.getPlugin(GyroscopePlugin) : null;
 
       if (!_this.gyroscope) {
-        throw new photoSphereViewer.PSVError('Stereo plugin requires the gyroscope plugin');
+        throw new photoSphereViewer.PSVError('Stereo plugin requires the Gyroscope plugin');
       }
       /**
        * @member {Object}

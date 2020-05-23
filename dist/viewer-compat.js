@@ -1,12 +1,12 @@
 /*!
-* Photo Sphere Viewer 4.0.4
+* Photo Sphere Viewer 4.0.5
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('three'), require('photo-sphere-viewer'), require('photo-sphere-viewer/plugins/gyroscope'), require('photo-sphere-viewer/plugins/stereo'), require('photo-sphere-viewer/plugins/markers'), require('photo-sphere-viewer/plugins/visible-range')) :
-  typeof define === 'function' && define.amd ? define(['three', 'photo-sphere-viewer', 'photo-sphere-viewer/plugins/gyroscope', 'photo-sphere-viewer/plugins/stereo', 'photo-sphere-viewer/plugins/markers', 'photo-sphere-viewer/plugins/visible-range'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('three'), require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope'), require('photo-sphere-viewer/dist/plugins/stereo'), require('photo-sphere-viewer/dist/plugins/markers'), require('photo-sphere-viewer/dist/plugins/visible-range')) :
+  typeof define === 'function' && define.amd ? define(['three', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope', 'photo-sphere-viewer/dist/plugins/stereo', 'photo-sphere-viewer/dist/plugins/markers', 'photo-sphere-viewer/dist/plugins/visible-range'], factory) :
   (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ViewerCompat = factory(global.THREE, global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin, global.PhotoSphereViewer.StereoPlugin, global.PhotoSphereViewer.MarkersPlugin, global.PhotoSphereViewer.VisibleRangePlugin)));
 }(this, (function (THREE, photoSphereViewer, GyroscopePlugin, StereoPlugin, MarkersPlugin, VisibleRangePlugin) { 'use strict';
 
