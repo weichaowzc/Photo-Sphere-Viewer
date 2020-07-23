@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.5
+* Photo Sphere Viewer 4.0.6
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -37,6 +37,14 @@
    */
 
   var LONGTOUCH_DELAY = 500;
+  /**
+   * @summary Delay in milliseconds to for the two fingers overlay to appear
+   * @memberOf PSV.constants
+   * @type {number}
+   * @constant
+   */
+
+  var TWOFINGERSOVERLAY_DELAY = 100;
   /**
    * @summary Time size of the mouse position history used to compute inertia
    * @memberOf PSV.constants
@@ -421,6 +429,7 @@
     MOVE_THRESHOLD: MOVE_THRESHOLD,
     DBLCLICK_DELAY: DBLCLICK_DELAY,
     LONGTOUCH_DELAY: LONGTOUCH_DELAY,
+    TWOFINGERSOVERLAY_DELAY: TWOFINGERSOVERLAY_DELAY,
     INERTIA_WINDOW: INERTIA_WINDOW,
     SPHERE_RADIUS: SPHERE_RADIUS,
     SPHERE_VERTICES: SPHERE_VERTICES,
@@ -2640,8 +2649,8 @@
      */
     ;
 
-    _proto.onClick = function onClick() {} // nothing
-
+    _proto.onClick = function onClick() {// nothing
+    }
     /**
      * @summary Handles click events
      * @description Zooms in and register long press timer
@@ -2944,8 +2953,8 @@
      */
     ;
 
-    _proto.onClick = function onClick() {} // nothing
-
+    _proto.onClick = function onClick() {// nothing
+    }
     /**
      * @summary Moves the zoom cursor
      * @param {number} level
@@ -3165,7 +3174,7 @@
       return bound(_maxFov, 1, 179);
     },
     lang: function lang(_lang) {
-      return _extends({}, DEFAULTS.lang, {}, _lang);
+      return _extends({}, DEFAULTS.lang, _lang);
     },
     keyboard: function keyboard(_keyboard) {
       // keyboard=true becomes the default map
@@ -4733,7 +4742,8 @@
         pinchDist: 0,
         dblclickData: null,
         dblclickTimeout: null,
-        longtouchTimeout: null
+        longtouchTimeout: null,
+        twofingersTimeout: null
       };
       /**
        * @summary Throttled wrapper of {@link PSV.Viewer#autoSize}
@@ -4795,6 +4805,7 @@
 
       clearTimeout(this.state.dblclickTimeout);
       clearTimeout(this.state.longtouchTimeout);
+      clearTimeout(this.state.twofingersTimeout);
       delete this.state;
 
       _AbstractService.prototype.destroy.call(this);
@@ -5087,18 +5098,18 @@
         return;
       }
 
-      if (this.prop.longtouchTimeout) {
-        this.__cancelLongTouch();
+      this.__cancelLongTouch();
 
-        if (evt.touches.length === 1) {
-          this.__stopMoveZoom();
-        } else if (evt.touches.length === 0) {
-          this.__stopMove(evt.changedTouches[0]);
+      if (evt.touches.length === 1) {
+        this.__stopMoveZoom();
+      } else if (evt.touches.length === 0) {
+        this.__stopMove(evt.changedTouches[0]);
+      }
 
-          if (this.config.touchmoveTwoFingers) {
-            this.psv.overlay.hide(IDS.TWO_FINGERS);
-          }
-        }
+      if (this.config.touchmoveTwoFingers) {
+        this.__cancelTwoFingersOverlay();
+
+        this.psv.overlay.hide(IDS.TWO_FINGERS);
       }
     }
     /**
@@ -5109,17 +5120,23 @@
     ;
 
     _proto.__onTouchMove = function __onTouchMove(evt) {
+      var _this3 = this;
+
       if (!this.config.mousemove) {
         return;
       }
 
       if (evt.touches.length === 1) {
         if (this.config.touchmoveTwoFingers) {
-          this.psv.overlay.show({
-            id: IDS.TWO_FINGERS,
-            image: gestureIcon,
-            text: this.config.lang.twoFingers[0]
-          });
+          if (!this.prop.twofingersTimeout) {
+            this.prop.twofingersTimeout = setTimeout(function () {
+              _this3.psv.overlay.show({
+                id: IDS.TWO_FINGERS,
+                image: gestureIcon,
+                text: _this3.config.lang.twoFingers[0]
+              });
+            }, TWOFINGERSOVERLAY_DELAY);
+          }
         } else {
           evt.preventDefault();
 
@@ -5129,6 +5146,10 @@
         evt.preventDefault();
 
         this.__moveZoom(evt);
+
+        if (this.config.touchmoveTwoFingers) {
+          this.__cancelTwoFingersOverlay();
+        }
       }
     }
     /**
@@ -5141,6 +5162,18 @@
       if (this.prop.longtouchTimeout) {
         clearTimeout(this.prop.longtouchTimeout);
         this.prop.longtouchTimeout = null;
+      }
+    }
+    /**
+     * @summary Cancel the two fingers overlay timer if any
+     * @private
+     */
+    ;
+
+    _proto.__cancelTwoFingersOverlay = function __cancelTwoFingersOverlay() {
+      if (this.prop.twofingersTimeout) {
+        clearTimeout(this.prop.twofingersTimeout);
+        this.prop.twofingersTimeout = null;
       }
     }
     /**
@@ -5192,19 +5225,19 @@
     ;
 
     _proto.__startMove = function __startMove(evt) {
-      var _this3 = this;
+      var _this4 = this;
 
       this.psv.stopAutorotate();
       this.psv.stopAnimation().then(function () {
-        _this3.state.mouseX = evt.clientX;
-        _this3.state.mouseY = evt.clientY;
-        _this3.state.startMouseX = _this3.state.mouseX;
-        _this3.state.startMouseY = _this3.state.mouseY;
-        _this3.state.moving = true;
-        _this3.state.zooming = false;
-        _this3.state.mouseHistory.length = 0;
+        _this4.state.mouseX = evt.clientX;
+        _this4.state.mouseY = evt.clientY;
+        _this4.state.startMouseX = _this4.state.mouseX;
+        _this4.state.startMouseY = _this4.state.mouseY;
+        _this4.state.moving = true;
+        _this4.state.zooming = false;
+        _this4.state.mouseHistory.length = 0;
 
-        _this3.__logMouseMove(evt);
+        _this4.__logMouseMove(evt);
       });
     }
     /**
@@ -5283,7 +5316,7 @@
     ;
 
     _proto.__stopMoveInertia = function __stopMoveInertia(evt) {
-      var _this4 = this;
+      var _this5 = this;
 
       var direction = {
         x: evt.clientX - this.state.mouseHistory[0][1],
@@ -5304,10 +5337,10 @@
         duration: norm * INERTIA_WINDOW / 100,
         easing: 'outCirc',
         onTick: function onTick(properties) {
-          _this4.__move(properties, false);
+          _this5.__move(properties, false);
         }
       }).finally(function () {
-        _this4.state.moving = false;
+        _this5.state.moving = false;
       });
     }
     /**
@@ -5321,7 +5354,7 @@
     ;
 
     _proto.__click = function __click(evt, longtouch) {
-      var _this5 = this;
+      var _this6 = this;
 
       if (longtouch === void 0) {
         longtouch = false;
@@ -5360,8 +5393,8 @@
           this.psv.trigger(EVENTS.CLICK, data);
           this.state.dblclickData = clone(data);
           this.state.dblclickTimeout = setTimeout(function () {
-            _this5.state.dblclickTimeout = null;
-            _this5.state.dblclickData = null;
+            _this6.state.dblclickTimeout = null;
+            _this6.state.dblclickData = null;
           }, DBLCLICK_DELAY);
         } else {
           if (Math.abs(this.state.dblclickData.clientX - data.clientX) < MOVE_THRESHOLD && Math.abs(this.state.dblclickData.clientY - data.clientY) < MOVE_THRESHOLD) {
@@ -5419,7 +5452,7 @@
       }
     }
     /**
-     * @summary Perfoms combines move and zoom
+     * @summary Perfoms combined move and zoom
      * @param {TouchEvent} evt
      * @private
      */
@@ -6405,7 +6438,7 @@
        * @property {*} data
        */
 
-      _this.prop = _extends({}, _this.prop, {}, size, {
+      _this.prop = _extends({}, _this.prop, size, {
         state: STATE.NONE,
         width: 0,
         height: 0,
