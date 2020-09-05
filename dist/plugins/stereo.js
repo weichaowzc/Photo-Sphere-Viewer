@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.6
+* Photo Sphere Viewer 4.0.7
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -25,13 +25,6 @@
 
     return self;
   }
-
-  /**
-   * @author alteredq / http://alteredqualia.com/
-   * @authod mrdoob / http://mrdoob.com/
-   * @authod arodic / http://aleksandarrodic.com/
-   * @authod fonserbc / http://fonserbc.github.io/
-  */
 
   var StereoEffect = function StereoEffect(renderer) {
     var _stereo = new three.StereoCamera();
@@ -217,13 +210,15 @@
        * @property {Promise<boolean>} isSupported - indicates of the gyroscope API is available
        * @property {external:THREE.WebGLRenderer} renderer - original renderer
        * @property {external:NoSleep} noSleep
+       * @property {WakeLockSentinel} wakeLock
        */
 
 
       _this.prop = {
         isSupported: _this.gyroscope.prop.isSupported,
         renderer: null,
-        noSleep: null
+        noSleep: null,
+        wakeLock: null
       };
       /**
        * @type {PSV.plugins.MarkersPlugin}
@@ -249,6 +244,10 @@
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
       this.stop();
+
+      if (this.prop.noSleep) {
+        delete this.prop.noSleep;
+      }
 
       _AbstractPlugin.prototype.destroy.call(this);
     }
@@ -374,32 +373,41 @@
       }
     }
     /**
-     * @summary Enables NoSleep.js
-     * TODO WakeLock API when available https://web.dev/wakelock
+     * @summary Enables WakeLock or NoSleep.js
      * @private
      */
     ;
 
     _proto.__startNoSleep = function __startNoSleep() {
-      if (!('NoSleep' in window)) {
+      var _this3 = this;
+
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(function (wakeLock) {
+          _this3.prop.wakeLock = wakeLock;
+        }).catch(function () {
+          return photoSphereViewer.utils.logWarn('Cannot acquire WakeLock');
+        });
+      } else if ('NoSleep' in window) {
+        if (!this.prop.noSleep) {
+          this.prop.noSleep = new window.NoSleep();
+        }
+
+        this.prop.noSleep.enable();
+      } else {
         photoSphereViewer.utils.logWarn('NoSleep is not available');
-        return;
       }
-
-      if (!this.prop.noSleep) {
-        this.prop.noSleep = new window.NoSleep();
-      }
-
-      this.prop.noSleep.enable();
     }
     /**
-     * @summary Disables NoSleep.js
+     * @summary Disables WakeLock or NoSleep.js
      * @private
      */
     ;
 
     _proto.__stopNoSleep = function __stopNoSleep() {
-      if (this.prop.noSleep) {
+      if (this.prop.wakeLock) {
+        this.prop.wakeLock.release();
+        this.prop.wakeLock = null;
+      } else if (this.prop.noSleep) {
         this.prop.noSleep.disable();
       }
     }
@@ -410,18 +418,18 @@
     ;
 
     _proto.__lockOrientation = function __lockOrientation() {
-      var _this3 = this,
+      var _this4 = this,
           _window$screen;
 
       var displayRotateMessageTimeout;
 
       var displayRotateMessage = function displayRotateMessage() {
-        if (_this3.isEnabled() && window.innerHeight > window.innerWidth) {
-          _this3.psv.overlay.show({
+        if (_this4.isEnabled() && window.innerHeight > window.innerWidth) {
+          _this4.psv.overlay.show({
             id: StereoPlugin.ID_OVERLAY_PLEASE_ROTATE,
             image: mobileRotateIcon,
-            text: _this3.psv.config.lang.pleaseRotate[0],
-            subtext: _this3.psv.config.lang.pleaseRotate[1]
+            text: _this4.psv.config.lang.pleaseRotate[0],
+            subtext: _this4.psv.config.lang.pleaseRotate[1]
           });
         }
 

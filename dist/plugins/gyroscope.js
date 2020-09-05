@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.6
+* Photo Sphere Viewer 4.0.7
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,24 @@
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
   (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.GyroscopePlugin = factory(global.PhotoSphereViewer, global.THREE)));
 }(this, (function (photoSphereViewer, THREE) { 'use strict';
+
+  function _extends() {
+    _extends = Object.assign || function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+
+      return target;
+    };
+
+    return _extends.apply(this, arguments);
+  }
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -25,14 +43,15 @@
   }
 
   /**
-   * @author richt / http://richt.me
-   * @author WestLangley / http://github.com/WestLangley
-   *
    * W3C Device Orientation control (http://w3c.github.io/deviceorientation/spec-source-orientation.html)
    */
 
   var DeviceOrientationControls = function DeviceOrientationControls(object) {
     var scope = this;
+    var changeEvent = {
+      type: "change"
+    };
+    var EPS = 0.000001;
     this.object = object;
     this.object.rotation.reorder('YXZ');
     this.enabled = true;
@@ -94,21 +113,29 @@
     };
 
     this.update = function () {
-      if (scope.enabled === false) return;
-      var device = scope.deviceOrientation;
+      var lastQuaternion = new THREE.Quaternion();
+      return function () {
+        if (scope.enabled === false) return;
+        var device = scope.deviceOrientation;
 
-      if (device) {
-        var alpha = device.alpha ? THREE.MathUtils.degToRad(device.alpha) + scope.alphaOffset : 0; // Z
+        if (device) {
+          var alpha = device.alpha ? THREE.MathUtils.degToRad(device.alpha) + scope.alphaOffset : 0; // Z
 
-        var beta = device.beta ? THREE.MathUtils.degToRad(device.beta) : 0; // X'
+          var beta = device.beta ? THREE.MathUtils.degToRad(device.beta) : 0; // X'
 
-        var gamma = device.gamma ? THREE.MathUtils.degToRad(device.gamma) : 0; // Y''
+          var gamma = device.gamma ? THREE.MathUtils.degToRad(device.gamma) : 0; // Y''
 
-        var orient = scope.screenOrientation ? THREE.MathUtils.degToRad(scope.screenOrientation) : 0; // O
+          var orient = scope.screenOrientation ? THREE.MathUtils.degToRad(scope.screenOrientation) : 0; // O
 
-        setObjectQuaternion(scope.object.quaternion, alpha, beta, gamma, orient);
-      }
-    };
+          setObjectQuaternion(scope.object.quaternion, alpha, beta, gamma, orient);
+
+          if (8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS) {
+            lastQuaternion.copy(scope.object.quaternion);
+            scope.dispatchEvent(changeEvent);
+          }
+        }
+      };
+    }();
 
     this.dispose = function () {
       scope.disconnect();
@@ -116,6 +143,9 @@
 
     this.connect();
   };
+
+  DeviceOrientationControls.prototype = Object.create(THREE.EventDispatcher.prototype);
+  DeviceOrientationControls.prototype.constructor = DeviceOrientationControls;
 
   var compass = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 0a50 50 0 1 0 0 100A50 50 0 0 0 50 0zm0 88.81a38.86 38.86 0 0 1-38.81-38.8 38.86 38.86 0 0 1 38.8-38.82A38.86 38.86 0 0 1 88.82 50 38.87 38.87 0 0 1 50 88.81z\"/><path d=\"M72.07 25.9L40.25 41.06 27.92 74.12l31.82-15.18v-.01l12.32-33.03zM57.84 54.4L44.9 42.58l21.1-10.06-8.17 21.9z\"/><!--Created by iconoci from the Noun Project--></svg>\n";
 
@@ -207,6 +237,11 @@
    * @typedef {Object} external:THREE.DeviceOrientationControls
    * @summary {@link https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/DeviceOrientationControls.js}
    */
+
+  /**
+   * @typedef {Object} PSV.plugins.GyroscopePlugin.Options
+   * @property {boolean} [absolutePosition=false] - when true the view will ignore the current direction when enabling gyroscope control
+   */
   // add gyroscope button
 
   photoSphereViewer.DEFAULTS.navbar.splice(-1, 0, GyroscopeButton.id);
@@ -230,8 +265,9 @@
 
     /**
      * @param {PSV.Viewer} psv
+     * @param {PSV.plugins.GyroscopePlugin.Options} options
      */
-    function GyroscopePlugin(psv) {
+    function GyroscopePlugin(psv, options) {
       var _this;
 
       _this = _AbstractPlugin.call(this, psv) || this;
@@ -250,6 +286,14 @@
         orientationCb: null,
         config_moveInertia: true
       };
+      /**
+       * @member {PSV.plugins.GyroscopePlugin.Options}
+       * @private
+       */
+
+      _this.config = _extends({
+        absolutePosition: false
+      }, options);
       /**
        * @member {external:THREE.DeviceOrientationControls}
        * @private
@@ -377,7 +421,7 @@
       }
     }
     /**
-     * @summary Attaches the {@link extenral:THREE.DeviceOrientationControls} to the camera
+     * @summary Attaches the {@link external:THREE.DeviceOrientationControls} to the camera
      * @private
      */
     ;
@@ -389,27 +433,46 @@
         this.controls = new DeviceOrientationControls(this.psv.renderer.camera);
       } else {
         this.controls.connect();
-      }
+      } // force reset
 
-      var direction = this.psv.renderer.camera.getWorldDirection(new THREE.Vector3());
-      var sphericalDirection = this.psv.dataHelper.vector3ToSphericalCoords(direction);
-      this.prop.alphaOffset = photoSphereViewer.utils.getShortestArc(this.psv.prop.position.longitude, sphericalDirection.longitude);
+
+      this.controls.deviceOrientation = null;
+      this.controls.screenOrientation = 0;
+      this.controls.alphaOffset = 0;
+      this.prop.alphaOffset = this.config.absolutePosition ? 0 : null;
 
       this.prop.orientationCb = function () {
-        _this3.controls.alphaOffset = _this3.prop.alphaOffset;
+        if (!_this3.controls.deviceOrientation) {
+          return;
+        } // on first run compute the offset depending on the current viewer position and device orientation
 
-        _this3.controls.update();
 
-        _this3.psv.renderer.camera.getWorldDirection(_this3.psv.prop.direction);
+        if (_this3.prop.alphaOffset === null) {
+          _this3.controls.update();
 
-        _this3.psv.prop.direction.multiplyScalar(photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
+          var direction = new THREE.Vector3();
 
-        var sphericalCoords = _this3.psv.dataHelper.vector3ToSphericalCoords(_this3.psv.prop.direction);
+          _this3.psv.renderer.camera.getWorldDirection(direction);
 
-        _this3.psv.prop.position.longitude = sphericalCoords.longitude;
-        _this3.psv.prop.position.latitude = sphericalCoords.latitude;
+          var sphericalCoords = _this3.psv.dataHelper.vector3ToSphericalCoords(direction);
 
-        _this3.psv.needsUpdate();
+          _this3.prop.alphaOffset = sphericalCoords.longitude - _this3.psv.prop.position.longitude;
+        } else {
+          _this3.controls.alphaOffset = _this3.prop.alphaOffset;
+
+          _this3.controls.update();
+
+          _this3.psv.renderer.camera.getWorldDirection(_this3.psv.prop.direction);
+
+          _this3.psv.prop.direction.multiplyScalar(photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
+
+          var _sphericalCoords = _this3.psv.dataHelper.vector3ToSphericalCoords(_this3.psv.prop.direction);
+
+          _this3.psv.prop.position.longitude = _sphericalCoords.longitude;
+          _this3.psv.prop.position.latitude = _sphericalCoords.latitude;
+
+          _this3.psv.needsUpdate();
+        }
       };
 
       this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this.prop.orientationCb);

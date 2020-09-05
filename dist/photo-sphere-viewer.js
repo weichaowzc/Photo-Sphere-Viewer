@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.0.6
+* Photo Sphere Viewer 4.0.7
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2020 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -2649,8 +2649,8 @@
      */
     ;
 
-    _proto.onClick = function onClick() {// nothing
-    }
+    _proto.onClick = function onClick() {} // nothing
+
     /**
      * @summary Handles click events
      * @description Zooms in and register long press timer
@@ -2696,7 +2696,7 @@
         onTick: function onTick(properties) {
           _this3.psv.zoom(properties.zoom);
         }
-      });
+      }).catch(function () {}); // ignore cancellation
     }
     /**
      * @summary Handles mouse up events
@@ -2953,8 +2953,8 @@
      */
     ;
 
-    _proto.onClick = function onClick() {// nothing
-    }
+    _proto.onClick = function onClick() {} // nothing
+
     /**
      * @summary Moves the zoom cursor
      * @param {number} level
@@ -3019,7 +3019,7 @@
     ;
 
     _proto.__changeZoomWithMouse = function __changeZoomWithMouse(evt) {
-      if (!this.prop.enabled) {
+      if (!this.prop.enabled || !this.prop.mousedown) {
         return;
       }
 
@@ -3035,7 +3035,7 @@
     ;
 
     _proto.__changeZoomByTouch = function __changeZoomByTouch(evt) {
-      if (!this.prop.enabled) {
+      if (!this.prop.enabled || !this.prop.mousedown) {
         return;
       }
 
@@ -3049,11 +3049,9 @@
     ;
 
     _proto.__changeZoom = function __changeZoom(x) {
-      if (this.prop.mousedown) {
-        var userInput = x - this.zoomRange.getBoundingClientRect().left;
-        var zoomLevel = userInput / this.zoomRange.offsetWidth * 100;
-        this.psv.zoom(zoomLevel);
-      }
+      var userInput = x - this.zoomRange.getBoundingClientRect().left;
+      var zoomLevel = userInput / this.zoomRange.offsetWidth * 100;
+      this.psv.zoom(zoomLevel);
     };
 
     return ZoomRangeButton;
@@ -3174,7 +3172,7 @@
       return bound(_maxFov, 1, 179);
     },
     lang: function lang(_lang) {
-      return _extends({}, DEFAULTS.lang, _lang);
+      return _extends({}, DEFAULTS.lang, {}, _lang);
     },
     keyboard: function keyboard(_keyboard) {
       // keyboard=true becomes the default map
@@ -6438,7 +6436,7 @@
        * @property {*} data
        */
 
-      _this.prop = _extends({}, _this.prop, size, {
+      _this.prop = _extends({}, _this.prop, {}, size, {
         state: STATE.NONE,
         width: 0,
         height: 0,
