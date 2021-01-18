@@ -1,16 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/settings')) :
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/settings'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = factory(global.PhotoSphereViewer, global.PhotoSphereViewer.SettingsPlugin)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = factory(global.PhotoSphereViewer, global.PhotoSphereViewer.SettingsPlugin)));
 }(this, (function (photoSphereViewer, SettingsPlugin) { 'use strict';
-
-  SettingsPlugin = SettingsPlugin && Object.prototype.hasOwnProperty.call(SettingsPlugin, 'default') ? SettingsPlugin['default'] : SettingsPlugin;
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -114,7 +112,7 @@
         type: 'options',
         label: _this.psv.config.lang.resolution,
         current: function current() {
-          return _this.prop.resolution ? _this.resolutionsById[_this.prop.resolution].label : '';
+          return _this.prop.resolution;
         },
         options: function options() {
           return _this.__getSettingsOptions();
@@ -149,7 +147,7 @@
 
       _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, _assertThisInitialized(_this));
 
-      if (options == null ? void 0 : options.resolutions) {
+      if (options != null && options.resolutions) {
         _this.setResolutions(options.resolutions);
       }
 
@@ -252,13 +250,9 @@
     ;
 
     _proto.__getSettingsOptions = function __getSettingsOptions() {
-      var _this4 = this;
-
       return this.resolutions.map(function (resolution) {
         return {
-          type: 'button',
           id: resolution.id,
-          active: resolution.id === _this4.prop.resolution,
           label: resolution.label
         };
       });

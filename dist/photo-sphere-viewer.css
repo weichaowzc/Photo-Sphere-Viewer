@@ -1,9 +1,91 @@
 /*!
- * Photo Sphere Viewer 4.0.7
+ * Photo Sphere Viewer 4.1.0
  * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
+ * @copyright 2015-2021 Damien "Mistic" Sorel
  * @licence MIT (https://opensource.org/licenses/MIT)
  */
+.psv-container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  background: radial-gradient(#fff 0%, #fdfdfd 16%, #fbfbfb 33%, #f8f8f8 49%, #efefef 66%, #dfdfdf 82%, #bfbfbf 100%);
+  overflow: hidden;
+}
+
+.psv-container--fullscreen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.psv-canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  -webkit-transition: opacity linear 100ms;
+  transition: opacity linear 100ms;
+}
+
+.psv-canvas {
+  display: block;
+}
+
+.psv-loader-container {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 80;
+}
+
+.psv-loader {
+  position: relative;
+  text-align: center;
+  color: rgba(61, 61, 61, 0.7);
+  width: 150px;
+  height: 150px;
+  border: 10px solid transparent;
+}
+
+.psv-loader::before {
+  content: "";
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+}
+
+.psv-loader, .psv-loader-image, .psv-loader-text {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.psv-loader-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.psv-loader-text {
+  font: 14px sans-serif;
+}
+
 .psv-navbar {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -87,67 +169,17 @@
   transition: transform 200ms ease, -webkit-transform 200ms ease;
 }
 
-.psv-button .psv-button-svg * {
-  fill: currentColor;
-}
-
 .psv-container:not(.psv--is-touch) .psv-button--hover-scale:not(.psv-button--disabled):hover .psv-button-svg {
   -webkit-transform: scale(1.2);
           transform: scale(1.2);
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
-.psv-container {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  position: relative;
-  background: radial-gradient(#fff 0%, #fdfdfd 16%, #fbfbfb 33%, #f8f8f8 49%, #efefef 66%, #dfdfdf 82%, #bfbfbf 100%);
-  overflow: hidden;
-}
 
-.psv-container--fullscreen {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
-
-.psv-canvas-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-  -webkit-transition: opacity linear 100ms;
-  transition: opacity linear 100ms;
-}
-
-.psv-canvas {
-  display: block;
-}
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
 .psv-autorotate-button.psv-button {
   width: 25px;
   height: 25px;
   padding: 7.5px;
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
+
 .psv-zoom-range.psv-button {
   width: 80px;
   height: 1px;
@@ -189,68 +221,7 @@
   -webkit-transform: scale(1.3);
           transform: scale(1.3);
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
-.psv-loader-container {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 80;
-}
 
-.psv-loader {
-  position: relative;
-  text-align: center;
-  color: rgba(61, 61, 61, 0.7);
-  width: 150px;
-  height: 150px;
-  border: 10px solid transparent;
-}
-
-.psv-loader::before {
-  content: "";
-  display: inline-block;
-  height: 100%;
-  vertical-align: middle;
-}
-
-.psv-loader, .psv-loader-image, .psv-loader-text {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.psv-loader-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.psv-loader-text {
-  font: 14px sans-serif;
-}
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
 .psv-notification {
   position: absolute;
   z-index: 100;
@@ -287,12 +258,7 @@
   opacity: 100;
   bottom: 80px;
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
+
 .psv-overlay {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -314,6 +280,7 @@
   bottom: 0;
   right: 0;
   background: radial-gradient(#fff 0%, #fdfdfd 16%, #fbfbfb 33%, #f8f8f8 49%, #efefef 66%, #dfdfdf 82%, #bfbfbf 100%);
+  color: black;
   opacity: 0.8;
 }
 
@@ -341,12 +308,7 @@
   opacity: 0.8;
   text-align: center;
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
+
 /* stylelint-disable scss/no-duplicate-dollar-variables */
 /* stylelint-enable */
 .psv-panel {
@@ -485,12 +447,83 @@
 .psv-panel--open .psv-panel-resizer {
   display: block;
 }
-/*!
- * Photo Sphere Viewer 4.0.7
- * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2020 Damien "Mistic" Sorel
- * @licence MIT (https://opensource.org/licenses/MIT)
- */
+
+.psv-panel-menu-title {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  font: 24px sans-serif;
+  margin: 24px 12px;
+}
+
+.psv-panel-menu-title svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+}
+
+.psv-panel-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.psv-panel-menu-item {
+  min-height: 20px;
+  padding: 0.5em 1em;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: start;
+      -ms-flex-pack: start;
+          justify-content: flex-start;
+  -webkit-transition: background 0.1s ease-in-out;
+  transition: background 0.1s ease-in-out;
+}
+
+.psv-panel-menu-item-icon {
+  -webkit-box-flex: 0;
+      -ms-flex: none;
+          flex: none;
+  height: 20px;
+  width: 20px;
+  margin-right: 0.5em;
+}
+
+.psv-panel-menu-item-icon img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.psv-panel-menu-item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.psv-panel-menu--stripped .psv-panel-menu-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.psv-panel-menu--stripped .psv-panel-menu-item:nth-child(odd), .psv-panel-menu--stripped .psv-panel-menu-item:nth-child(odd)::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.psv-panel-menu--stripped .psv-panel-menu-item:nth-child(even), .psv-panel-menu--stripped .psv-panel-menu-item:nth-child(even)::before {
+  background: transparent;
+}
+
+.psv-container:not(.psv--is-touch) .psv-panel-menu-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .psv-tooltip {
   position: absolute;
   z-index: 50;

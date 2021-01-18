@@ -29,12 +29,13 @@ visibleRangePlugin.setLongitudeRange(['0deg', '180deg']);
 visibleRangePlugin.setLatitudeRange(null);
 ```
 
+Alternatively, if `usePanoData` is set to `true`, the visible range is limited to the [cropped panorama data](../guide/cropped-panorama.md#provide-cropping-data) provided to the viewer.
 
 ## Example
 
 In this example only the front portion of the sphere is visible.
 
-<iframe style="width: 100%; height: 500px;" src="//jsfiddle.net/mistic100/m2fw1oLd/embedded/result,js/dark" allowfullscreen="allowfullscreen" allowpaymentrequest frameborder="0"></iframe>
+<iframe style="width: 100%; height: 500px;" src="//jsfiddle.net/mistic100/m2fw1oLd/embedded/result,js/dark" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
 
 
 ## Configuration
@@ -51,9 +52,19 @@ Visible longitude as two angles.
 
 Visible latitude as two angles.
 
+#### `usePanoData`
+- type: `boolean`
+- default: `false`
+
+Use cropped panorama data as visible range immediately after load.
+
 
 ## Methods
 
 #### `setLatitudeRange(range)` | `setLongitudeRange(range)`
 
 Change or remove the ranges.
+
+#### `setRangesFromPanoData()`
+
+Use cropped panorama data as visible range.

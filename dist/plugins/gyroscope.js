@@ -1,13 +1,13 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('three')) :
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.GyroscopePlugin = factory(global.PhotoSphereViewer, global.THREE)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.GyroscopePlugin = factory(global.PhotoSphereViewer, global.THREE)));
 }(this, (function (photoSphereViewer, THREE) { 'use strict';
 
   function _extends() {
@@ -49,7 +49,7 @@
   var DeviceOrientationControls = function DeviceOrientationControls(object) {
     var scope = this;
     var changeEvent = {
-      type: "change"
+      type: 'change'
     };
     var EPS = 0.000001;
     this.object = object;
@@ -147,7 +147,7 @@
   DeviceOrientationControls.prototype = Object.create(THREE.EventDispatcher.prototype);
   DeviceOrientationControls.prototype.constructor = DeviceOrientationControls;
 
-  var compass = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 0a50 50 0 1 0 0 100A50 50 0 0 0 50 0zm0 88.81a38.86 38.86 0 0 1-38.81-38.8 38.86 38.86 0 0 1 38.8-38.82A38.86 38.86 0 0 1 88.82 50 38.87 38.87 0 0 1 50 88.81z\"/><path d=\"M72.07 25.9L40.25 41.06 27.92 74.12l31.82-15.18v-.01l12.32-33.03zM57.84 54.4L44.9 42.58l21.1-10.06-8.17 21.9z\"/><!--Created by iconoci from the Noun Project--></svg>\n";
+  var compass = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M50 0a50 50 0 1 0 0 100A50 50 0 0 0 50 0zm0 88.81a38.86 38.86 0 0 1-38.81-38.8 38.86 38.86 0 0 1 38.8-38.82A38.86 38.86 0 0 1 88.82 50 38.87 38.87 0 0 1 50 88.81z\"/><path d=\"M72.07 25.9L40.25 41.06 27.92 74.12l31.82-15.18v-.01l12.32-33.03zM57.84 54.4L44.9 42.58l21.1-10.06-8.17 21.9z\"/><!--Created by iconoci from the Noun Project--></svg>\n";
 
   /**
    * @summary Navigation bar gyroscope button class
@@ -240,6 +240,7 @@
 
   /**
    * @typedef {Object} PSV.plugins.GyroscopePlugin.Options
+   * @property {boolean} [touchmove=true] - allows to pan horizontally when the gyroscope is enabled (requires global `mousemove=true`)
    * @property {boolean} [absolutePosition=false] - when true the view will ignore the current direction when enabling gyroscope control
    */
   // add gyroscope button
@@ -292,6 +293,7 @@
        */
 
       _this.config = _extends({
+        touchmove: true,
         absolutePosition: false
       }, options);
       /**
@@ -487,7 +489,10 @@
     _proto.__onRotate = function __onRotate(e) {
       if (this.isEnabled()) {
         e.preventDefault();
-        this.prop.alphaOffset -= e.args[0].longitude - this.psv.prop.position.longitude;
+
+        if (this.config.touchmove) {
+          this.prop.alphaOffset -= e.args[0].longitude - this.psv.prop.position.longitude;
+        }
       }
     }
     /**
@@ -503,7 +508,6 @@
       } else if ('DeviceOrientationEvent' in window) {
         return new Promise(function (resolve) {
           var listener = function listener(e) {
-            /* eslint-disable-next-line no-restricted-globals */
             resolve(e && e.alpha !== null && !isNaN(e.alpha));
             window.removeEventListener('deviceorientation', listener);
           };

@@ -1,13 +1,13 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('three')) :
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.MarkersPlugin = factory(global.PhotoSphereViewer, global.THREE)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.MarkersPlugin = factory(global.PhotoSphereViewer, global.THREE)));
 }(this, (function (photoSphereViewer, THREE) { 'use strict';
 
   function _extends() {
@@ -710,7 +710,7 @@
     return Marker;
   }();
 
-  var pin = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"10 9 81 81\"><path d=\"M50.5 90S22.9 51.9 22.9 36.6 35.2 9 50.5 9s27.6 12.4 27.6 27.6S50.5 90 50.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
+  var pin = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"10 9 81 81\"><path fill=\"currentColor\" d=\"M50.5 90S22.9 51.9 22.9 36.6 35.2 9 50.5 9s27.6 12.4 27.6 27.6S50.5 90 50.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
 
   /**
    * @summary Navigation bar markers button class
@@ -1042,7 +1042,7 @@
 
       _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CONFIG_CHANGED, _assertThisInitialized(_this));
 
-      if (options == null ? void 0 : options.markers) {
+      if (options != null && options.markers) {
         _this.psv.once(photoSphereViewer.CONSTANTS.EVENTS.READY, function () {
           _this.setMarkers(options.markers);
         });
@@ -1447,7 +1447,7 @@
 
       var marker = this.getMarker(markerId);
 
-      if (marker == null ? void 0 : (_marker$config = marker.config) == null ? void 0 : _marker$config.content) {
+      if (marker != null && (_marker$config = marker.config) != null && _marker$config.content) {
         this.psv.panel.show({
           id: MarkersPlugin.ID_PANEL_MARKER,
           content: marker.config.content
@@ -1827,7 +1827,7 @@
 
       var targetMarker = this.__getTargetMarker(e.target);
 
-      if (targetMarker == null ? void 0 : targetMarker.isPoly()) {
+      if (targetMarker != null && targetMarker.isPoly()) {
         marker = targetMarker;
       } // do not hide if we enter the tooltip itself while hovering a polygon
       else if (this.prop.hoveringMarker && this.__targetOnTooltip(e.target, this.prop.hoveringMarker.tooltip)) {
@@ -1843,7 +1843,7 @@
         if (!this.prop.showAllTooltips) {
           marker.showTooltip(e);
         }
-      } else if ((_this$prop$hoveringMa = this.prop.hoveringMarker) == null ? void 0 : _this$prop$hoveringMa.isPoly()) {
+      } else if ((_this$prop$hoveringMa = this.prop.hoveringMarker) != null && _this$prop$hoveringMa.isPoly()) {
         this.trigger(MarkersPlugin.EVENTS.LEAVE_MARKER, this.prop.hoveringMarker);
 
         if (!this.prop.showAllTooltips) {
@@ -1974,8 +1974,8 @@
   MarkersPlugin.ID_PANEL_MARKERS_LIST = 'markersList';
 
   MarkersPlugin.MARKERS_LIST_TEMPLATE = function (markers, title, dataKey) {
-    return "\n<div class=\"psv-markers-list-container\">\n  <h1 class=\"psv-markers-list-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-markers-list\">\n    " + markers.map(function (marker) {
-      return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-markers-list-item " + (marker.config.className || '') + "\">\n      " + (marker.type === 'image' ? "<img class=\"psv-markers-list-image\" src=\"" + marker.config.image + "\"/>" : '') + "\n      <p class=\"psv-markers-list-name\">" + marker.getListContent() + "</p>\n    </li>\n    ";
+    return "\n<div class=\"psv-panel-menu psv-panel-menu--stripped\">\n  <h1 class=\"psv-panel-menu-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + markers.map(function (marker) {
+      return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-panel-menu-item\">\n      " + (marker.type === 'image' ? "<span class=\"psv-panel-menu-item-icon\" ><img src=\"" + marker.config.image + "\"/></span>" : '') + "\n      <span class=\"psv-panel-menu-item-label\">" + marker.getListContent() + "</span>\n    </li>\n    ";
     }).join('') + "\n  </ul>\n</div>\n";
   };
 

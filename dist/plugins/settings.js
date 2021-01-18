@@ -1,13 +1,13 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer')) :
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.SettingsPlugin = factory(global.PhotoSphereViewer)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.SettingsPlugin = factory(global.PhotoSphereViewer)));
 }(this, (function (photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
@@ -24,7 +24,7 @@
     return self;
   }
 
-  var check = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 90 90\"><polygon fill=\"currentColor\"  points=\"0,48 10,35 36,57 78,10 90,21 37,79 \"/><!-- Created by Zahroe from the Noun Project --></svg>\n";
+  var check = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 90 90\"><polygon fill=\"currentColor\" points=\"0,48 10,35 36,57 78,10 90,21 37,79 \"/><!-- Created by Zahroe from the Noun Project --></svg>\n";
 
   var chevron = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M86.2 50.7l-44 44-9.9-9.9 34.1-34.1-34.7-34.8L41.6 6z\"/><!-- Created by Renee Ramsey-Passmore from the Noun Project--></svg>\n";
 
@@ -141,7 +141,7 @@
    * @typedef {PSV.plugins.SettingsPlugin.Setting} PSV.plugins.SettingsPlugin.OptionsSetting
    * @summary Description of a 'options' setting
    * @property {'options'} type - type of the setting
-   * @property {function} current - function which returns the current value (human readable)
+   * @property {function} current - function which returns the current option id
    * @property {function} options - function which the possible options as an array of {@link PSV.plugins.SettingsPlugin.Option}
    * @property {function} apply - function called with the id of the selected option
    */
@@ -159,7 +159,6 @@
    * @summary Option of an 'option' setting
    * @property {string} id - identifier of the option
    * @property {string} label - label of the option
-   * @property {boolean} active - state of the option
    */
 
   /**
@@ -188,6 +187,7 @@
      * @param {PSV.plugins.SettingsPlugin.Setting[]} settings
      * @param {string} title
      * @param {string} dataKey
+     * @param {function} optionsCurrent
      * @returns {string}
      */
 
@@ -200,6 +200,7 @@
      * @param {PSV.plugins.SettingsPlugin.OptionsSetting} setting
      * @param {string} title
      * @param {string} dataKey
+     * @param {function} optionActive
      * @returns {string}
      */
 
@@ -309,7 +310,14 @@
 
       this.psv.panel.show({
         id: SettingsPlugin.ID_PANEL,
-        content: SettingsPlugin.SETTINGS_TEMPLATE(this.settings, this.psv.config.lang[SettingsButton.id], photoSphereViewer.utils.dasherize(SettingsPlugin.SETTING_DATA)),
+        content: SettingsPlugin.SETTINGS_TEMPLATE(this.settings, this.psv.config.lang[SettingsButton.id], photoSphereViewer.utils.dasherize(SettingsPlugin.SETTING_DATA), function (setting) {
+          // retrocompatibility with "current" returning a label
+          var current = setting.current();
+          var option = setting.options().find(function (opt) {
+            return opt.id === current;
+          });
+          return (option == null ? void 0 : option.label) || current;
+        }),
         noMargin: true,
         clickHandler: function clickHandler(e) {
           var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
@@ -348,9 +356,13 @@
     _proto.__showOptions = function __showOptions(setting) {
       var _this3 = this;
 
+      var current = setting.current();
       this.psv.panel.show({
         id: SettingsPlugin.ID_PANEL,
-        content: SettingsPlugin.SETTING_OPTIONS_TEMPLATE(setting, this.psv.config.lang[SettingsButton.id], photoSphereViewer.utils.dasherize(SettingsPlugin.SETTING_DATA)),
+        content: SettingsPlugin.SETTING_OPTIONS_TEMPLATE(setting, this.psv.config.lang[SettingsButton.id], photoSphereViewer.utils.dasherize(SettingsPlugin.SETTING_DATA), function (option) {
+          // retrocompatibility with options having an "active" flag
+          return 'active' in option ? option.active : option.id === current;
+        }),
         noMargin: true,
         clickHandler: function clickHandler(e) {
           var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
@@ -374,25 +386,25 @@
   SettingsPlugin.ID_PANEL = 'settings';
   SettingsPlugin.SETTING_DATA = 'settingId';
 
-  SettingsPlugin.SETTINGS_TEMPLATE = function (settings, title, dataKey) {
-    return "\n<h1 class=\"psv-settings-title\">" + icon + " " + title + "</h1>\n<ul class=\"psv-settings-list\">\n  " + settings.map(function (s) {
-      return "\n    <li class=\"psv-settings-item\" data-" + dataKey + "=\"" + s.id + "\">\n      " + SettingsPlugin.SETTINGS_TEMPLATE_[s.type](s) + "\n    </li>\n  ";
-    }).join('') + "\n</ul>";
+  SettingsPlugin.SETTINGS_TEMPLATE = function (settings, title, dataKey, optionsCurrent) {
+    return "\n<div class=\"psv-panel-menu\">\n  <h1 class=\"psv-panel-menu-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + settings.map(function (s) {
+      return "\n      <li class=\"psv-panel-menu-item\" data-" + dataKey + "=\"" + s.id + "\">\n        " + SettingsPlugin.SETTINGS_TEMPLATE_[s.type](s, optionsCurrent) + "\n      </li>\n    ";
+    }).join('') + "\n  </ul>\n</div>\n";
   };
 
   SettingsPlugin.SETTINGS_TEMPLATE_ = {
-    options: function options(setting) {
-      return "\n      <span class=\"psv-settings-item-label\">" + setting.label + "</span> \n      <span class=\"psv-settings-item-value\">" + setting.current() + "</span> \n      <span class=\"psv-settings-item-icon\">" + chevron + "</span>\n    ";
+    options: function options(setting, optionsCurrent) {
+      return "\n      <span class=\"psv-settings-item-label\">" + setting.label + "</span> \n      <span class=\"psv-settings-item-value\">" + optionsCurrent(setting) + "</span> \n      <span class=\"psv-settings-item-icon\">" + chevron + "</span>\n    ";
     },
     toggle: function toggle(setting) {
       return "\n      <span class=\"psv-settings-item-label\">" + setting.label + "</span>\n      <span class=\"psv-settings-item-value\">" + (setting.active() ? switchOn : switchOff) + "</span>\n    ";
     }
   };
 
-  SettingsPlugin.SETTING_OPTIONS_TEMPLATE = function (setting, title, dataKey) {
-    return "\n<h1 class=\"psv-settings-title\">" + icon + " " + title + "</h1>\n<ul class=\"psv-settings-list\">\n  <li class=\"psv-settings-item psv-settings-item--header\" data-" + dataKey + "=\"__back\">\n    <span class=\"psv-settings-item-icon\">" + chevron + "</span>\n    <span class=\"psv-settings-item-label\">" + setting.label + "</span>\n  </li>\n  " + setting.options().map(function (s) {
-      return "\n    <li class=\"psv-settings-item\" data-" + dataKey + "=\"" + s.id + "\">\n      <span class=\"psv-settings-item-icon\">" + (s.active ? check : '') + "</span>\n      <span class=\"psv-settings-item-value\">" + s.label + "</span>\n    </li>\n  ";
-    }).join('') + "\n</ul>";
+  SettingsPlugin.SETTING_OPTIONS_TEMPLATE = function (setting, title, dataKey, optionActive) {
+    return "\n<div class=\"psv-panel-menu\">\n  <h1 class=\"psv-panel-menu-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    <li class=\"psv-panel-menu-item psv-settings-item--header\" data-" + dataKey + "=\"__back\">\n      <span class=\"psv-settings-item-icon\">" + chevron + "</span>\n      <span class=\"psv-settings-item-label\">" + setting.label + "</span>\n    </li>\n    " + setting.options().map(function (s) {
+      return "\n      <li class=\"psv-panel-menu-item\" data-" + dataKey + "=\"" + s.id + "\">\n        <span class=\"psv-settings-item-icon\">" + (optionActive(s) ? check : '') + "</span>\n        <span class=\"psv-settings-item-value\">" + s.label + "</span>\n      </li>\n    ";
+    }).join('') + "\n  </ul>\n";
   };
 
   return SettingsPlugin;

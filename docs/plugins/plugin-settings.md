@@ -26,12 +26,12 @@ const viewer = new PhotoSphereViewer.Viewer({
 
 The following example manually adds two settings.
 
-<iframe style="width: 100%; height: 500px;" src="//jsfiddle.net/mistic100/54qx9yLt/embedded/result,js/dark" allowfullscreen="allowfullscreen" allowpaymentrequest frameborder="0"></iframe>
+<iframe style="width: 100%; height: 500px;" src="//jsfiddle.net/mistic100/54qx9yLt/embedded/result,js/dark" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
 
 
 ## Adding a setting
 
-Registering a new setting is done by calling the `registerSetting` on the plugin. There are currently two types of setting.
+Registering a new setting is done by calling the `addSetting` on the plugin. There are currently two types of setting.
 
 ### Toggle setting
 
@@ -56,12 +56,12 @@ settings.addSetting({
   id     : 'custom-options-setting',
   label  : 'Options setting',
   type   : 'options',
-  current: () => currentOption, // prefer a human readable label
   options: () => ([
-    { id: 'option-a', label: 'Option A', active: currentOption === 'option-a' },
-    { id: 'option-b', label: 'Option B', active: currentOption === 'option-b' },
+    { id: 'option-a', label: 'Option A' },
+    { id: 'option-b', label: 'Option B' },
   ]),
-  toggle : (option) => currentOption = option,
+  current: () => currentOption,
+  apply  : (option) => currentOption = option,
 });
 ```
 

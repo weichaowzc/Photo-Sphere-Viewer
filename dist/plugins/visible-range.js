@@ -1,13 +1,13 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('three')) :
   typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VisibleRangePlugin = factory(global.PhotoSphereViewer, global.THREE)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VisibleRangePlugin = factory(global.PhotoSphereViewer, global.THREE)));
 }(this, (function (photoSphereViewer, THREE) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
@@ -28,6 +28,7 @@
    * @typedef {Object} PSV.plugins.VisibleRangePlugin.Options
    * @property {double[]|string[]} [latitudeRange] - latitude range as two angles
    * @property {double[]|string[]} [longitudeRange] - longitude range as two angles
+   * @property {boolean} [usePanoData] - use panoData as visible range, you can also manually call `setRangesFromPanoData`
    */
 
   /**
@@ -54,14 +55,19 @@
 
       _this.config = {
         latitudeRange: null,
-        longitudeRange: null
+        longitudeRange: null,
+        usePanoData: false
       };
 
       if (options) {
+        _this.config.usePanoData = !!options.usePanoData;
+
         _this.setLatitudeRange(options.latitudeRange);
 
         _this.setLongitudeRange(options.longitudeRange);
       }
+
+      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, _assertThisInitialized(_this));
 
       _this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, _assertThisInitialized(_this));
 
@@ -77,6 +83,7 @@
     var _proto = VisibleRangePlugin.prototype;
 
     _proto.destroy = function destroy() {
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
 
@@ -106,6 +113,10 @@
         }
 
         return _rangedPosition;
+      } else if (e.type === photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED) {
+        if (this.config.usePanoData) {
+          this.setRangesFromPanoData();
+        }
       }
     }
     /**
@@ -165,6 +176,55 @@
 
       if (this.psv.prop.ready) {
         this.psv.rotate(this.psv.getPosition());
+      }
+    }
+    /**
+     * @summary Changes the latitude and longitude ranges according the current panorama cropping data
+     */
+    ;
+
+    _proto.setRangesFromPanoData = function setRangesFromPanoData() {
+      this.setLatitudeRange(this.getPanoLatitudeRange());
+      this.setLongitudeRange(this.getPanoLongitudeRange());
+    }
+    /**
+     * @summary Gets the latitude range defined by the viewer's panoData
+     * @returns {double[]|null}
+     * @private
+     */
+    ;
+
+    _proto.getPanoLatitudeRange = function getPanoLatitudeRange() {
+      var p = this.psv.prop.panoData;
+
+      if (p.croppedHeight === p.fullHeight && p.croppedY === 0) {
+        return null;
+      } else {
+        var latitude = function latitude(y) {
+          return Math.PI * (1 - y / p.fullHeight) - Math.PI / 2;
+        };
+
+        return [latitude(p.croppedY), latitude(p.croppedY + p.croppedHeight)];
+      }
+    }
+    /**
+     * @summary Gets the longitude range defined by the viewer's panoData
+     * @returns {double[]|null}
+     * @private
+     */
+    ;
+
+    _proto.getPanoLongitudeRange = function getPanoLongitudeRange() {
+      var p = this.psv.prop.panoData;
+
+      if (p.croppedWidth === p.fullWidth && p.croppedX === 0) {
+        return null;
+      } else {
+        var longitude = function longitude(x) {
+          return 2 * Math.PI * (x / p.fullWidth) - Math.PI;
+        };
+
+        return [longitude(p.croppedX), longitude(p.croppedX + p.croppedWidth)];
       }
     }
     /**

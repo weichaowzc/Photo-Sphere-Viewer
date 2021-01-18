@@ -1,19 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.0.7
+* Photo Sphere Viewer 4.1.0
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2020 Damien "Mistic" Sorel
+* @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('three'), require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope'), require('photo-sphere-viewer/dist/plugins/stereo'), require('photo-sphere-viewer/dist/plugins/markers'), require('photo-sphere-viewer/dist/plugins/visible-range')) :
   typeof define === 'function' && define.amd ? define(['three', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope', 'photo-sphere-viewer/dist/plugins/stereo', 'photo-sphere-viewer/dist/plugins/markers', 'photo-sphere-viewer/dist/plugins/visible-range'], factory) :
-  (global = global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ViewerCompat = factory(global.THREE, global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin, global.PhotoSphereViewer.StereoPlugin, global.PhotoSphereViewer.MarkersPlugin, global.PhotoSphereViewer.VisibleRangePlugin)));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ViewerCompat = factory(global.THREE, global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin, global.PhotoSphereViewer.StereoPlugin, global.PhotoSphereViewer.MarkersPlugin, global.PhotoSphereViewer.VisibleRangePlugin)));
 }(this, (function (THREE, photoSphereViewer, GyroscopePlugin, StereoPlugin, MarkersPlugin, VisibleRangePlugin) { 'use strict';
-
-  GyroscopePlugin = GyroscopePlugin && Object.prototype.hasOwnProperty.call(GyroscopePlugin, 'default') ? GyroscopePlugin['default'] : GyroscopePlugin;
-  StereoPlugin = StereoPlugin && Object.prototype.hasOwnProperty.call(StereoPlugin, 'default') ? StereoPlugin['default'] : StereoPlugin;
-  MarkersPlugin = MarkersPlugin && Object.prototype.hasOwnProperty.call(MarkersPlugin, 'default') ? MarkersPlugin['default'] : MarkersPlugin;
-  VisibleRangePlugin = VisibleRangePlugin && Object.prototype.hasOwnProperty.call(VisibleRangePlugin, 'default') ? VisibleRangePlugin['default'] : VisibleRangePlugin;
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
