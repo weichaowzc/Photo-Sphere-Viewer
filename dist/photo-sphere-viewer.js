@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.1.0
+* Photo Sphere Viewer 4.2.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -168,7 +168,7 @@
     /**
      * @event close-panel
      * @memberof PSV
-     * @summary Trigered when the panel is closed
+     * @summary Triggered when the panel is closed
      * @param {string} [id]
      */
     CLOSE_PANEL: 'close-panel',
@@ -200,14 +200,14 @@
     /**
      * @event hide-notification
      * @memberof PSV
-     * @summary Trigered when the notification is hidden
+     * @summary Triggered when the notification is hidden
      */
     HIDE_NOTIFICATION: 'hide-notification',
 
     /**
      * @event hide-overlay
      * @memberof PSV
-     * @summary Trigered when the overlay is hidden
+     * @summary Triggered when the overlay is hidden
      * @param {string} [id]
      */
     HIDE_OVERLAY: 'hide-overlay',
@@ -215,7 +215,7 @@
     /**
      * @event hide-tooltip
      * @memberof PSV
-     * @summary Trigered when the tooltip is hidden
+     * @summary Triggered when the tooltip is hidden
      * @param {*} Data associated to this tooltip
      */
     HIDE_TOOLTIP: 'hide-tooltip',
@@ -260,14 +260,14 @@
     /**
      * @event show-notification
      * @memberof PSV
-     * @summary Trigered when the notification is shown
+     * @summary Triggered when the notification is shown
      */
     SHOW_NOTIFICATION: 'show-notification',
 
     /**
      * @event show-overlay
      * @memberof PSV
-     * @summary Trigered when the overlay is shown
+     * @summary Triggered when the overlay is shown
      * @param {string} [id]
      */
     SHOW_OVERLAY: 'show-overlay',
@@ -275,7 +275,7 @@
     /**
      * @event show-tooltip
      * @memberof PSV
-     * @summary Trigered when the tooltip is shown
+     * @summary Triggered when the tooltip is shown
      * @param {*} Data associated to this tooltip
      * @param {PSV.components.Tooltip} Instance of the tooltip
      */
@@ -1015,6 +1015,37 @@
       return array2.indexOf(value) !== -1;
     });
   }
+  /**
+   * @summary Returns if a valu is null or undefined
+   * @param {*} val
+   * @return {boolean}
+   */
+
+  function isNil(val) {
+    return val === null || val === undefined;
+  }
+  /**
+   * @summary Returns the first non null non undefined parameter
+   * @memberOf PSV.utils
+   * @param {*} values
+   * @return {*}
+   */
+
+  function firstNonNull() {
+    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+      values[_key] = arguments[_key];
+    }
+
+    for (var _i = 0, _values = values; _i < _values.length; _i++) {
+      var val = _values[_i];
+
+      if (!isNil(val)) {
+        return val;
+      }
+    }
+
+    return undefined;
+  }
 
   /**
    * @summary Custom error used in the lib
@@ -1046,11 +1077,25 @@
     console.warn("PhotoSphereViewer: " + message);
   }
   /**
+   * @summary Checks if an object is a {PSV.ExtendedPosition}, ie has x/y or longitude/latitude
+   * @memberOf PSV.utils
+   * @param {object} object
+   * @returns {boolean}
+   */
+
+  function isExtendedPosition(object) {
+    return [['x', 'y'], ['longitude', 'latitude']].some(function (_ref) {
+      var key1 = _ref[0],
+          key2 = _ref[1];
+      return object[key1] !== undefined && object[key2] !== undefined;
+    });
+  }
+  /**
    * @summary Returns the value of a given attribute in the panorama metadata
    * @memberOf PSV.utils
    * @param {string} data
    * @param {string} attr
-   * @returns (string)
+   * @returns (number)
    */
 
   function getXMPValue(data, attr) {
@@ -1058,14 +1103,17 @@
     var result = data.match('<GPano:' + attr + '>(.*)</GPano:' + attr + '>');
 
     if (result !== null) {
-      return result[1];
+      var val = parseInt(result[1], 10);
+      return isNaN(val) ? null : val;
     } // XMP data are stored in attributes
 
 
     result = data.match('GPano:' + attr + '="(.*?)"');
 
     if (result !== null) {
-      return result[1];
+      var _val = parseInt(result[1], 10);
+
+      return isNaN(_val) ? null : _val;
     }
 
     return null;
@@ -1290,7 +1338,10 @@
     isEmpty: isEmpty,
     each: each,
     intersect: intersect,
+    isNil: isNil,
+    firstNonNull: firstNonNull,
     logWarn: logWarn,
+    isExtendedPosition: isExtendedPosition,
     getXMPValue: getXMPValue,
     parsePosition: parsePosition,
     parseSpeed: parseSpeed,
@@ -2372,19 +2423,19 @@
    * @property {Function} load - Loads the system if not already loaded
    * @property {number} pixelRatio
    * @property {boolean} isWebGLSupported
-   * @property {number} maxTextureWidth
    * @property {number} maxCanvasWidth
    * @property {string} mouseWheelEvent
    * @property {string} fullscreenEvent
+   * @property {Function} getMaxCanvasWidth - Returns the max width of a canvas allowed by the browser
    * @property {Promise<boolean>} isTouchEnabled
    */
+
   var SYSTEM = {
     loaded: false,
     pixelRatio: 1,
     isWebGLSupported: false,
     isTouchEnabled: null,
     maxTextureWidth: 0,
-    maxCanvasWidth: 0,
     mouseWheelEvent: null,
     fullscreenEvent: null
   };
@@ -2400,10 +2451,19 @@
       SYSTEM.isWebGLSupported = ctx != null;
       SYSTEM.isTouchEnabled = isTouchEnabled();
       SYSTEM.maxTextureWidth = getMaxTextureWidth(ctx);
-      SYSTEM.maxCanvasWidth = getMaxCanvasWidth(SYSTEM.maxTextureWidth);
       SYSTEM.mouseWheelEvent = getMouseWheelEvent();
       SYSTEM.fullscreenEvent = getFullscreenEvent();
     }
+  };
+
+  var maxCanvasWidth = null;
+
+  SYSTEM.getMaxCanvasWidth = function () {
+    if (maxCanvasWidth === null) {
+      maxCanvasWidth = getMaxCanvasWidth(SYSTEM.maxTextureWidth);
+    }
+
+    return maxCanvasWidth;
   };
   /**
    * @summary Tries to return a canvas webgl context
@@ -2502,7 +2562,7 @@
       canvas.height /= 2;
     }
 
-    return 0;
+    throw new PSVError('Unable to detect system capabilities');
   }
   /**
    * @summary Gets the event name for mouse wheel
@@ -3087,11 +3147,7 @@
     defaultZoomLvl: 50,
     defaultLong: 0,
     defaultLat: 0,
-    sphereCorrection: {
-      pan: 0,
-      tilt: 0,
-      roll: 0
-    },
+    sphereCorrection: null,
     moveSpeed: 1,
     zoomButtonIncrement: 2,
     autorotateDelay: null,
@@ -3106,6 +3162,7 @@
     touchmoveTwoFingers: false,
     useXmpData: true,
     panoData: null,
+    canvasBackground: '#000',
     withCredentials: false,
     navbar: ['autorotate', 'zoomOut', 'zoomRange', 'zoomIn', 'download', 'caption', 'fullscreen'],
     lang: {
@@ -3156,6 +3213,10 @@
       }
 
       return _container;
+    },
+    defaultLong: function defaultLong(_defaultLong) {
+      // defaultLat is between 0 and PI
+      return parseAngle(_defaultLong);
     },
     defaultLat: function defaultLat(_defaultLat) {
       // defaultLat is between -PI/2 and PI/2
@@ -3844,7 +3905,7 @@
       context.lineWidth = this.prop.tickness;
       context.strokeStyle = getStyle(this.loader, 'color');
       context.beginPath();
-      context.arc(this.canvas.width / 2, this.canvas.height / 2, this.canvas.width / 2 - this.prop.tickness / 2, -Math.PI / 2, value / 100 * 2 * Math.PI - Math.PI / 2);
+      context.arc(this.canvas.width / 2, this.canvas.height / 2, this.canvas.width / 2 - this.prop.tickness / 2, -Math.PI / 2, bound(value, 0, 100) / 100 * 2 * Math.PI - Math.PI / 2);
       context.stroke();
     };
 
@@ -4290,7 +4351,7 @@
     }
     /**
      * @summary Shows the panel
-     * @param {Object} config
+     * @param {string|Object} config
      * @param {string} [config.id]
      * @param {string} config.content
      * @param {boolean} [config.noMargin=false]
@@ -4662,20 +4723,6 @@
       };
     }
     /**
-     * @summary Checks if an object is a {PSV.ExtendedPosition}, ie has x/y or longitude/latitude
-     * @param {object} object
-     * @returns {boolean}
-     */
-    ;
-
-    _proto.isExtendedPosition = function isExtendedPosition(object) {
-      return [['x', 'y'], ['longitude', 'latitude']].some(function (_ref) {
-        var key1 = _ref[0],
-            key2 = _ref[1];
-        return key1 in object && key2 in object;
-      });
-    }
-    /**
      * @summary Converts x/y to latitude/longitude if present and ensure boundaries
      * @param {PSV.ExtendedPosition} position
      * @returns {PSV.Position}
@@ -4693,7 +4740,7 @@
       }
     }
     /**
-     * @summary Ensure a SphereCorrection object is valide
+     * @summary Ensure a SphereCorrection object is valid
      * @param {PSV.SphereCorrection} sphereCorrection
      * @returns {PSV.SphereCorrection}
      */
@@ -5633,11 +5680,12 @@
       /**
        * @member {HTMLElement}
        * @readonly
-       * @protected
+       * @package
        */
 
       _this.canvasContainer = document.createElement('div');
       _this.canvasContainer.className = 'psv-canvas-container';
+      _this.canvasContainer.style.background = _this.psv.config.canvasBackground;
       _this.canvasContainer.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
 
       _this.psv.container.appendChild(_this.canvasContainer);
@@ -5783,19 +5831,32 @@
     }
     /**
      * @summary Apply a SphereCorrection to a Mesh
-     * @param {PSV.SphereCorrection} sphereCorrection
+     * @param {PSV.PanoData} [panoData]
+     * @param {PSV.SphereCorrection} [sphereCorrection]
      * @param {external:THREE.Mesh} [mesh=this.mesh]
      * @package
      */
     ;
 
-    _proto.setSphereCorrection = function setSphereCorrection(sphereCorrection, mesh) {
+    _proto.setSphereCorrection = function setSphereCorrection(panoData, sphereCorrection, mesh) {
       if (mesh === void 0) {
         mesh = this.mesh;
       }
 
-      var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
-      mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll);
+      if (!isNil(panoData == null ? void 0 : panoData.poseHeading) || !isNil(panoData == null ? void 0 : panoData.posePitch) || !isNil(panoData == null ? void 0 : panoData.poseRoll)) {
+        // By Google documentation the angles are applied on the camera in order : heading, pitch, roll
+        // here we apply the reverse transformation on the sphere
+        mesh.rotation.set(-THREE.Math.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0), 'ZXY');
+
+        if (sphereCorrection) {
+          logWarn('sphereCorrection was ignored because panoData already contains pose angles.');
+        }
+      } else if (sphereCorrection) {
+        var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
+        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll);
+      } else {
+        mesh.rotation.set(0, 0, 0);
+      }
     }
     /**
      * @summary Creates the 3D scene and GUI components
@@ -5805,7 +5866,9 @@
 
     _proto.__createScene = function __createScene() {
       this.raycaster = new THREE.Raycaster();
-      this.renderer = new THREE.WebGLRenderer();
+      this.renderer = new THREE.WebGLRenderer({
+        alpha: true
+      });
       this.renderer.setSize(this.prop.size.width, this.prop.size.height);
       this.renderer.setPixelRatio(SYSTEM.pixelRatio);
       this.camera = new THREE.PerspectiveCamera(this.prop.vFov, this.prop.size.width / this.prop.size.height, 1, 3 * SPHERE_RADIUS);
@@ -5885,8 +5948,9 @@
     _proto.transition = function transition(textureData, options) {
       var _this3 = this;
 
-      var texture = textureData.texture;
-      var positionProvided = this.psv.dataHelper.isExtendedPosition(options);
+      var texture = textureData.texture,
+          panoData = textureData.panoData;
+      var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
       var mesh;
 
@@ -5907,10 +5971,7 @@
         mesh.material.map = texture;
         mesh.material.transparent = true;
         mesh.material.opacity = 0;
-
-        if (options.sphereCorrection) {
-          this.setSphereCorrection(options.sphereCorrection, mesh);
-        }
+        this.setSphereCorrection(panoData, options.sphereCorrection, mesh);
       } // rotate the new sphere to make the target position face the camera
 
 
@@ -5969,10 +6030,8 @@
         mesh.geometry.dispose();
         mesh.geometry = null;
 
-        if (options.sphereCorrection) {
-          _this3.setSphereCorrection(options.sphereCorrection);
-        } else {
-          _this3.setSphereCorrection({});
+        if (!_this3.prop.isCubemap) {
+          _this3.setSphereCorrection(panoData, options.sphereCorrection);
         } // actually rotate the camera
 
 
@@ -6106,6 +6165,7 @@
     }
     /**
      * @summary Cancels current HTTP requests
+     * @package
      */
     ;
 
@@ -6221,44 +6281,48 @@
     _proto.__loadEquirectangularTexture = function __loadEquirectangularTexture(panorama, newPanoData) {
       var _this3 = this;
 
-      /* eslint no-shadow: ["error", {allow: ["newPanoData"]}] */
       if (this.prop.isCubemap === true) {
         throw new PSVError('The viewer was initialized with an cubemap, cannot switch to equirectangular panorama.');
       }
 
       this.prop.isCubemap = false;
-      return (newPanoData || !this.config.useXmpData ? this.__loadImage(panorama, function (p) {
+      return (!this.config.useXmpData ? this.__loadImage(panorama, function (p) {
         return _this3.psv.loader.setProgress(p);
       }).then(function (img) {
         return {
           img: img,
-          newPanoData: newPanoData
+          xmpPanoData: null
         };
       }) : this.__loadXMP(panorama, function (p) {
         return _this3.psv.loader.setProgress(p);
-      }).then(function (newPanoData) {
+      }).then(function (xmpPanoData) {
         return _this3.__loadImage(panorama).then(function (img) {
           return {
             img: img,
-            newPanoData: newPanoData
+            xmpPanoData: xmpPanoData
           };
         });
       })).then(function (_ref) {
+        var _newPanoData, _newPanoData2, _newPanoData3, _newPanoData4, _newPanoData5, _newPanoData6, _newPanoData7, _newPanoData8, _newPanoData9;
+
         var img = _ref.img,
-            newPanoData = _ref.newPanoData;
+            xmpPanoData = _ref.xmpPanoData;
 
         if (typeof newPanoData === 'function') {
           // eslint-disable-next-line no-param-reassign
           newPanoData = newPanoData(img);
         }
 
-        var panoData = newPanoData || {
-          fullWidth: img.width,
-          fullHeight: img.height,
-          croppedWidth: img.width,
-          croppedHeight: img.height,
-          croppedX: 0,
-          croppedY: 0
+        var panoData = {
+          fullWidth: firstNonNull((_newPanoData = newPanoData) == null ? void 0 : _newPanoData.fullWidth, xmpPanoData == null ? void 0 : xmpPanoData.fullWidth, img.width),
+          fullHeight: firstNonNull((_newPanoData2 = newPanoData) == null ? void 0 : _newPanoData2.fullHeight, xmpPanoData == null ? void 0 : xmpPanoData.fullHeight, img.height),
+          croppedWidth: firstNonNull((_newPanoData3 = newPanoData) == null ? void 0 : _newPanoData3.croppedWidth, xmpPanoData == null ? void 0 : xmpPanoData.croppedWidth, img.width),
+          croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
+          croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
+          croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
+          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading),
+          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch),
+          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll)
         };
 
         if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
@@ -6292,25 +6356,22 @@
         var a = binary.indexOf('<x:xmpmeta');
         var b = binary.indexOf('</x:xmpmeta>');
         var data = binary.substring(a, b);
-        var panoData = null;
 
         if (a !== -1 && b !== -1 && data.indexOf('GPano:') !== -1) {
-          panoData = {
-            fullWidth: parseInt(getXMPValue(data, 'FullPanoWidthPixels'), 10),
-            fullHeight: parseInt(getXMPValue(data, 'FullPanoHeightPixels'), 10),
-            croppedWidth: parseInt(getXMPValue(data, 'CroppedAreaImageWidthPixels'), 10),
-            croppedHeight: parseInt(getXMPValue(data, 'CroppedAreaImageHeightPixels'), 10),
-            croppedX: parseInt(getXMPValue(data, 'CroppedAreaLeftPixels'), 10),
-            croppedY: parseInt(getXMPValue(data, 'CroppedAreaTopPixels'), 10)
+          return {
+            fullWidth: getXMPValue(data, 'FullPanoWidthPixels'),
+            fullHeight: getXMPValue(data, 'FullPanoHeightPixels'),
+            croppedWidth: getXMPValue(data, 'CroppedAreaImageWidthPixels'),
+            croppedHeight: getXMPValue(data, 'CroppedAreaImageHeightPixels'),
+            croppedX: getXMPValue(data, 'CroppedAreaLeftPixels'),
+            croppedY: getXMPValue(data, 'CroppedAreaTopPixels'),
+            poseHeading: getXMPValue(data, 'PoseHeadingDegrees'),
+            posePitch: getXMPValue(data, 'PosePitchDegrees'),
+            poseRoll: getXMPValue(data, 'PoseRollDegrees')
           };
-
-          if (!panoData.fullWidth || !panoData.fullHeight || !panoData.croppedWidth || !panoData.croppedHeight) {
-            logWarn('invalid XMP data');
-            panoData = null;
-          }
         }
 
-        return panoData;
+        return null;
       });
     }
     /**
@@ -6328,13 +6389,17 @@
       if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
         var resizedPanoData = _extends({}, panoData);
 
-        var ratio = SYSTEM.maxCanvasWidth / panoData.fullWidth;
-        resizedPanoData.fullWidth *= ratio;
-        resizedPanoData.fullHeight *= ratio;
-        resizedPanoData.croppedWidth *= ratio;
-        resizedPanoData.croppedHeight *= ratio;
-        resizedPanoData.croppedX *= ratio;
-        resizedPanoData.croppedY *= ratio;
+        var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
+
+        if (ratio < 1) {
+          resizedPanoData.fullWidth *= ratio;
+          resizedPanoData.fullHeight *= ratio;
+          resizedPanoData.croppedWidth *= ratio;
+          resizedPanoData.croppedHeight *= ratio;
+          resizedPanoData.croppedX *= ratio;
+          resizedPanoData.croppedY *= ratio;
+        }
+
         var buffer = document.createElement('canvas');
         buffer.width = resizedPanoData.fullWidth;
         buffer.height = resizedPanoData.fullHeight;
@@ -6407,7 +6472,7 @@
 
       if (img.width > SYSTEM.maxTextureWidth) {
         var buffer = document.createElement('canvas');
-        var ratio = SYSTEM.maxCanvasWidth / img.width;
+        var ratio = SYSTEM.getMaxCanvasWidth() / img.width;
         buffer.width = img.width * ratio;
         buffer.height = img.height * ratio;
         var ctx = buffer.getContext('2d');
@@ -6424,7 +6489,7 @@
     }
     /**
      * @summary Preload a panorama file without displaying it
-     * @param {string} panorama
+     * @param {string|string[]|PSV.Cubemap} panorama
      * @returns {Promise}
      */
     ;
@@ -6890,7 +6955,7 @@
         throw new PSVError('WebGL is not supported.');
       }
 
-      if (SYSTEM.maxCanvasWidth === 0 || SYSTEM.maxTextureWidth === 0) {
+      if (SYSTEM.maxTextureWidth === 0) {
         throw new PSVError('Unable to detect system capabilities');
       }
       /**
@@ -7293,7 +7358,8 @@
 
       if (this.prop.loadingPromise !== null) {
         this.textureLoader.abortLoading();
-      }
+      } // apply default parameters on first load
+
 
       if (!this.prop.ready) {
         if (!('longitude' in options) && !this.prop.isCubemap) {
@@ -7325,7 +7391,7 @@
         options.showLoader = true;
       }
 
-      var positionProvided = this.dataHelper.isExtendedPosition(options);
+      var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
 
       if (positionProvided || zoomProvided) {
@@ -7365,9 +7431,7 @@
         this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
           _this3.renderer.setTexture(textureData);
 
-          if (options.sphereCorrection) {
-            _this3.renderer.setSphereCorrection(options.sphereCorrection);
-          }
+          _this3.renderer.setSphereCorrection(textureData.panoData, options.sphereCorrection);
 
           if (zoomProvided) {
             _this3.zoom(options.zoom);
@@ -7382,7 +7446,7 @@
           this.loader.show();
         }
 
-        this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama).then(function (textureData) {
+        this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
           _this3.loader.hide();
 
           return _this3.renderer.transition(textureData, options);
@@ -7428,7 +7492,7 @@
             break;
 
           case 'sphereCorrection':
-            _this4.renderer.setSphereCorrection(value);
+            _this4.renderer.setSphereCorrection(_this4.prop.panoData, value);
 
             break;
 
@@ -7448,6 +7512,10 @@
 
             _this4.trigger(EVENTS.ZOOM_UPDATED, _this4.getZoomLevel());
 
+            break;
+
+          case 'canvasBackground':
+            _this4.renderer.canvasContainer.style.background = _this4.config.canvasBackground;
             break;
         }
       });
@@ -7585,7 +7653,7 @@
 
       this.__stopAll();
 
-      var positionProvided = this.dataHelper.isExtendedPosition(options);
+      var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
       var animProperties = {};
       var duration; // clean/filter position and compute duration

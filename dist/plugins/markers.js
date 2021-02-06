@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.1.0
+* Photo Sphere Viewer 4.2.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -57,8 +57,8 @@
         φ1 = p1[1];
     var λ2 = p2[0],
         φ2 = p2[1];
-    var r = photoSphereViewer.utils.greatArcDistance(p1, p2) * photoSphereViewer.CONSTANTS.SPHERE_RADIUS;
-    var a = Math.sin((1 - f) * r) / Math.sin(r / photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
+    var r = photoSphereViewer.utils.greatArcDistance(p1, p2);
+    var a = Math.sin((1 - f) * r) / Math.sin(r);
     var b = Math.sin(f * r) / Math.sin(r);
     var x = a * Math.cos(φ1) * Math.cos(λ1) + b * Math.cos(φ2) * Math.cos(λ2);
     var y = a * Math.cos(φ1) * Math.sin(λ1) + b * Math.cos(φ2) * Math.sin(λ2);
@@ -74,10 +74,28 @@
    */
 
   function getPolygonCenter(polygon) {
-    var sum = polygon.reduce(function (intermediary, point) {
+    // apply offsets to avoid crossing the origin
+    var workPoints = [polygon[0]];
+    var k = 0;
+
+    for (var i = 1; i < polygon.length; i++) {
+      var d = polygon[i - 1][0] - polygon[i][0];
+
+      if (d > Math.PI) {
+        // crossed the origin left to right
+        k += 1;
+      } else if (d < -Math.PI) {
+        // crossed the origin right to left
+        k -= 1;
+      }
+
+      workPoints.push([polygon[i][0] + k * 2 * Math.PI, polygon[i][1]]);
+    }
+
+    var sum = workPoints.reduce(function (intermediary, point) {
       return [intermediary[0] + point[0], intermediary[1] + point[1]];
     });
-    return [sum[0] / polygon.length, sum[1] / polygon.length];
+    return [photoSphereViewer.utils.parseAngle(sum[0] / polygon.length), sum[1] / polygon.length];
   }
   /**
    * @summary Computes the middle point of a polyline
@@ -100,14 +118,14 @@
 
     var consumed = 0;
 
-    for (var _i = 0; _i < polyline.length - 1; _i++) {
+    for (var j = 0; j < polyline.length - 1; j++) {
       // once the segment containing the middle point is found, computes the intermediary point
-      if (consumed + lengths[_i] > length / 2) {
-        var r = (length / 2 - consumed) / lengths[_i];
-        return greatArcIntermediaryPoint(polyline[_i], polyline[_i + 1], r);
+      if (consumed + lengths[j] > length / 2) {
+        var r = (length / 2 - consumed) / lengths[j];
+        return greatArcIntermediaryPoint(polyline[j], polyline[j + 1], r);
       }
 
-      consumed += lengths[_i];
+      consumed += lengths[j];
     } // this never happens
 
 
@@ -154,16 +172,6 @@
     function Marker(properties, psv) {
       if (!properties.id) {
         throw new photoSphereViewer.PSVError('missing marker id');
-      }
-
-      if (properties.image && (!properties.width || !properties.height)) {
-        throw new photoSphereViewer.PSVError('missing marker width/height');
-      }
-
-      if (properties.image || properties.html) {
-        if ((!('x' in properties) || !('y' in properties)) && (!('latitude' in properties) || !('longitude' in properties))) {
-          throw new photoSphereViewer.PSVError('missing marker position, latitude/longitude or x/y');
-        }
       }
       /**
        * @member {PSV.Viewer}
@@ -432,7 +440,7 @@
     /**
      * @summary Updates the marker with new properties
      * @param {PSV.plugins.MarkersPlugin.Properties} properties
-     * @throws {PSV.PSVError} when trying to change the marker's type
+     * @throws {PSV.PSVError} when the configuration is incorrect
      */
     ;
 
@@ -495,6 +503,14 @@
     ;
 
     _proto.__updateNormal = function __updateNormal() {
+      if (!photoSphereViewer.utils.isExtendedPosition(this.config)) {
+        throw new photoSphereViewer.PSVError('missing marker position, latitude/longitude or x/y');
+      }
+
+      if (this.config.image && (!this.config.width || !this.config.height)) {
+        throw new photoSphereViewer.PSVError('missing marker width/height');
+      }
+
       if (this.config.width && this.config.height) {
         this.props.dynamicSize = false;
         this.props.width = this.config.width;
@@ -528,6 +544,10 @@
 
     _proto.__updateSvg = function __updateSvg() {
       var _this = this;
+
+      if (!photoSphereViewer.utils.isExtendedPosition(this.config)) {
+        throw new photoSphereViewer.PSVError('missing marker position, latitude/longitude or x/y');
+      }
 
       this.props.dynamicSize = true; // set content
 
@@ -1532,11 +1552,14 @@
           isVisible = positions.length > (marker.isPolygon() ? 2 : 1);
 
           if (isVisible) {
-            marker.props.position2D = _this6.__getMarkerPosition(marker);
+            var position = _this6.__getMarkerPosition(marker);
+
+            marker.props.position2D = position;
             var points = positions.map(function (pos) {
-              return pos.x + ',' + pos.y;
+              return pos.x - position.x + ',' + (pos.y - position.y);
             }).join(' ');
             marker.$el.setAttributeNS(null, 'points', points);
+            marker.$el.setAttributeNS(null, 'transform', "translate(" + position.x + " " + position.y + ")");
           }
         } else if (isVisible) {
           if (marker.props.dynamicSize) {
@@ -1545,15 +1568,15 @@
 
           var scale = marker.getScale(_this6.psv.getZoomLevel());
 
-          var position = _this6.__getMarkerPosition(marker, scale);
+          var _position = _this6.__getMarkerPosition(marker, scale);
 
-          isVisible = _this6.__isMarkerVisible(marker, position);
+          isVisible = _this6.__isMarkerVisible(marker, _position);
 
           if (isVisible) {
-            marker.props.position2D = position;
+            marker.props.position2D = _position;
 
             if (marker.isSvg()) {
-              var transform = "translate(" + position.x + ", " + position.y + ")";
+              var transform = "translate(" + _position.x + ", " + _position.y + ")";
 
               if (scale !== 1) {
                 transform += " scale(" + scale + ", " + scale + ")";
@@ -1561,7 +1584,7 @@
 
               marker.$el.setAttributeNS(null, 'transform', transform);
             } else {
-              var _transform = "translate3D(" + position.x + "px, " + position.y + "px, 0px)";
+              var _transform = "translate3D(" + _position.x + "px, " + _position.y + "px, 0px)";
 
               if (scale !== 1) {
                 _transform += " scale(" + scale + ", " + scale + ")";

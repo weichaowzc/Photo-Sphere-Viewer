@@ -22,6 +22,7 @@ import {
   exitFullscreen,
   getAngle,
   getShortestArc,
+  isExtendedPosition,
   isFullscreenEnabled,
   requestFullscreen,
   throttle,
@@ -52,7 +53,7 @@ export class Viewer extends EventEmitter {
       throw new PSVError('WebGL is not supported.');
     }
 
-    if (SYSTEM.maxCanvasWidth === 0 || SYSTEM.maxTextureWidth === 0) {
+    if (SYSTEM.maxTextureWidth === 0) {
       throw new PSVError('Unable to detect system capabilities');
     }
 
@@ -432,6 +433,7 @@ export class Viewer extends EventEmitter {
       this.textureLoader.abortLoading();
     }
 
+    // apply default parameters on first load
     if (!this.prop.ready) {
       if (!('longitude' in options) && !this.prop.isCubemap) {
         options.longitude = this.config.defaultLong;
@@ -457,7 +459,7 @@ export class Viewer extends EventEmitter {
       options.showLoader = true;
     }
 
-    const positionProvided = this.dataHelper.isExtendedPosition(options);
+    const positionProvided = isExtendedPosition(options);
     const zoomProvided = 'zoom' in options;
 
     if (positionProvided || zoomProvided) {
@@ -498,10 +500,8 @@ export class Viewer extends EventEmitter {
       this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData)
         .then((textureData) => {
           this.renderer.setTexture(textureData);
+          this.renderer.setSphereCorrection(textureData.panoData, options.sphereCorrection);
 
-          if (options.sphereCorrection) {
-            this.renderer.setSphereCorrection(options.sphereCorrection);
-          }
           if (zoomProvided) {
             this.zoom(options.zoom);
           }
@@ -516,7 +516,7 @@ export class Viewer extends EventEmitter {
         this.loader.show();
       }
 
-      this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama)
+      this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData)
         .then((textureData) => {
           this.loader.hide();
 
@@ -560,7 +560,7 @@ export class Viewer extends EventEmitter {
           break;
 
         case 'sphereCorrection':
-          this.renderer.setSphereCorrection(value);
+          this.renderer.setSphereCorrection(this.prop.panoData, value);
           break;
 
         case 'navbar':
@@ -576,6 +576,10 @@ export class Viewer extends EventEmitter {
         case 'maxFov':
           this.prop.zoomLvl = this.dataHelper.fovToZoomLevel(this.prop.vFov);
           this.trigger(EVENTS.ZOOM_UPDATED, this.getZoomLevel());
+          break;
+
+        case 'canvasBackground':
+          this.renderer.canvasContainer.style.background = this.config.canvasBackground;
           break;
 
         default:
@@ -709,7 +713,7 @@ export class Viewer extends EventEmitter {
   animate(options) {
     this.__stopAll();
 
-    const positionProvided = this.dataHelper.isExtendedPosition(options);
+    const positionProvided = isExtendedPosition(options);
     const zoomProvided = 'zoom' in options;
 
     const animProperties = {};

@@ -12,23 +12,37 @@ export function logWarn(message) {
 }
 
 /**
+ * @summary Checks if an object is a {PSV.ExtendedPosition}, ie has x/y or longitude/latitude
+ * @memberOf PSV.utils
+ * @param {object} object
+ * @returns {boolean}
+ */
+export function isExtendedPosition(object) {
+  return [['x', 'y'], ['longitude', 'latitude']].some(([key1, key2]) => {
+    return object[key1] !== undefined && object[key2] !== undefined;
+  });
+}
+
+/**
  * @summary Returns the value of a given attribute in the panorama metadata
  * @memberOf PSV.utils
  * @param {string} data
  * @param {string} attr
- * @returns (string)
+ * @returns (number)
  */
 export function getXMPValue(data, attr) {
   // XMP data are stored in children
   let result = data.match('<GPano:' + attr + '>(.*)</GPano:' + attr + '>');
   if (result !== null) {
-    return result[1];
+    const val = parseInt(result[1], 10);
+    return isNaN(val) ? null : val;
   }
 
   // XMP data are stored in attributes
   result = data.match('GPano:' + attr + '="(.*?)"');
   if (result !== null) {
-    return result[1];
+    const val = parseInt(result[1], 10);
+    return isNaN(val) ? null : val;
   }
 
   return null;

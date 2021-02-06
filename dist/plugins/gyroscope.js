@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.1.0
+* Photo Sphere Viewer 4.2.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -92,23 +92,23 @@
       if (window.DeviceOrientationEvent !== undefined && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
         window.DeviceOrientationEvent.requestPermission().then(function (response) {
           if (response == 'granted') {
-            window.addEventListener('orientationchange', onScreenOrientationChangeEvent, false);
-            window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent, false);
+            window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
+            window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
           }
         }).catch(function (error) {
           console.error('THREE.DeviceOrientationControls: Unable to use DeviceOrientation API:', error);
         });
       } else {
-        window.addEventListener('orientationchange', onScreenOrientationChangeEvent, false);
-        window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent, false);
+        window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
+        window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
       }
 
       scope.enabled = true;
     };
 
     this.disconnect = function () {
-      window.removeEventListener('orientationchange', onScreenOrientationChangeEvent, false);
-      window.removeEventListener('deviceorientation', onDeviceOrientationChangeEvent, false);
+      window.removeEventListener('orientationchange', onScreenOrientationChangeEvent);
+      window.removeEventListener('deviceorientation', onDeviceOrientationChangeEvent);
       scope.enabled = false;
     };
 

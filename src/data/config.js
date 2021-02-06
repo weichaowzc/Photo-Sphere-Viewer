@@ -21,11 +21,7 @@ export const DEFAULTS = {
   defaultZoomLvl     : 50,
   defaultLong        : 0,
   defaultLat         : 0,
-  sphereCorrection   : {
-    pan : 0,
-    tilt: 0,
-    roll: 0,
-  },
+  sphereCorrection   : null,
   moveSpeed          : 1,
   zoomButtonIncrement: 2,
   autorotateDelay    : null,
@@ -40,6 +36,7 @@ export const DEFAULTS = {
   touchmoveTwoFingers: false,
   useXmpData         : true,
   panoData           : null,
+  canvasBackground   : '#000',
   withCredentials    : false,
   navbar             : [
     'autorotate',
@@ -97,6 +94,10 @@ export const CONFIG_PARSERS = {
       throw new PSVError('No value given for container.');
     }
     return container;
+  },
+  defaultLong    : (defaultLong) => {
+    // defaultLat is between 0 and PI
+    return parseAngle(defaultLong);
   },
   defaultLat     : (defaultLat) => {
     // defaultLat is between -PI/2 and PI/2

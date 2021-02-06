@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.1.0
+* Photo Sphere Viewer 4.2.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -165,7 +165,7 @@
             pt = {
               markerId: pt
             };
-          } else if (_this2.psv.dataHelper.isExtendedPosition(pt)) {
+          } else if (photoSphereViewer.utils.isExtendedPosition(pt)) {
             // eslint-disable-next-line no-param-reassign
             pt = {
               position: pt
