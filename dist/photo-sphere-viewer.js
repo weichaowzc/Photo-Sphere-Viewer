@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.2.0
+* Photo Sphere Viewer 4.2.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -3148,6 +3148,7 @@
     defaultLong: 0,
     defaultLat: 0,
     sphereCorrection: null,
+    sphereCorrectionReorder: false,
     moveSpeed: 1,
     zoomButtonIncrement: 2,
     autorotateDelay: null,
@@ -4131,19 +4132,12 @@
     /**
      * @summary Displays an overlay on the viewer
      * @param {Object|string} config
-     * @param {string} [config.id]
-     * @param {string} config.image
-     * @param {string} config.text
-     * @param {string} [config.subtext]
-     * @param {boolean} [config.dissmisable=true]
+     * @param {string} [config.id] - unique identifier to use with "hide"
+     * @param {string} config.image - SVG image/icon displayed above the text
+     * @param {string} config.text - main message
+     * @param {string} [config.subtext] - secondary message
+     * @param {boolean} [config.dissmisable=true] - if the user can hide the overlay by clicking
      * @fires PSV.show-overlay
-     *
-     * @example
-     * viewer.showOverlay({
-     *   image: '<svg></svg>',
-     *   text: '....',
-     *   subtext: '....'
-     * })
      */
     ;
 
@@ -4224,7 +4218,8 @@
         mouseX: 0,
         mouseY: 0,
         mousedown: false,
-        clickHandler: null
+        clickHandler: null,
+        width: {}
       });
       var resizer = document.createElement('div');
       resizer.className = 'psv-panel-resizer';
@@ -4352,10 +4347,11 @@
     /**
      * @summary Shows the panel
      * @param {string|Object} config
-     * @param {string} [config.id]
-     * @param {string} config.content
-     * @param {boolean} [config.noMargin=false]
-     * @param {Function} [config.clickHandler]
+     * @param {string} [config.id] - unique identifier to use with "hide" and to store the user desired width
+     * @param {string} config.content - HTML content of the panel
+     * @param {boolean} [config.noMargin=false] - remove the default margins
+     * @param {string} [config.width] - initial width, if not specified the default width will be used
+     * @param {Function} [config.clickHandler] - called when the user clicks inside the panel
      * @fires PSV.open-panel
      */
     ;
@@ -4373,6 +4369,14 @@
       if (this.prop.clickHandler) {
         this.content.removeEventListener('click', this.prop.clickHandler);
         this.prop.clickHandler = null;
+      }
+
+      if (config.id && this.prop.width[config.id]) {
+        this.container.style.width = this.prop.width[config.id];
+      } else if (config.width) {
+        this.container.style.width = config.width;
+      } else {
+        this.container.style.width = null;
       }
 
       this.content.innerHTML = config.content;
@@ -4497,7 +4501,13 @@
     _proto.__resize = function __resize(evt) {
       var x = evt.clientX;
       var y = evt.clientY;
-      this.container.style.width = Math.max(PANEL_MIN_WIDTH, this.container.offsetWidth - (x - this.prop.mouseX)) + 'px';
+      var width = Math.max(PANEL_MIN_WIDTH, this.container.offsetWidth - (x - this.prop.mouseX)) + 'px';
+
+      if (this.prop.contentId) {
+        this.prop.width[this.prop.contentId] = width;
+      }
+
+      this.container.style.width = width;
       this.prop.mouseX = x;
       this.prop.mouseY = y;
     };
@@ -4699,7 +4709,7 @@
     _proto.viewerCoordsToVector3 = function viewerCoordsToVector3(viewerPoint) {
       var screen = new THREE.Vector2(2 * viewerPoint.x / this.prop.size.width - 1, -2 * viewerPoint.y / this.prop.size.height + 1);
       this.psv.renderer.raycaster.setFromCamera(screen, this.psv.renderer.camera);
-      var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children);
+      var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
 
       if (intersects.length === 1) {
         return intersects[0].point;
@@ -5671,6 +5681,13 @@
 
       _this.mesh = null;
       /**
+       * @member {external:THREE.Group}
+       * @readonly
+       * @private
+       */
+
+      _this.meshContainer = null;
+      /**
        * @member {external:THREE.Raycaster}
        * @readonly
        * @protected
@@ -5728,6 +5745,7 @@
       delete this.scene;
       delete this.camera;
       delete this.mesh;
+      delete this.meshContainer;
       delete this.raycaster;
 
       _AbstractService.prototype.destroy.call(this);
@@ -5830,15 +5848,14 @@
       this.psv.trigger(EVENTS.PANORAMA_LOADED);
     }
     /**
-     * @summary Apply a SphereCorrection to a Mesh
+     * @summary Apply a panorama data pose to a Mesh
      * @param {PSV.PanoData} [panoData]
-     * @param {PSV.SphereCorrection} [sphereCorrection]
      * @param {external:THREE.Mesh} [mesh=this.mesh]
      * @package
      */
     ;
 
-    _proto.setSphereCorrection = function setSphereCorrection(panoData, sphereCorrection, mesh) {
+    _proto.setPanoramaPose = function setPanoramaPose(panoData, mesh) {
       if (mesh === void 0) {
         mesh = this.mesh;
       }
@@ -5847,13 +5864,35 @@
         // By Google documentation the angles are applied on the camera in order : heading, pitch, roll
         // here we apply the reverse transformation on the sphere
         mesh.rotation.set(-THREE.Math.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0), 'ZXY');
+      } else {
+        mesh.rotation.set(0, 0, 0);
+      }
+    }
+    /**
+     * @summary Apply a SphereCorrection to a Mesh
+     * @param {PSV.SphereCorrection} [sphereCorrection]
+     * @param {external:THREE.Mesh} [mesh=this.meshContainer]
+     * @package
+     */
+    ;
 
-        if (sphereCorrection) {
-          logWarn('sphereCorrection was ignored because panoData already contains pose angles.');
-        }
-      } else if (sphereCorrection) {
+    _proto.setSphereCorrection = function setSphereCorrection(sphereCorrection, mesh) {
+      if (mesh === void 0) {
+        mesh = this.meshContainer;
+      }
+
+      if (sphereCorrection) {
         var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
-        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll);
+
+        if (!this.config.sphereCorrectionReorder) {
+          var nonZeros = (cleanCorrection.tilt !== 0) + (cleanCorrection.pan !== 0) + (cleanCorrection.roll !== 0);
+
+          if (nonZeros > 1) {
+            logWarn("\"sphereCorrection\" computation will change in a future version. \n            Please set \"sphereCorrectionReorder: true\" and modify your correction accordingly.");
+          }
+        }
+
+        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll, this.config.sphereCorrectionReorder ? 'ZXY' : 'XYZ');
       } else {
         mesh.rotation.set(0, 0, 0);
       }
@@ -5882,7 +5921,9 @@
         this.mesh = this.__createSphere();
       }
 
-      this.scene.add(this.mesh); // create canvas container
+      this.meshContainer = new THREE.Group();
+      this.meshContainer.add(this.mesh);
+      this.scene.add(this.meshContainer); // create canvas container
 
       this.renderer.domElement.className = 'psv-canvas';
       this.canvasContainer.appendChild(this.renderer.domElement);
@@ -5952,6 +5993,7 @@
           panoData = textureData.panoData;
       var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
+      var group = new THREE.Group();
       var mesh;
 
       if (this.prop.isCubemap) {
@@ -5971,7 +6013,8 @@
         mesh.material.map = texture;
         mesh.material.transparent = true;
         mesh.material.opacity = 0;
-        this.setSphereCorrection(panoData, options.sphereCorrection, mesh);
+        this.setPanoramaPose(panoData, mesh);
+        this.setSphereCorrection(options.sphereCorrection, group);
       } // rotate the new sphere to make the target position face the camera
 
 
@@ -5979,10 +6022,10 @@
         var cleanPosition = this.psv.dataHelper.cleanPosition(options); // Longitude rotation along the vertical axis
 
         var verticalAxis = new THREE.Vector3(0, 1, 0);
-        mesh.rotateOnWorldAxis(verticalAxis, cleanPosition.longitude - this.prop.position.longitude); // Latitude rotation along the camera horizontal axis
+        group.rotateOnWorldAxis(verticalAxis, cleanPosition.longitude - this.prop.position.longitude); // Latitude rotation along the camera horizontal axis
 
         var horizontalAxis = new THREE.Vector3(0, 1, 0).cross(this.camera.getWorldDirection(new THREE.Vector3())).normalize();
-        mesh.rotateOnWorldAxis(horizontalAxis, cleanPosition.latitude - this.prop.position.latitude); // TODO: find a better way to handle ranges
+        group.rotateOnWorldAxis(horizontalAxis, cleanPosition.latitude - this.prop.position.latitude); // TODO: find a better way to handle ranges
 
         if (this.config.latitudeRange || this.config.longitudeRange) {
           this.config.longitudeRange = null;
@@ -5991,7 +6034,8 @@
         }
       }
 
-      this.scene.add(mesh);
+      group.add(mesh);
+      this.scene.add(group);
       this.psv.needsUpdate();
       return new Animation({
         properties: {
@@ -6025,13 +6069,15 @@
         // remove temp sphere and transfer the texture to the main sphere
         _this3.setTexture(textureData);
 
-        _this3.scene.remove(mesh);
+        _this3.scene.remove(group);
 
         mesh.geometry.dispose();
         mesh.geometry = null;
 
         if (!_this3.prop.isCubemap) {
-          _this3.setSphereCorrection(panoData, options.sphereCorrection);
+          _this3.setPanoramaPose(panoData);
+
+          _this3.setSphereCorrection(options.sphereCorrection);
         } // actually rotate the camera
 
 
@@ -7431,7 +7477,9 @@
         this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
           _this3.renderer.setTexture(textureData);
 
-          _this3.renderer.setSphereCorrection(textureData.panoData, options.sphereCorrection);
+          _this3.renderer.setPanoramaPose(textureData.panoData);
+
+          _this3.renderer.setSphereCorrection(options.sphereCorrection);
 
           if (zoomProvided) {
             _this3.zoom(options.zoom);
@@ -7492,7 +7540,7 @@
             break;
 
           case 'sphereCorrection':
-            _this4.renderer.setSphereCorrection(_this4.prop.panoData, value);
+            _this4.renderer.setSphereCorrection(value);
 
             break;
 

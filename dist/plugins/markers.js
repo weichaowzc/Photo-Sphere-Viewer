@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.2.0
+* Photo Sphere Viewer 4.2.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1307,17 +1307,17 @@
     }
     /**
      * @summary Removes a marker from the viewer
-     * @param {*} markerOrId
+     * @param {string} markerId
      * @param {boolean} [render=true] - renders the marker immediately
      */
     ;
 
-    _proto.removeMarker = function removeMarker(markerOrId, render) {
+    _proto.removeMarker = function removeMarker(markerId, render) {
       if (render === void 0) {
         render = true;
       }
 
-      var marker = this.getMarker(markerOrId);
+      var marker = this.getMarker(markerId);
 
       if (marker.isNormal()) {
         this.container.removeChild(marker.$el);
@@ -1445,18 +1445,6 @@
       this.renderMarkers();
     }
     /**
-     * @summary Toggles the visibility of markers list
-     */
-    ;
-
-    _proto.toggleMarkersList = function toggleMarkersList() {
-      if (this.psv.panel.prop.contentId === MarkersPlugin.ID_PANEL_MARKERS_LIST) {
-        this.hideMarkersList();
-      } else {
-        this.showMarkersList();
-      }
-    }
-    /**
      * @summary Opens the panel with the content of the marker
      * @param {string} markerId
      */
@@ -1474,6 +1462,18 @@
         });
       } else {
         this.psv.panel.hide(MarkersPlugin.ID_PANEL_MARKER);
+      }
+    }
+    /**
+     * @summary Toggles the visibility of markers list
+     */
+    ;
+
+    _proto.toggleMarkersList = function toggleMarkersList() {
+      if (this.psv.panel.prop.contentId === MarkersPlugin.ID_PANEL_MARKERS_LIST) {
+        this.hideMarkersList();
+      } else {
+        this.showMarkersList();
       }
     }
     /**
@@ -1951,7 +1951,9 @@
     ;
 
     _proto.__refreshUi = function __refreshUi() {
-      var nbMarkers = this.getNbMarkers();
+      var nbMarkers = Object.values(this.markers).filter(function (m) {
+        return !m.config.hideList;
+      }).length;
       var markersButton = this.psv.navbar.getButton(MarkersButton.id, false);
       var markersListButton = this.psv.navbar.getButton(MarkersListButton.id, false);
 

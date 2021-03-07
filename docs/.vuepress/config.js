@@ -43,6 +43,17 @@ module.exports = {
             'cubemap',
             'cropped-panorama',
             'migration-v3',
+            {
+              title: 'Reusable components',
+              path: '/guide/components/',
+              collapsable : false,
+              children: [
+                'components/panel',
+                'components/notification',
+                'components/overlay',
+                'components/tooltip',
+              ],
+            },
           ],
         },
       ],

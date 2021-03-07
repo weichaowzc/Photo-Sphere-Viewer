@@ -63,6 +63,7 @@ One of these options is required.
 |---|---|---|
 | `image` | `string` | Path to the image representing the marker. Requires `width` and `height` to be defined. |
 | `html` | `string` | HTML content of the marker. It is recommended to define `width` and `height`. |
+| `square` | `integer` | Size of the square. |
 | `rect` | `integer[2] |`<br>`{width:int,height:int}` | Size of the rectangle. |
 | `circle` | `integer` | Radius of the circle. |
 | `ellipse` | `integer[2] |`<br>`{cx:int,cy:int}` | Radiuses of the ellipse. |
@@ -78,6 +79,7 @@ One of these options is required.
 {
   image: 'pin-red.png',
   html: 'Click here',
+  square: 10,
   rect: [10, 5],
   rect: {width: 10, height: 5},
   circle: 10,
@@ -100,24 +102,24 @@ Texture coordinates are not applicable to cubemaps.
 ## Markers options
 
 #### `id` (required)
-- type : `string`
+- type: `string`
 
 Unique identifier of the marker.
 
 #### `x` & `y` or `latitude` & `longitude` (required)
-- type : `integer` or `double`
+- type: `integer` or `double`
 
 Position of the marker in **texture coordinates** (pixels) or **spherical coordinates** (radians).
 _(This option is ignored for polygons and polylines)_
 
 #### `width` & `height` (required for images, recommended for html)
-- type : `integer`
+- type: `integer`
 
 Size of the marker.
 _(This option is ignored for polygons and polylines)_
 
 #### `scale`
-- type : `double | double[]`
+- type: `double | double[]`
 
 Scale factor multiplied by the zoom level. Provide an array of two values for min and max.
 By default the scale is constant.
@@ -130,12 +132,12 @@ scale: [0.5, 1] // at minimum zoom level the marker is half its size at maximum 
 ```
 
 #### `className`
-- type : `string`
+- type: `string`
 
 CSS class(es) added to the marker element.
 
 #### `style`
-- type : `object`
+- type: `object`
 
 CSS properties to set on the marker (background, border, etc.).
 
@@ -147,7 +149,7 @@ style: {
 ```
 
 #### `svgStyle`
-- type : `object`
+- type: `object`
 
 SVG properties to set on the marker (fill, stroke, etc.). _Only for SVG and polygons/polylines markers._
 
@@ -179,21 +181,21 @@ And use it in your marker : `fill: 'url(#image)'`.
 :::
 
 #### `anchor`
-- type : `string`
-- default : `'center center'`
+- type: `string`
+- default: `'center center'`
 
 Defines where the marker is placed toward its defined position. Any CSS position is valid like `bottom center` or `20% 80%`.
 _(This option is ignored for polygons and polylines)_
 
 #### `visible`
-- type : `boolean`
-- default : `true`
+- type: `boolean`
+- default: `true`
 
 Initial visibility of the marker.
 
 #### `tooltip`
-- type : `string | {content: string, position: string}`
-- default : `{content: null, position: 'top center'}`
+- type: `string | {content: string, position: string}`
+- default: `{content: null, position: 'top center'}`
 
 Tooltip content and position. Accepted positions are combinations of `top`, `center`, `bottom` and `left`, `center`, `right` with the exception of `center center`.
 
@@ -207,12 +209,18 @@ tooltip: { // tooltip with custom position
 ```
 
 #### `content`
-- type : `string`
+- type: `string`
 
 HTML content that will be displayed on the side panel when the marker is clicked.
 
+#### `hideList`
+- type: `boolean`
+- default: `false`
+
+Hide the marker in the markers list.
+
 #### `data`
-- type : `any`
+- type: `any`
 
 Any custom data you want to attach to the marker.
 
