@@ -1,19 +1,29 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.SettingsPlugin = factory(global.PhotoSphereViewer)));
-}(this, (function (photoSphereViewer) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.SettingsPlugin = {}), global.PhotoSphereViewer));
+}(this, (function (exports, photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -381,7 +391,6 @@
 
     return SettingsPlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   SettingsPlugin.id = 'settings';
   SettingsPlugin.ID_PANEL = 'settings';
   SettingsPlugin.SETTING_DATA = 'settingId';
@@ -407,7 +416,9 @@
     }).join('') + "\n  </ul>\n";
   };
 
-  return SettingsPlugin;
+  exports.SettingsPlugin = SettingsPlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=settings.js.map

@@ -1,5 +1,5 @@
-import { AbstractPlugin, utils, CONSTANTS, Animation } from 'photo-sphere-viewer';
 import * as THREE from 'three';
+import { AbstractPlugin, Animation, CONSTANTS, utils } from '../..';
 
 /**
  * @typedef {Object} PSV.plugins.VisibleRangePlugin.Options
@@ -13,7 +13,7 @@ import * as THREE from 'three';
  * @extends PSV.plugins.AbstractPlugin
  * @memberof PSV.plugins
  */
-export default class VisibleRangePlugin extends AbstractPlugin {
+export class VisibleRangePlugin extends AbstractPlugin {
 
   static id = 'visible-range';
 
@@ -31,7 +31,7 @@ export default class VisibleRangePlugin extends AbstractPlugin {
     this.config = {
       latitudeRange : null,
       longitudeRange: null,
-      usePanoData: false,
+      usePanoData   : false,
     };
 
     if (options) {
@@ -41,6 +41,7 @@ export default class VisibleRangePlugin extends AbstractPlugin {
     }
 
     this.psv.on(CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+    this.psv.on(CONSTANTS.EVENTS.ZOOM_UPDATED, this);
     this.psv.on(CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
     this.psv.on(CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
   }
@@ -50,6 +51,7 @@ export default class VisibleRangePlugin extends AbstractPlugin {
    */
   destroy() {
     this.psv.off(CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+    this.psv.off(CONSTANTS.EVENTS.ZOOM_UPDATED, this);
     this.psv.off(CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
     this.psv.off(CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
 
@@ -80,6 +82,13 @@ export default class VisibleRangePlugin extends AbstractPlugin {
         this.setRangesFromPanoData();
       }
     }
+    else if (e.type === CONSTANTS.EVENTS.ZOOM_UPDATED) {
+      const currentPosition = this.psv.getPosition();
+      const { rangedPosition } = this.applyRanges(currentPosition);
+      if (currentPosition.longitude !== rangedPosition.longitude || currentPosition.latitude !== rangedPosition.latitude) {
+        this.psv.rotate(rangedPosition);
+      }
+    }
   }
 
   /**
@@ -90,13 +99,11 @@ export default class VisibleRangePlugin extends AbstractPlugin {
     // latitude range must have two values
     if (range && range.length !== 2) {
       utils.logWarn('latitude range must have exactly two elements');
-      // eslint-disable-next-line no-param-reassign
       range = null;
     }
     // latitude range must be ordered
     else if (range && range[0] > range[1]) {
       utils.logWarn('latitude range values must be ordered');
-      // eslint-disable-next-line no-param-reassign
       range = [range[1], range[0]];
     }
     // latitude range is between -PI/2 and PI/2
@@ -120,7 +127,6 @@ export default class VisibleRangePlugin extends AbstractPlugin {
     // longitude range must have two values
     if (range && range.length !== 2) {
       utils.logWarn('longitude range must have exactly two elements');
-      // eslint-disable-next-line no-param-reassign
       range = null;
     }
     // longitude range is between 0 and 2*PI

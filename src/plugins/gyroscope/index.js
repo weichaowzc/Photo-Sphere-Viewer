@@ -1,12 +1,8 @@
-import { AbstractPlugin, CONSTANTS, DEFAULTS, registerButton, utils } from 'photo-sphere-viewer';
 import * as THREE from 'three';
 import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls';
+import { AbstractPlugin, CONSTANTS, DEFAULTS, registerButton, utils } from '../..';
 import { GyroscopeButton } from './GyroscopeButton';
 
-/**
- * @typedef {Object} external:THREE.DeviceOrientationControls
- * @summary {@link https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/DeviceOrientationControls.js}
- */
 
 /**
  * @typedef {Object} PSV.plugins.GyroscopePlugin.Options
@@ -20,13 +16,14 @@ DEFAULTS.navbar.splice(-1, 0, GyroscopeButton.id);
 DEFAULTS.lang[GyroscopeButton.id] = 'Gyroscope';
 registerButton(GyroscopeButton);
 
+const direction = new THREE.Vector3();
 
 /**
  * @summary Adds gyroscope controls on mobile devices
  * @extends PSV.plugins.AbstractPlugin
  * @memberof PSV.plugins
  */
-export default class GyroscopePlugin extends AbstractPlugin {
+export class GyroscopePlugin extends AbstractPlugin {
 
   static id = 'gyroscope';
 
@@ -37,6 +34,12 @@ export default class GyroscopePlugin extends AbstractPlugin {
    * @constant
    */
   static EVENTS = {
+    /**
+     * @event gyroscope-updated
+     * @memberof PSV.plugins.GyroscopePlugin
+     * @summary Triggered when the gyroscope mode is enabled/disabled
+     * @param {boolean} enabled
+     */
     GYROSCOPE_UPDATED: 'gyroscope-updated',
   };
 
@@ -52,13 +55,13 @@ export default class GyroscopePlugin extends AbstractPlugin {
      * @private
      * @property {Promise<boolean>} isSupported - indicates of the gyroscope API is available
      * @property {number} alphaOffset - current alpha offset for gyroscope controls
-     * @property {Function} orientationCb - update callback of the device orientation
+     * @property {boolean} enabled
      * @property {boolean} config_moveInertia - original config "moveInertia"
      */
     this.prop = {
       isSupported       : this.__checkSupport(),
       alphaOffset       : 0,
-      orientationCb     : null,
+      enabled           : false,
       config_moveInertia: true,
     };
 
@@ -80,6 +83,7 @@ export default class GyroscopePlugin extends AbstractPlugin {
 
     this.psv.on(CONSTANTS.EVENTS.STOP_ALL, this);
     this.psv.on(CONSTANTS.EVENTS.BEFORE_ROTATE, this);
+    this.psv.on(CONSTANTS.EVENTS.BEFORE_RENDER, this);
   }
 
   /**
@@ -88,6 +92,7 @@ export default class GyroscopePlugin extends AbstractPlugin {
   destroy() {
     this.psv.off(CONSTANTS.EVENTS.STOP_ALL, this);
     this.psv.off(CONSTANTS.EVENTS.BEFORE_ROTATE, this);
+    this.psv.off(CONSTANTS.EVENTS.BEFORE_RENDER, this);
 
     this.stop();
 
@@ -105,8 +110,11 @@ export default class GyroscopePlugin extends AbstractPlugin {
       case CONSTANTS.EVENTS.STOP_ALL:
         this.stop();
         break;
+      case CONSTANTS.EVENTS.BEFORE_RENDER:
+        this.__onBeforeRender();
+        break;
       case CONSTANTS.EVENTS.BEFORE_ROTATE:
-        this.__onRotate(e);
+        this.__onBeforeRotate(e);
         break;
       default:
         break;
@@ -118,7 +126,7 @@ export default class GyroscopePlugin extends AbstractPlugin {
    * @returns {boolean}
    */
   isEnabled() {
-    return !!this.prop.orientationCb;
+    return this.prop.enabled;
   }
 
   /**
@@ -154,14 +162,22 @@ export default class GyroscopePlugin extends AbstractPlugin {
         this.prop.config_moveInertia = this.psv.config.moveInertia;
         this.psv.config.moveInertia = false;
 
-        this.__configure();
+        // enable gyro controls
+        if (!this.controls) {
+          this.controls = new DeviceOrientationControls(new THREE.Object3D());
+        }
+        else {
+          this.controls.connect();
+        }
 
-        /**
-         * @event gyroscope-updated
-         * @memberof PSV.plugins.GyroscopePlugin
-         * @summary Triggered when the gyroscope mode is enabled/disabled
-         * @param {boolean} enabled
-         */
+        // force reset
+        this.controls.deviceOrientation = null;
+        this.controls.screenOrientation = 0;
+        this.controls.alphaOffset = 0;
+
+        this.prop.alphaOffset = this.config.absolutePosition ? 0 : null;
+        this.prop.enabled = true;
+
         this.trigger(GyroscopePlugin.EVENTS.GYROSCOPE_UPDATED, true);
       });
   }
@@ -174,9 +190,7 @@ export default class GyroscopePlugin extends AbstractPlugin {
     if (this.isEnabled()) {
       this.controls.disconnect();
 
-      this.psv.off(CONSTANTS.EVENTS.BEFORE_RENDER, this.prop.orientationCb);
-      this.prop.orientationCb = null;
-
+      this.prop.enabled = false;
       this.psv.config.moveInertia = this.prop.config_moveInertia;
 
       this.trigger(GyroscopePlugin.EVENTS.GYROSCOPE_UPDATED, false);
@@ -196,54 +210,38 @@ export default class GyroscopePlugin extends AbstractPlugin {
   }
 
   /**
-   * @summary Attaches the {@link external:THREE.DeviceOrientationControls} to the camera
+   * @summary Handles gyro movements
    * @private
    */
-  __configure() {
-    if (!this.controls) {
-      this.controls = new DeviceOrientationControls(this.psv.renderer.camera);
+  __onBeforeRender() {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    if (!this.controls.deviceOrientation) {
+      return;
+    }
+
+    // on first run compute the offset depending on the current viewer position and device orientation
+    if (this.prop.alphaOffset === null) {
+      this.controls.update();
+      this.controls.object.getWorldDirection(direction);
+
+      const sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
+      this.prop.alphaOffset = sphericalCoords.longitude - this.psv.getPosition().longitude;
     }
     else {
-      this.controls.connect();
+      this.controls.alphaOffset = this.prop.alphaOffset;
+      this.controls.update();
+      this.controls.object.getWorldDirection(direction);
+
+      const sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
+      // TODO use dynamic goto for smooth movement
+      this.psv.dynamics.position.setValue({
+        longitude: sphericalCoords.longitude,
+        latitude : -sphericalCoords.latitude,
+      });
     }
-
-    // force reset
-    this.controls.deviceOrientation = null;
-    this.controls.screenOrientation = 0;
-    this.controls.alphaOffset = 0;
-    this.prop.alphaOffset = this.config.absolutePosition ? 0 : null;
-
-    this.prop.orientationCb = () => {
-      if (!this.controls.deviceOrientation) {
-        return;
-      }
-
-      // on first run compute the offset depending on the current viewer position and device orientation
-      if (this.prop.alphaOffset === null) {
-        this.controls.update();
-
-        const direction = new THREE.Vector3();
-        this.psv.renderer.camera.getWorldDirection(direction);
-
-        const sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
-        this.prop.alphaOffset = sphericalCoords.longitude - this.psv.prop.position.longitude;
-      }
-      else {
-        this.controls.alphaOffset = this.prop.alphaOffset;
-        this.controls.update();
-
-        this.psv.renderer.camera.getWorldDirection(this.psv.prop.direction);
-        this.psv.prop.direction.multiplyScalar(CONSTANTS.SPHERE_RADIUS);
-
-        const sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(this.psv.prop.direction);
-        this.psv.prop.position.longitude = sphericalCoords.longitude;
-        this.psv.prop.position.latitude = sphericalCoords.latitude;
-
-        this.psv.needsUpdate();
-      }
-    };
-
-    this.psv.on(CONSTANTS.EVENTS.BEFORE_RENDER, this.prop.orientationCb);
   }
 
   /**
@@ -251,12 +249,12 @@ export default class GyroscopePlugin extends AbstractPlugin {
    * @param {external:uEvent.Event} e
    * @private
    */
-  __onRotate(e) {
+  __onBeforeRotate(e) {
     if (this.isEnabled()) {
       e.preventDefault();
 
       if (this.config.touchmove) {
-        this.prop.alphaOffset -= e.args[0].longitude - this.psv.prop.position.longitude;
+        this.prop.alphaOffset -= e.args[0].longitude - this.psv.getPosition().longitude;
       }
     }
   }

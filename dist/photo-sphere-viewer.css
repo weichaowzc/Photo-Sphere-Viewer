@@ -1,5 +1,5 @@
 /*!
- * Photo Sphere Viewer 4.2.1
+ * Photo Sphere Viewer 4.3.0
  * @copyright 2014-2015 Jérémy Heleine
  * @copyright 2015-2021 Damien "Mistic" Sorel
  * @licence MIT (https://opensource.org/licenses/MIT)
@@ -169,9 +169,22 @@
   transition: transform 200ms ease, -webkit-transform 200ms ease;
 }
 
+.psv-button:not(.psv-button--disabled):focus-visible {
+  outline: 2px dotted currentColor;
+  outline-offset: -2px;
+}
+
 .psv-container:not(.psv--is-touch) .psv-button--hover-scale:not(.psv-button--disabled):hover .psv-button-svg {
   -webkit-transform: scale(1.2);
           transform: scale(1.2);
+}
+
+.psv-move-button + .psv-move-button {
+  margin-left: -10px;
+}
+
+.psv-custom-button {
+  width: auto;
 }
 
 .psv-autorotate-button.psv-button {
@@ -506,6 +519,11 @@
 .psv-panel-menu-item-icon svg {
   width: 100%;
   height: 100%;
+}
+
+.psv-panel-menu-item:focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: -1px;
 }
 
 .psv-panel-menu--stripped .psv-panel-menu-item:hover {

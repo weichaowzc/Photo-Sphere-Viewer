@@ -1,19 +1,29 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope'), require('three')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope', 'three'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = factory(global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin, global.THREE)));
-}(this, (function (photoSphereViewer, GyroscopePlugin, three) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.THREE, global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin));
+}(this, (function (exports, three, photoSphereViewer, gyroscope) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -24,38 +34,41 @@
     return self;
   }
 
-  var StereoEffect = function StereoEffect(renderer) {
-    var _stereo = new three.StereoCamera();
+  class StereoEffect {
+    constructor(renderer) {
+      const _stereo = new three.StereoCamera();
 
-    _stereo.aspect = 0.5;
-    var size = new three.Vector2();
+      _stereo.aspect = 0.5;
+      const size = new three.Vector2();
 
-    this.setEyeSeparation = function (eyeSep) {
-      _stereo.eyeSep = eyeSep;
-    };
+      this.setEyeSeparation = function (eyeSep) {
+        _stereo.eyeSep = eyeSep;
+      };
 
-    this.setSize = function (width, height) {
-      renderer.setSize(width, height);
-    };
+      this.setSize = function (width, height) {
+        renderer.setSize(width, height);
+      };
 
-    this.render = function (scene, camera) {
-      scene.updateMatrixWorld();
-      if (camera.parent === null) camera.updateMatrixWorld();
+      this.render = function (scene, camera) {
+        scene.updateMatrixWorld();
+        if (camera.parent === null) camera.updateMatrixWorld();
 
-      _stereo.update(camera);
+        _stereo.update(camera);
 
-      renderer.getSize(size);
-      if (renderer.autoClear) renderer.clear();
-      renderer.setScissorTest(true);
-      renderer.setScissor(0, 0, size.width / 2, size.height);
-      renderer.setViewport(0, 0, size.width / 2, size.height);
-      renderer.render(scene, _stereo.cameraL);
-      renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
-      renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
-      renderer.render(scene, _stereo.cameraR);
-      renderer.setScissorTest(false);
-    };
-  };
+        renderer.getSize(size);
+        if (renderer.autoClear) renderer.clear();
+        renderer.setScissorTest(true);
+        renderer.setScissor(0, 0, size.width / 2, size.height);
+        renderer.setViewport(0, 0, size.width / 2, size.height);
+        renderer.render(scene, _stereo.cameraL);
+        renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
+        renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
+        renderer.render(scene, _stereo.cameraR);
+        renderer.setScissorTest(false);
+      };
+    }
+
+  }
 
   var mobileRotateIcon = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M66.7 19a14 14 0 0 1 13.8 12.1l-3.9-2.7c-.5-.3-1.1-.2-1.4.3-.3.5-.2 1.1.3 1.4l5.7 3.9.6.2c.3 0 .6-.2.8-.4l3.9-5.7c.3-.5.2-1.1-.3-1.4-.5-.3-1.1-.2-1.4.3l-2.4 3.5A16 16 0 0 0 66.7 17c-.6 0-1 .4-1 1s.4 1 1 1zM25 15h10c.6 0 1-.4 1-1s-.4-1-1-1H25c-.6 0-1 .4-1 1s.4 1 1 1zm-6.9 30H16l-2 .2a1 1 0 0 0-.8 1.2c.1.5.5.8 1 .8h.2l1.7-.2h2.1c.6 0 1-.4 1-1s-.5-1-1.1-1zm10 0h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1zM84 45H55V16A11 11 0 0 0 44 5H16A11 11 0 0 0 5 16v68a11 11 0 0 0 11 11h68a11 11 0 0 0 11-11V56a11 11 0 0 0-11-11zM16 93c-5 0-9-4-9-9V53.2c.3-.1.6-.3.7-.6a9.8 9.8 0 0 1 2-3c.4-.4.4-1 0-1.4a1 1 0 0 0-1.4 0l-1.2 1.5V16c0-5 4-9 9-9h28c5 0 9 4 9 9v68c0 5-4 9-9 9H16zm77-9c0 5-4 9-9 9H50.3c2.8-2 4.7-5.3 4.7-9V47h29c5 0 9 4 9 9v28zM38.1 45h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.5-1-1-1zm9.9 0h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1zm38 19c-.6 0-1 .4-1 1v10c0 .6.4 1 1 1s1-.4 1-1V65c0-.6-.4-1-1-1z\"/><!--Created by Anthony Bresset from the Noun Project--></svg>\n";
 
@@ -146,11 +159,6 @@
   StereoButton.icon = stereo;
 
   /**
-   * @typedef {Object} external:THREE.StereoEffect
-   * @summary {@link https://github.com/mrdoob/three.js/blob/dev/examples/jsm/effects/StereoEffect.js}
-   */
-
-  /**
    * @external NoSleep
    * @description {@link https://github.com/richtr/NoSleep.js}
    */
@@ -197,7 +205,7 @@
        * @private
        */
 
-      _this.gyroscope = GyroscopePlugin ? psv.getPlugin(GyroscopePlugin) : null;
+      _this.gyroscope = gyroscope.GyroscopePlugin ? psv.getPlugin(gyroscope.GyroscopePlugin) : null;
 
       if (!_this.gyroscope) {
         throw new photoSphereViewer.PSVError('Stereo plugin requires the Gyroscope plugin');
@@ -309,13 +317,6 @@
         _this2.psv.navbar.hide();
 
         _this2.psv.panel.hide();
-        /**
-         * @event stereo-updated
-         * @memberof PSV.plugins.StereoPlugin
-         * @summary Triggered when the stereo view is enabled/disabled
-         * @param {boolean} enabled
-         */
-
 
         _this2.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, true);
 
@@ -466,14 +467,21 @@
 
     return StereoPlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   StereoPlugin.id = 'stereo';
   StereoPlugin.ID_OVERLAY_PLEASE_ROTATE = 'pleaseRotate';
   StereoPlugin.EVENTS = {
+    /**
+     * @event stereo-updated
+     * @memberof PSV.plugins.StereoPlugin
+     * @summary Triggered when the stereo view is enabled/disabled
+     * @param {boolean} enabled
+     */
     STEREO_UPDATED: 'stereo-updated'
   };
 
-  return StereoPlugin;
+  exports.StereoPlugin = StereoPlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=stereo.js.map

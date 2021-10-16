@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.AutorotateKeypointsPlugin = factory(global.PhotoSphereViewer)));
-}(this, (function (photoSphereViewer) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.AutorotateKeypointsPlugin = {}), global.PhotoSphereViewer));
+}(this, (function (exports, photoSphereViewer) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -31,7 +31,17 @@
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -125,6 +135,8 @@
 
       _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, _assertThisInitialized(_this));
 
+      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, _assertThisInitialized(_this));
+
       return _this;
     }
 
@@ -132,6 +144,7 @@
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, this);
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
       delete this.keypoints;
       delete this.state;
 
@@ -141,6 +154,8 @@
     _proto.handleEvent = function handleEvent(e) {
       if (e.type === photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE) {
         this.__configure();
+      } else if (e.type === photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER) {
+        this.__beforeRender(e.args[0]);
       }
     }
     /**
@@ -161,12 +176,10 @@
       if (this.keypoints) {
         this.keypoints.forEach(function (pt, i) {
           if (typeof pt === 'string') {
-            // eslint-disable-next-line no-param-reassign
             pt = {
               markerId: pt
             };
           } else if (photoSphereViewer.utils.isExtendedPosition(pt)) {
-            // eslint-disable-next-line no-param-reassign
             pt = {
               position: pt
             };
@@ -204,15 +217,15 @@
     ;
 
     _proto.__configure = function __configure() {
-      var _this3 = this;
-
       if (!this.psv.isAutorotateEnabled() || !this.keypoints) {
         this.__hideTooltip();
 
         this.state = {};
         return;
-      }
+      } // cancel core rotation
 
+
+      this.psv.dynamics.position.stop();
       this.state = {
         idx: -1,
         curve: [],
@@ -228,30 +241,34 @@
       if (this.config.startFromClosest) {
         var _this$keypoints;
 
+        var currentPosition = serializePt(this.psv.getPosition());
+
         var index = this.__findMinIndex(this.keypoints, function (keypoint) {
-          return photoSphereViewer.utils.greatArcDistance(keypoint.position, serializePt(_this3.psv.prop.position));
+          return photoSphereViewer.utils.greatArcDistance(keypoint.position, currentPosition);
         });
 
         (_this$keypoints = this.keypoints).push.apply(_this$keypoints, this.keypoints.splice(0, index));
       }
+    }
+    /**
+     * @private
+     */
+    ;
 
-      var autorotateCb = function autorotateCb(e, timestamp) {
+    _proto.__beforeRender = function __beforeRender(timestamp) {
+      if (this.psv.isAutorotateEnabled()) {
         // initialisation
-        if (!_this3.state.startTime) {
-          _this3.state.endPt = serializePt(_this3.psv.prop.position);
+        if (!this.state.startTime) {
+          this.state.endPt = serializePt(this.psv.getPosition());
 
-          _this3.__nextStep();
+          this.__nextStep();
 
-          _this3.state.startTime = timestamp;
-          _this3.state.lastTime = timestamp;
+          this.state.startTime = timestamp;
+          this.state.lastTime = timestamp;
         }
 
-        _this3.__nextFrame(timestamp);
-      };
-
-      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this.psv.prop.autorotateCb);
-      this.psv.prop.autorotateCb = autorotateCb;
-      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this.psv.prop.autorotateCb);
+        this.__nextFrame(timestamp);
+      }
     }
     /**
      * @private
@@ -317,7 +334,8 @@
       var workPoints = [];
 
       if (this.state.idx === -1) {
-        workPoints.push(serializePt(this.psv.prop.position), serializePt(this.psv.prop.position), this.keypoints[0].position, this.keypoints[1].position);
+        var currentPosition = serializePt(this.psv.getPosition());
+        workPoints.push(currentPosition, currentPosition, this.keypoints[0].position, this.keypoints[1].position);
       } else {
         for (var i = -1; i < 3; i++) {
           var keypoint = this.state.idx + i < 0 ? this.keypoints[this.keypoints.length - 1] : this.keypoints[(this.state.idx + i) % this.keypoints.length];
@@ -500,10 +518,11 @@
 
     return AutorotateKeypointsPlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   AutorotateKeypointsPlugin.id = 'autorotate-keypoints';
 
-  return AutorotateKeypointsPlugin;
+  exports.AutorotateKeypointsPlugin = AutorotateKeypointsPlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=autorotate-keypoints.js.map

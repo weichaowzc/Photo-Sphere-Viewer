@@ -56,39 +56,7 @@ export const INERTIA_WINDOW = 300;
  * @type {number}
  * @constant
  */
-export const SPHERE_RADIUS = 100;
-
-/**
- * @summary Number of vertice of the THREE.SphereGeometry
- * @memberOf PSV.constants
- * @type {number}
- * @constant
- */
-export const SPHERE_VERTICES = 64;
-
-/**
- * @summary Number of vertices of each side of the THREE.BoxGeometry
- * @memberOf PSV.constants
- * @type {number}
- * @constant
- */
-export const CUBE_VERTICES = 8;
-
-/**
- * @summary Order of cube textures for arrays
- * @memberOf PSV.constants
- * @type {number[]}
- * @constant
- */
-export const CUBE_MAP = [0, 2, 4, 5, 3, 1];
-
-/**
- * @summary Order of cube textures for maps
- * @memberOf PSV.constants
- * @type {string[]}
- * @constant
- */
-export const CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
+export const SPHERE_RADIUS = 10;
 
 /**
  * @summary Property name added to viewer element
@@ -133,6 +101,7 @@ export const EVENTS = {
    * @memberof PSV
    * @summary Triggered before a render, used to modify the view
    * @param {number} timestamp - time provided by requestAnimationFrame
+   * @param {number} elapsed - time elapsed from the previous frame
    */
   BEFORE_RENDER     : 'before-render',
   /**
@@ -352,3 +321,25 @@ export const EASINGS = {
 };
 // @formatter:on
 /* eslint-enable */
+
+/**
+ * @summary Subset of key codes
+ * @memberOf PSV.constants
+ * @type {Object<string, string>}
+ * @constant
+ */
+export const KEY_CODES = {
+  Enter     : 'Enter',
+  Control   : 'Control',
+  Escape    : 'Escape',
+  Space     : ' ',
+  PageUp    : 'PageUp',
+  PageDown  : 'PageDown',
+  ArrowLeft : 'ArrowLeft',
+  ArrowUp   : 'ArrowUp',
+  ArrowRight: 'ArrowRight',
+  ArrowDown : 'ArrowDown',
+  Delete    : 'Delete',
+  Plus      : '+',
+  Minus     : '-',
+};

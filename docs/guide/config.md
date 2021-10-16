@@ -23,29 +23,15 @@ container: document.querySelector('.viewer')
 container: 'viewer' // will target [id="viewer"]
 ```
 
+#### `adapter`
+- default: `equirectangular`
+
+Which [adapter](./adapters) used to load the panorama.
+
 #### `panorama` (required)
-- type: `string | string[] | object`
+- type: `*`
 
-Path to the panorama image(s). It must be a single string for equirectangular panoramas and an array or an object for cubemaps.
-
-```js
-// Equirectangular panorama :
-panorama: 'path/to/panorama.jpg'
-
-// Cubemap as array (order is important) :
-panorama: [
-  'path/to/left.jpg', 'path/to/front.jpg',
-  'path/to/right.jpg', 'path/to/back.jpg',
-  'path/to/top.jpg', 'path/to/bottom.jpg',
-]
-
-// Cubemap as object :
-panorama: {
-  left:   'path/to/left.jpg',  front:  'path/to/front.jpg',
-  right:  'path/to/right.jpg', back:   'path/to/back.jpg',
-  top:    'path/to/top.jpg',   bottom: 'path/to/bottom.jpg',
-}
-```
+Path to the panorama. Must be a single URL for the default equirectangular adapter. Other adapters support other values.
 
 #### `plugins`
 - type: `array`
@@ -145,6 +131,7 @@ lang: {
     zoom      : 'Zoom',
     zoomOut   : 'Zoom out',
     zoomIn    : 'Zoom in',
+    move      : 'Move',
     download  : 'Download',
     fullscreen: 'Fullscreen',
     menu      : 'Menu',
@@ -210,27 +197,17 @@ Sphere rotation angles, in radians.
 
 ![pan-tilt-toll](/assets//pan-tilt-roll.png)
 
-::: warning Future change in computation
-In a future version the order in which the angles are applied will change. It is highly recommended to set `sphereCorrectionReorder: true` to any new viewer to enable the new behaviour.
-:::
-
 #### `moveSpeed`
 - type: `double`
 - default `1`
 
-Speed multiplicator for manual moves.
+Speed multiplicator for panorama moves. Used for click move, touch move and navbar buttons.
 
-#### `zoomButtonIncrement`
+#### `zoomSpeed`
 - type: `double`
-- default `2`
+- default `1`
 
-Zoom increment when using the keyboard or the navbar buttons.
-
-#### `mousewheelSpeed`
-- type: `double`
-- default: `1`
-
-Zoom speed when using the mouse wheel.
+Speed multiplicator for panorama zooms. Used for mouse wheel, touch pinch and navbar buttons.
 
 #### `useXmpData`
 - type: `boolean`
@@ -272,6 +249,25 @@ panoData: (image) => ({
 ```
 
 **Note** : if any of _poseHeading_, _posePitch_ or _poseRoll_ parameters are found, the `sphereCorrection` option is ignored.
+
+#### `requestHeaders`
+- type: `object | function<string, object>`
+
+Sets the HTTP headers when loading the images files.
+
+```js
+requestHeaders: {
+  header: value,
+}
+```
+
+It can also be a function to dynamically set the request headers before every call. This can be useful when adding a Bearer, which is temporarily valid, to the Authorization header.
+
+```js
+requestHeaders: (url) => ({
+   header: value,
+})
+```
 
 #### `canvasBackground`
 - type: `string`

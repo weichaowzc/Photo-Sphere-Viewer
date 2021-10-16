@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -68,39 +68,7 @@
    * @constant
    */
 
-  var SPHERE_RADIUS = 100;
-  /**
-   * @summary Number of vertice of the THREE.SphereGeometry
-   * @memberOf PSV.constants
-   * @type {number}
-   * @constant
-   */
-
-  var SPHERE_VERTICES = 64;
-  /**
-   * @summary Number of vertices of each side of the THREE.BoxGeometry
-   * @memberOf PSV.constants
-   * @type {number}
-   * @constant
-   */
-
-  var CUBE_VERTICES = 8;
-  /**
-   * @summary Order of cube textures for arrays
-   * @memberOf PSV.constants
-   * @type {number[]}
-   * @constant
-   */
-
-  var CUBE_MAP = [0, 2, 4, 5, 3, 1];
-  /**
-   * @summary Order of cube textures for maps
-   * @memberOf PSV.constants
-   * @type {string[]}
-   * @constant
-   */
-
-  var CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
+  var SPHERE_RADIUS = 10;
   /**
    * @summary Property name added to viewer element
    * @memberOf PSV.constants
@@ -146,6 +114,7 @@
      * @memberof PSV
      * @summary Triggered before a render, used to modify the view
      * @param {number} timestamp - time provided by requestAnimationFrame
+     * @param {number} elapsed - time elapsed from the previous frame
      */
     BEFORE_RENDER: 'before-render',
 
@@ -425,6 +394,29 @@
 
   /* eslint-enable */
 
+  /**
+   * @summary Subset of key codes
+   * @memberOf PSV.constants
+   * @type {Object<string, string>}
+   * @constant
+   */
+
+  var KEY_CODES = {
+    Enter: 'Enter',
+    Control: 'Control',
+    Escape: 'Escape',
+    Space: ' ',
+    PageUp: 'PageUp',
+    PageDown: 'PageDown',
+    ArrowLeft: 'ArrowLeft',
+    ArrowUp: 'ArrowUp',
+    ArrowRight: 'ArrowRight',
+    ArrowDown: 'ArrowDown',
+    Delete: 'Delete',
+    Plus: '+',
+    Minus: '-'
+  };
+
   var constants = /*#__PURE__*/Object.freeze({
     __proto__: null,
     MOVE_THRESHOLD: MOVE_THRESHOLD,
@@ -434,16 +426,13 @@
     CTRLZOOM_TIMEOUT: CTRLZOOM_TIMEOUT,
     INERTIA_WINDOW: INERTIA_WINDOW,
     SPHERE_RADIUS: SPHERE_RADIUS,
-    SPHERE_VERTICES: SPHERE_VERTICES,
-    CUBE_VERTICES: CUBE_VERTICES,
-    CUBE_MAP: CUBE_MAP,
-    CUBE_HASHMAP: CUBE_HASHMAP,
     VIEWER_DATA: VIEWER_DATA,
     ACTIONS: ACTIONS,
     EVENTS: EVENTS,
     CHANGE_EVENTS: CHANGE_EVENTS,
     IDS: IDS,
-    EASINGS: EASINGS
+    EASINGS: EASINGS,
+    KEY_CODES: KEY_CODES
   });
 
   /**
@@ -708,9 +697,9 @@
         pixelY *= LINE_HEIGHT;
       } // delta in PAGE units
       else {
-          pixelX *= PAGE_HEIGHT;
-          pixelY *= PAGE_HEIGHT;
-        }
+        pixelX *= PAGE_HEIGHT;
+        pixelY *= PAGE_HEIGHT;
+      }
     } // Fall-back if spin cannot be determined
 
 
@@ -808,7 +797,7 @@
     return Math.acos(Math.cos(position1.latitude) * Math.cos(position2.latitude) * Math.cos(position1.longitude - position2.longitude) + Math.sin(position1.latitude) * Math.sin(position2.latitude));
   }
   /**
-   * Returns the distance between two points on a sphere of radius one
+   * @summary Returns the distance between two points on a sphere of radius one
    * @memberOf PSV.utils
    * @param {number[]} p1
    * @param {number[]} p2
@@ -826,7 +815,7 @@
   }
 
   /**
-   * @summary Transforms a string to dash-case{@link https://github.com/shahata/dasherize}
+   * @summary Transforms a string to dash-case {@link https://github.com/shahata/dasherize}
    * @memberOf PSV.utils
    * @param {string} str
    * @returns {string}
@@ -1017,6 +1006,7 @@
   }
   /**
    * @summary Returns if a valu is null or undefined
+   * @memberOf PSV.utils
    * @param {*} val
    * @return {boolean}
    */
@@ -1067,6 +1057,27 @@
   PSVError.prototype.name = 'PSVError';
   PSVError.prototype.constructor = PSVError;
 
+  /**
+   * @summary Returns the plugin constructor from the imported object
+   * For retrocompatibility with previous default exports
+   * @memberOf PSV.utils
+   * @package
+   */
+
+  function pluginInterop(plugin, target) {
+    if (plugin) {
+      for (var _i = 0, _arr = [['_', plugin]].concat(Object.entries(plugin)); _i < _arr.length; _i++) {
+        var _arr$_i = _arr[_i],
+            p = _arr$_i[1];
+
+        if (p.prototype instanceof target) {
+          return p;
+        }
+      }
+    }
+
+    return null;
+  }
   /**
    * @summary Displays a warning in the console
    * @memberOf PSV.utils
@@ -1136,7 +1147,7 @@
    * @memberOf PSV.utils
    * @description The implementation is as close as possible to the "background-position" specification
    * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/background-position}
-   * @param {string|object} value
+   * @param {string|PSV.Point} value
    * @returns {PSV.Point}
    */
 
@@ -1305,6 +1316,20 @@
 
     return zeroCenter ? bound(parsed - Math.PI, -Math.PI / (halfCircle ? 2 : 1), Math.PI / (halfCircle ? 2 : 1)) : parsed;
   }
+  /**
+   * @summary Creates a THREE texture from an image
+   * @memberOf PSV.utils
+   * @param {HTMLImageElement | HTMLCanvasElement} img
+   * @return {external:THREE.Texture}
+   */
+
+  function createTexture(img) {
+    var texture = new THREE.Texture(img);
+    texture.needsUpdate = true;
+    texture.minFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    return texture;
+  }
 
   /**
    * @namespace PSV.utils
@@ -1340,12 +1365,14 @@
     intersect: intersect,
     isNil: isNil,
     firstNonNull: firstNonNull,
+    pluginInterop: pluginInterop,
     logWarn: logWarn,
     isExtendedPosition: isExtendedPosition,
     getXMPValue: getXMPValue,
     parsePosition: parsePosition,
     parseSpeed: parseSpeed,
-    parseAngle: parseAngle
+    parseAngle: parseAngle,
+    createTexture: createTexture
   });
 
   /**
@@ -1558,6 +1585,22 @@
     return Animation;
   }();
 
+  function _defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  function _createClass(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties(Constructor, staticProps);
+    return Constructor;
+  }
+
   function _extends() {
     _extends = Object.assign || function (target) {
       for (var i = 1; i < arguments.length; i++) {
@@ -1579,7 +1622,17 @@
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -1767,8 +1820,9 @@
      * @param {PSV.components.Navbar} navbar
      * @param {string} [className] - Additional CSS classes
      * @param {boolean} [collapsable=false] - `true` if the button can be moved to menu when the navbar is too small
+     * @param {boolean} [tabbable=true] - `true` if the button is accessible with Tab key
      */
-    function AbstractButton(navbar, className, collapsable) {
+    function AbstractButton(navbar, className, collapsable, tabbable) {
       var _this;
 
       if (className === void 0) {
@@ -1777,6 +1831,10 @@
 
       if (collapsable === void 0) {
         collapsable = false;
+      }
+
+      if (tabbable === void 0) {
+        tabbable = true;
       }
 
       _this = _AbstractComponent.call(this, navbar, 'psv-button ' + className) || this;
@@ -1808,12 +1866,24 @@
         _this.container.title = _this.psv.config.lang[_this.prop.id];
       }
 
+      if (tabbable) {
+        _this.container.tabIndex = 0;
+      }
+
       _this.container.addEventListener('click', function (e) {
         if (_this.prop.enabled) {
           _this.onClick();
         }
 
         e.stopPropagation();
+      });
+
+      _this.container.addEventListener('keydown', function (e) {
+        if (getEventKey(e) === KEY_CODES.Enter && _this.prop.enabled) {
+          _this.onClick();
+
+          e.stopPropagation();
+        }
       });
 
       return _this;
@@ -2110,7 +2180,7 @@
         _this.container.innerHTML = _this.config.content;
       }
 
-      _this.width = _this.container.offsetWidth;
+      _this.prop.width = _this.container.offsetWidth;
 
       if (_this.config.enabled === false) {
         _this.disable();
@@ -2411,7 +2481,7 @@
 
   MenuButton.MENU_TEMPLATE = function (buttons, psv, dataKey) {
     return "\n<div class=\"psv-panel-menu psv-panel-menu--stripped\">\n  <h1 class=\"psv-panel-menu-title\">" + menuIcon + " " + psv.config.lang.menu + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + buttons.map(function (button) {
-      return "\n    <li data-" + dataKey + "=\"" + button.prop.id + "\" class=\"psv-panel-menu-item\">\n      <span class=\"psv-panel-menu-item-icon\">" + button.container.innerHTML + "</span>\n      <span class=\"psv-panel-menu-item-label\">" + button.container.title + "</span>\n    </li>\n    ";
+      return "\n    <li data-" + dataKey + "=\"" + button.prop.id + "\" class=\"psv-panel-menu-item\" tabindex=\"0\">\n      <span class=\"psv-panel-menu-item-icon\">" + button.container.innerHTML + "</span>\n      <span class=\"psv-panel-menu-item-label\">" + button.container.title + "</span>\n    </li>\n    ";
     }).join('') + "\n  </ul>\n</div>\n";
   };
 
@@ -2615,6 +2685,326 @@
     }
   }
 
+  var arrow = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"40 40 432 432\"><g transform=\"rotate(0, 256, 256)\"><path fill=\"currentColor\" d=\"M425.23 210.55H227.39a5 5 0 01-3.53-8.53l56.56-56.57a45.5 45.5 0 000-64.28 45.15 45.15 0 00-32.13-13.3 45.15 45.15 0 00-32.14 13.3L41.32 256l174.83 174.83a45.15 45.15 0 0032.14 13.3 45.15 45.15 0 0032.13-13.3 45.5 45.5 0 000-64.28l-56.57-56.57a5 5 0 013.54-8.53h197.84c25.06 0 45.45-20.39 45.45-45.45s-20.4-45.45-45.45-45.45z\"/></g><!-- Created by Flatart from the Noun Project --></svg>\n";
+
+  /**
+   * @summary Helper for pressable things (buttons, keyboard)
+   * @description When the pressed thing goes up and was not pressed long enough, wait a bit more before execution
+   * @package
+   * @package
+   */
+  var PressHandler = /*#__PURE__*/function () {
+    function PressHandler(delay) {
+      if (delay === void 0) {
+        delay = 200;
+      }
+
+      this.delay = delay;
+      this.time = 0;
+      this.timeout = null;
+    }
+
+    var _proto = PressHandler.prototype;
+
+    _proto.down = function down() {
+      if (this.timeout) {
+        clearTimeout(this.timeout);
+        this.timeout = null;
+      }
+
+      this.time = new Date().getTime();
+    };
+
+    _proto.up = function up(cb) {
+      var _this = this;
+
+      if (!this.time) {
+        return;
+      }
+
+      var elapsed = new Date().getTime() - this.time;
+
+      if (elapsed < this.delay) {
+        this.timeout = setTimeout(function () {
+          cb();
+          _this.timeout = null;
+          _this.time = 0;
+        }, this.delay);
+      } else {
+        cb();
+        this.time = 0;
+      }
+    };
+
+    return PressHandler;
+  }();
+
+  function getOrientedArrow(direction) {
+    var angle = 0;
+
+    switch (direction) {
+      // @formatter:off
+      case 'up':
+        angle = 90;
+        break;
+
+      case 'right':
+        angle = 180;
+        break;
+
+      case 'down':
+        angle = -90;
+        break;
+
+      default:
+        angle = 0;
+        break;
+      // @formatter:on
+    }
+
+    return arrow.replace('rotate(0', "rotate(" + angle);
+  }
+  /**
+   * @summary Navigation bar move button class
+   * @extends PSV.buttons.AbstractButton
+   * @memberof PSV.buttons
+   */
+
+  var AbstractMoveButton = /*#__PURE__*/function (_AbstractButton) {
+    _inheritsLoose(AbstractMoveButton, _AbstractButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     * @param {number} value
+     */
+    function AbstractMoveButton(navbar, value) {
+      var _this;
+
+      _this = _AbstractButton.call(this, navbar, 'psv-button--hover-scale psv-move-button') || this;
+      _this.container.title = _this.psv.config.lang.move;
+      /**
+       * @override
+       * @property {{longitude: boolean, latitude: boolean}} value
+       * @property {PressHandler} handler
+       */
+
+      _this.prop = _extends({}, _this.prop, {
+        value: value,
+        handler: new PressHandler()
+      });
+
+      _this.container.addEventListener('mousedown', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('keydown', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('keyup', _assertThisInitialized(_this));
+
+      _this.psv.container.addEventListener('mouseup', _assertThisInitialized(_this));
+
+      _this.psv.container.addEventListener('touchend', _assertThisInitialized(_this));
+
+      return _this;
+    }
+    /**
+     * @override
+     */
+
+
+    var _proto = AbstractMoveButton.prototype;
+
+    _proto.destroy = function destroy() {
+      this.__onMouseUp();
+
+      this.psv.container.removeEventListener('mouseup', this);
+      this.psv.container.removeEventListener('touchend', this);
+
+      _AbstractButton.prototype.destroy.call(this);
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} e
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(e) {
+      /* eslint-disable */
+      switch (e.type) {
+        // @formatter:off
+        case 'mousedown':
+          this.__onMouseDown();
+
+          break;
+
+        case 'mouseup':
+          this.__onMouseUp();
+
+          break;
+
+        case 'touchend':
+          this.__onMouseUp();
+
+          break;
+
+        case 'keydown':
+          getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown();
+          break;
+
+        case 'keyup':
+          getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp();
+          break;
+        // @formatter:on
+      }
+      /* eslint-enable */
+
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.isSupported = function isSupported() {
+      return {
+        initial: true,
+        promise: SYSTEM.isTouchEnabled.then(function (enabled) {
+          return !enabled;
+        })
+      };
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.onClick = function onClick() {// nothing
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseDown = function __onMouseDown() {
+      if (!this.prop.enabled) {
+        return;
+      }
+
+      this.psv.__stopAll();
+
+      this.psv.dynamics.position.roll(this.prop.value);
+      this.prop.handler.down();
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseUp = function __onMouseUp() {
+      var _this2 = this;
+
+      if (!this.prop.enabled) {
+        return;
+      }
+
+      this.prop.handler.up(function () {
+        return _this2.psv.dynamics.position.stop();
+      });
+    };
+
+    return AbstractMoveButton;
+  }(AbstractButton);
+
+  /**
+   * @summary Navigation bar move down button class
+   * @extends PSV.buttons.AbstractMoveButton
+   * @memberof PSV.buttons
+   */
+
+  var MoveDownButton = /*#__PURE__*/function (_AbstractMoveButton) {
+    _inheritsLoose(MoveDownButton, _AbstractMoveButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function MoveDownButton(navbar) {
+      return _AbstractMoveButton.call(this, navbar, {
+        latitude: true
+      }) || this;
+    }
+
+    return MoveDownButton;
+  }(AbstractMoveButton);
+  MoveDownButton.id = 'moveDown';
+  MoveDownButton.icon = getOrientedArrow('down');
+
+  /**
+   * @summary Navigation bar move left button class
+   * @extends PSV.buttons.AbstractMoveButton
+   * @memberof PSV.buttons
+   */
+
+  var MoveLeftButton = /*#__PURE__*/function (_AbstractMoveButton) {
+    _inheritsLoose(MoveLeftButton, _AbstractMoveButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function MoveLeftButton(navbar) {
+      return _AbstractMoveButton.call(this, navbar, {
+        longitude: true
+      }) || this;
+    }
+
+    return MoveLeftButton;
+  }(AbstractMoveButton);
+  MoveLeftButton.id = 'moveLeft';
+  MoveLeftButton.icon = getOrientedArrow('left');
+
+  /**
+   * @summary Navigation bar move right button class
+   * @extends PSV.buttons.AbstractMoveButton
+   * @memberof PSV.buttons
+   */
+
+  var MoveRightButton = /*#__PURE__*/function (_AbstractMoveButton) {
+    _inheritsLoose(MoveRightButton, _AbstractMoveButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function MoveRightButton(navbar) {
+      return _AbstractMoveButton.call(this, navbar, {
+        longitude: false
+      }) || this;
+    }
+
+    return MoveRightButton;
+  }(AbstractMoveButton);
+  MoveRightButton.id = 'moveRight';
+  MoveRightButton.icon = getOrientedArrow('right');
+
+  /**
+   * @summary Navigation bar move up button class
+   * @extends PSV.buttons.AbstractMoveButton
+   * @memberof PSV.buttons
+   */
+
+  var MoveUpButton = /*#__PURE__*/function (_AbstractMoveButton) {
+    _inheritsLoose(MoveUpButton, _AbstractMoveButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function MoveUpButton(navbar) {
+      return _AbstractMoveButton.call(this, navbar, {
+        latitude: false
+      }) || this;
+    }
+
+    return MoveUpButton;
+  }(AbstractMoveButton);
+  MoveUpButton.id = 'moveUp';
+  MoveUpButton.icon = getOrientedArrow('up');
+
   /**
    * @summary Navigation bar zoom button class
    * @extends PSV.buttons.AbstractButton
@@ -2634,20 +3024,20 @@
       _this = _AbstractButton.call(this, navbar, 'psv-button--hover-scale psv-zoom-button') || this;
       /**
        * @override
-       * @property {number} value
-       * @property {boolean} buttondown
-       * @property {*} longPressTimeout
-       * @property {PSV.Animation} longPressAnimation
+       * @property {boolean} value
+       * @property {PressHandler} handler
        */
 
       _this.prop = _extends({}, _this.prop, {
         value: value,
-        buttondown: false,
-        longPressTimeout: null,
-        longPressAnimation: null
+        handler: new PressHandler()
       });
 
       _this.container.addEventListener('mousedown', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('keydown', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('keyup', _assertThisInitialized(_this));
 
       _this.psv.container.addEventListener('mouseup', _assertThisInitialized(_this));
 
@@ -2695,6 +3085,14 @@
           this.__onMouseUp();
 
           break;
+
+        case 'keydown':
+          getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown();
+          break;
+
+        case 'keyup':
+          getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp();
+          break;
         // @formatter:on
       }
       /* eslint-enable */
@@ -2721,75 +3119,33 @@
     _proto.onClick = function onClick() {// nothing
     }
     /**
-     * @summary Handles click events
-     * @description Zooms in and register long press timer
      * @private
      */
     ;
 
     _proto.__onMouseDown = function __onMouseDown() {
+      if (!this.prop.enabled) {
+        return;
+      }
+
+      this.psv.dynamics.zoom.roll(this.prop.value);
+      this.prop.handler.down();
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseUp = function __onMouseUp() {
       var _this2 = this;
 
       if (!this.prop.enabled) {
         return;
       }
 
-      this.prop.buttondown = true;
-      this.prop.longPressTimeout = setTimeout(function () {
-        return _this2.__startLongPressInterval();
-      }, 100);
-    }
-    /**
-     * @summary Continues zooming as long as the user presses the button
-     * @private
-     */
-    ;
-
-    _proto.__startLongPressInterval = function __startLongPressInterval() {
-      var _this3 = this;
-
-      if (!this.prop.buttondown) {
-        return;
-      }
-
-      var end = this.prop.value < 0 ? 0 : 100;
-      this.prop.longPressAnimation = new Animation({
-        properties: {
-          zoom: {
-            start: this.psv.prop.zoomLvl,
-            end: end
-          }
-        },
-        duration: 1500 * Math.abs(this.psv.prop.zoomLvl - end) / 100,
-        easing: 'linear',
-        onTick: function onTick(properties) {
-          _this3.psv.zoom(properties.zoom);
-        }
-      }).catch(function () {}); // ignore cancellation
-    }
-    /**
-     * @summary Handles mouse up events
-     * @private
-     */
-    ;
-
-    _proto.__onMouseUp = function __onMouseUp() {
-      if (!this.prop.enabled || !this.prop.buttondown) {
-        return;
-      }
-
-      if (this.prop.longPressAnimation) {
-        this.prop.longPressAnimation.cancel();
-        this.prop.longPressAnimation = null;
-      } else {
-        this.psv.zoom(this.psv.prop.zoomLvl + this.prop.value * this.psv.config.zoomButtonIncrement);
-      }
-
-      if (this.prop.longPressTimeout) {
-        clearTimeout(this.prop.longPressTimeout);
-      }
-
-      this.prop.buttondown = false;
+      this.prop.handler.up(function () {
+        return _this2.psv.dynamics.zoom.stop();
+      });
     };
 
     return AbstractZoomButton;
@@ -2810,7 +3166,7 @@
      * @param {PSV.components.Navbar} navbar
      */
     function ZoomInButton(navbar) {
-      return _AbstractZoomButton.call(this, navbar, 1) || this;
+      return _AbstractZoomButton.call(this, navbar, false) || this;
     }
 
     return ZoomInButton;
@@ -2833,7 +3189,7 @@
      * @param {PSV.components.Navbar} navbar
      */
     function ZoomOutButton(navbar) {
-      return _AbstractZoomButton.call(this, navbar, -1) || this;
+      return _AbstractZoomButton.call(this, navbar, true) || this;
     }
 
     return ZoomOutButton;
@@ -2856,7 +3212,7 @@
     function ZoomRangeButton(navbar) {
       var _this;
 
-      _this = _AbstractButton.call(this, navbar, 'psv-zoom-range') || this;
+      _this = _AbstractButton.call(this, navbar, 'psv-zoom-range', false, false) || this;
       /**
        * @override
        * @property {boolean} mousedown
@@ -2906,7 +3262,7 @@
       _this.psv.on(EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
 
       if (_this.psv.prop.ready) {
-        _this.__moveZoomValue(_this.psv.prop.zoomLvl);
+        _this.__moveZoomValue(_this.psv.getZoomLevel());
       } else {
         _this.psv.once(EVENTS.READY, _assertThisInitialized(_this));
       }
@@ -2982,7 +3338,7 @@
           break;
 
         case EVENTS.READY:
-          this.__moveZoomValue(this.psv.prop.zoomLvl);
+          this.__moveZoomValue(this.psv.getZoomLevel());
 
           break;
         // @formatter:on
@@ -3128,6 +3484,390 @@
   ZoomRangeButton.id = 'zoomRange';
 
   /**
+   * @namespace PSV.adapters
+   */
+
+  /**
+   * @summary Base adapters class
+   * @memberof PSV.adapters
+   * @abstract
+   */
+
+  var AbstractAdapter = /*#__PURE__*/function () {
+    /**
+     * @summary Unique identifier of the adapter
+     * @member {string}
+     * @readonly
+     * @static
+     */
+
+    /**
+     * @summary Indicates if the adapter supports transitions between panoramas
+     * @member {boolean}
+     * @readonly
+     * @static
+     */
+
+    /**
+     * @param {PSV.Viewer} psv
+     */
+    function AbstractAdapter(psv) {
+      /**
+       * @summary Reference to main controller
+       * @type {PSV.Viewer}
+       * @readonly
+       */
+      this.psv = psv;
+    }
+    /**
+     * @summary Destroys the adapter
+     */
+
+
+    var _proto = AbstractAdapter.prototype;
+
+    _proto.destroy = function destroy() {
+      delete this.psv;
+    }
+    /**
+     * @abstract
+     * @summary Loads the panorama texture(s)
+     * @param {*} panorama
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    ;
+
+    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('loadTexture not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Creates the cube mesh
+     * @param {number} [scale=1]
+     * @returns {external:THREE.Mesh}
+     */
+    ;
+
+    _proto.createMesh = function createMesh(scale) {
+
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('createMesh not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Applies the texture to the mesh
+     * @param {external:THREE.Mesh} mesh
+     * @param {PSV.TextureData} textureData
+     */
+    ;
+
+    _proto.setTexture = function setTexture(mesh, textureData) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('setTexture not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Changes the opacity of the mesh
+     * @param {external:THREE.Mesh} mesh
+     * @param {number} opacity
+     */
+    ;
+
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('setTextureOpacity not implemented');
+    };
+
+    return AbstractAdapter;
+  }();
+  AbstractAdapter.id = null;
+  AbstractAdapter.supportsTransition = false;
+
+  var SPHERE_SEGMENTS = 64;
+  /**
+   * @summary Adapter for equirectangular panoramas
+   * @memberof PSV.adapters
+   */
+
+  var EquirectangularAdapter = /*#__PURE__*/function (_AbstractAdapter) {
+    _inheritsLoose(EquirectangularAdapter, _AbstractAdapter);
+
+    function EquirectangularAdapter() {
+      return _AbstractAdapter.apply(this, arguments) || this;
+    }
+
+    var _proto = EquirectangularAdapter.prototype;
+
+    /**
+     * @override
+     * @param {string} panorama
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
+      var _this = this;
+
+      if (typeof panorama !== 'string') {
+        if (Array.isArray(panorama) || typeof panorama === 'object' && !!panorama.left) {
+          logWarn('Cubemap support now requires an additional adapter, see https://photo-sphere-viewer.js.org/guide/adapters');
+        }
+
+        return Promise.reject(new PSVError('Invalid panorama url, are you using the right adapter?'));
+      }
+
+      return (!this.psv.config.useXmpData ? this.psv.textureLoader.loadImage(panorama, function (p) {
+        return _this.psv.loader.setProgress(p);
+      }).then(function (img) {
+        return {
+          img: img,
+          xmpPanoData: null
+        };
+      }) : this.__loadXMP(panorama, function (p) {
+        return _this.psv.loader.setProgress(p);
+      }).then(function (xmpPanoData) {
+        return _this.psv.textureLoader.loadImage(panorama).then(function (img) {
+          return {
+            img: img,
+            xmpPanoData: xmpPanoData
+          };
+        });
+      })).then(function (_ref) {
+        var _newPanoData, _newPanoData2, _newPanoData3, _newPanoData4, _newPanoData5, _newPanoData6, _newPanoData7, _newPanoData8, _newPanoData9;
+
+        var img = _ref.img,
+            xmpPanoData = _ref.xmpPanoData;
+
+        if (typeof newPanoData === 'function') {
+          newPanoData = newPanoData(img);
+        }
+
+        var panoData = {
+          fullWidth: firstNonNull((_newPanoData = newPanoData) == null ? void 0 : _newPanoData.fullWidth, xmpPanoData == null ? void 0 : xmpPanoData.fullWidth, img.width),
+          fullHeight: firstNonNull((_newPanoData2 = newPanoData) == null ? void 0 : _newPanoData2.fullHeight, xmpPanoData == null ? void 0 : xmpPanoData.fullHeight, img.height),
+          croppedWidth: firstNonNull((_newPanoData3 = newPanoData) == null ? void 0 : _newPanoData3.croppedWidth, xmpPanoData == null ? void 0 : xmpPanoData.croppedWidth, img.width),
+          croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
+          croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
+          croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
+          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading),
+          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch),
+          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll)
+        };
+
+        if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
+          logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image.\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
+        }
+
+        if (panoData.fullWidth !== panoData.fullHeight * 2) {
+          logWarn('Invalid panoData, fullWidth should be twice fullHeight');
+        }
+
+        var texture = _this.__createEquirectangularTexture(img, panoData);
+
+        return {
+          texture: texture,
+          panoData: panoData
+        };
+      });
+    }
+    /**
+     * @summary Loads the XMP data of an image
+     * @param {string} panorama
+     * @param {function(number)} [onProgress]
+     * @returns {Promise<PSV.PanoData>}
+     * @throws {PSV.PSVError} when the image cannot be loaded
+     * @private
+     */
+    ;
+
+    _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
+      var _this2 = this;
+
+      return this.psv.textureLoader.loadFile(panorama, onProgress).then(function (blob) {
+        return _this2.__loadBlobAsString(blob);
+      }).then(function (binary) {
+        var a = binary.indexOf('<x:xmpmeta');
+        var b = binary.indexOf('</x:xmpmeta>');
+        var data = binary.substring(a, b);
+
+        if (a !== -1 && b !== -1 && data.indexOf('GPano:') !== -1) {
+          return {
+            fullWidth: getXMPValue(data, 'FullPanoWidthPixels'),
+            fullHeight: getXMPValue(data, 'FullPanoHeightPixels'),
+            croppedWidth: getXMPValue(data, 'CroppedAreaImageWidthPixels'),
+            croppedHeight: getXMPValue(data, 'CroppedAreaImageHeightPixels'),
+            croppedX: getXMPValue(data, 'CroppedAreaLeftPixels'),
+            croppedY: getXMPValue(data, 'CroppedAreaTopPixels'),
+            poseHeading: getXMPValue(data, 'PoseHeadingDegrees'),
+            posePitch: getXMPValue(data, 'PosePitchDegrees'),
+            poseRoll: getXMPValue(data, 'PoseRollDegrees')
+          };
+        }
+
+        return null;
+      });
+    }
+    /**
+     * @summmary read a Blob as string
+     * @param {Blob} blob
+     * @returns {Promise<string>}
+     * @private
+     */
+    ;
+
+    _proto.__loadBlobAsString = function __loadBlobAsString(blob) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+
+        reader.onload = function () {
+          return resolve(reader.result);
+        };
+
+        reader.onerror = reject;
+        reader.readAsText(blob);
+      });
+    }
+    /**
+     * @summary Creates the final texture from image and panorama data
+     * @param {Image} img
+     * @param {PSV.PanoData} panoData
+     * @returns {external:THREE.Texture}
+     * @private
+     */
+    ;
+
+    _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
+      var finalImage; // resize image / fill cropped parts with black
+
+      if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
+        var resizedPanoData = _extends({}, panoData);
+
+        var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
+
+        if (ratio < 1) {
+          resizedPanoData.fullWidth *= ratio;
+          resizedPanoData.fullHeight *= ratio;
+          resizedPanoData.croppedWidth *= ratio;
+          resizedPanoData.croppedHeight *= ratio;
+          resizedPanoData.croppedX *= ratio;
+          resizedPanoData.croppedY *= ratio;
+        }
+
+        var buffer = document.createElement('canvas');
+        buffer.width = resizedPanoData.fullWidth;
+        buffer.height = resizedPanoData.fullHeight;
+        var ctx = buffer.getContext('2d');
+        ctx.drawImage(img, resizedPanoData.croppedX, resizedPanoData.croppedY, resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
+        finalImage = buffer;
+      } else {
+        finalImage = img;
+      }
+
+      return createTexture(finalImage);
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.createMesh = function createMesh(scale) {
+      if (scale === void 0) {
+        scale = 1;
+      }
+
+      // The middle of the panorama is placed at longitude=0
+      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, SPHERE_SEGMENTS, SPHERE_SEGMENTS / 2, -Math.PI / 2);
+      var material = new THREE.MeshBasicMaterial({
+        side: THREE.BackSide
+      });
+      var mesh = new THREE.Mesh(geometry, material);
+      mesh.scale.set(-1, 1, 1);
+      return mesh;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.setTexture = function setTexture(mesh, textureData) {
+      var texture = textureData.texture;
+
+      if (mesh.material.map) {
+        mesh.material.map.dispose();
+      }
+
+      mesh.material.map = texture;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      mesh.material.opacity = opacity;
+      mesh.material.transparent = opacity < 1;
+    };
+
+    return EquirectangularAdapter;
+  }(AbstractAdapter);
+  EquirectangularAdapter.id = 'equirectangular';
+  EquirectangularAdapter.supportsTransition = true;
+
+  /**
+   * @namespace PSV.plugins
+   */
+
+  /**
+   * @summary Base plugins class
+   * @memberof PSV.plugins
+   * @abstract
+   */
+
+  var AbstractPlugin = /*#__PURE__*/function (_EventEmitter) {
+    _inheritsLoose(AbstractPlugin, _EventEmitter);
+
+    /**
+     * @summary Unique identifier of the plugin
+     * @member {string}
+     * @readonly
+     * @static
+     */
+
+    /**
+     * @param {PSV.Viewer} psv
+     */
+    function AbstractPlugin(psv) {
+      var _this;
+
+      _this = _EventEmitter.call(this) || this;
+      /**
+       * @summary Reference to main controller
+       * @type {PSV.Viewer}
+       * @readonly
+       */
+
+      _this.psv = psv;
+      return _this;
+    }
+    /**
+     * @summary Destroys the plugin
+     * @package
+     */
+
+
+    var _proto = AbstractPlugin.prototype;
+
+    _proto.destroy = function destroy() {
+      delete this.psv;
+    };
+
+    return AbstractPlugin;
+  }(uevent.EventEmitter);
+  AbstractPlugin.id = null;
+
+  var _keyboard;
+  /**
    * @summary Default options
    * @type {PSV.Options}
    * @memberOf PSV
@@ -3137,6 +3877,7 @@
   var DEFAULTS = {
     panorama: null,
     container: null,
+    adapter: null,
     caption: null,
     loadingImg: null,
     loadingTxt: 'Loading...',
@@ -3148,29 +3889,29 @@
     defaultLong: 0,
     defaultLat: 0,
     sphereCorrection: null,
-    sphereCorrectionReorder: false,
     moveSpeed: 1,
-    zoomButtonIncrement: 2,
+    zoomSpeed: 1,
     autorotateDelay: null,
     autorotateSpeed: '2rpm',
     autorotateLat: null,
     moveInertia: true,
     mousewheel: true,
-    mousewheelSpeed: 1,
     mousemove: true,
     captureCursor: false,
     mousewheelCtrlKey: false,
     touchmoveTwoFingers: false,
     useXmpData: true,
     panoData: null,
+    requestHeaders: null,
     canvasBackground: '#000',
     withCredentials: false,
-    navbar: ['autorotate', 'zoomOut', 'zoomRange', 'zoomIn', 'download', 'caption', 'fullscreen'],
+    navbar: ['autorotate', 'zoom', 'move', 'download', 'caption', 'fullscreen'],
     lang: {
       autorotate: 'Automatic rotation',
       zoom: 'Zoom',
       zoomOut: 'Zoom out',
       zoomIn: 'Zoom in',
+      move: 'Move',
       download: 'Download',
       fullscreen: 'Fullscreen',
       menu: 'Menu',
@@ -3178,17 +3919,7 @@
       ctrlZoom: 'Use ctrl + scroll to zoom the image',
       loadError: 'The panorama can\'t be loaded'
     },
-    keyboard: {
-      'ArrowUp': ACTIONS.ROTATE_LAT_UP,
-      'ArrowDown': ACTIONS.ROTATE_LAT_DOWN,
-      'ArrowRight': ACTIONS.ROTATE_LONG_RIGHT,
-      'ArrowLeft': ACTIONS.ROTATE_LONG_LEFT,
-      'PageUp': ACTIONS.ZOOM_IN,
-      'PageDown': ACTIONS.ZOOM_OUT,
-      '+': ACTIONS.ZOOM_IN,
-      '-': ACTIONS.ZOOM_OUT,
-      ' ': ACTIONS.TOGGLE_AUTOROTATE
-    },
+    keyboard: (_keyboard = {}, _keyboard[KEY_CODES.ArrowUp] = ACTIONS.ROTATE_LAT_UP, _keyboard[KEY_CODES.ArrowDown] = ACTIONS.ROTATE_LAT_DOWN, _keyboard[KEY_CODES.ArrowRight] = ACTIONS.ROTATE_LONG_RIGHT, _keyboard[KEY_CODES.ArrowLeft] = ACTIONS.ROTATE_LONG_LEFT, _keyboard[KEY_CODES.PageUp] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.PageDown] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Plus] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.Minus] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Space] = ACTIONS.TOGGLE_AUTOROTATE, _keyboard),
     plugins: []
   };
   /**
@@ -3200,7 +3931,18 @@
     panorama: 'Use setPanorama method to change the panorama',
     panoData: 'Use setPanorama method to change the panorama',
     container: 'Cannot change viewer container',
+    adapter: 'Cannot change adapter',
     plugins: 'Cannot change plugins'
+  };
+  /**
+   * @summary List of deprecated options and their warning messages
+   * @private
+   */
+
+  var DEPRECATED_OPTIONS = {
+    zoomButtonIncrement: 'zoomButtonIncrement is deprecated, use zoomSpeed',
+    mousewheelSpeed: 'mousewheelSpeed is deprecated, use zoomSpeed',
+    sphereCorrectionReorder: 'sphereCorrectionReorder is deprecated'
   };
   /**
    * @summary Parsers/validators for each option
@@ -3215,6 +3957,15 @@
 
       return _container;
     },
+    adapter: function adapter(_adapter) {
+      if (!_adapter) {
+        return [EquirectangularAdapter];
+      } else if (Array.isArray(_adapter)) {
+        return [pluginInterop(_adapter[0], AbstractAdapter), _adapter[1]];
+      } else {
+        return [pluginInterop(_adapter, AbstractAdapter)];
+      }
+    },
     defaultLong: function defaultLong(_defaultLong) {
       // defaultLat is between 0 and PI
       return parseAngle(_defaultLong);
@@ -3226,8 +3977,7 @@
     minFov: function minFov(_minFov, config) {
       // minFov and maxFov must be ordered
       if (config.maxFov < _minFov) {
-        logWarn('maxFov cannot be lower than minFov'); // eslint-disable-next-line no-param-reassign
-
+        logWarn('maxFov cannot be lower than minFov');
         _minFov = config.maxFov;
       } // minFov between 1 and 179
 
@@ -3237,7 +3987,6 @@
     maxFov: function maxFov(_maxFov, config) {
       // minFov and maxFov must be ordered
       if (_maxFov < config.minFov) {
-        // eslint-disable-next-line no-param-reassign
         _maxFov = config.minFov;
       } // maxFov between 1 and 179
 
@@ -3252,13 +4001,13 @@
 
       return _extends({}, DEFAULTS.lang, _lang);
     },
-    keyboard: function keyboard(_keyboard) {
+    keyboard: function keyboard(_keyboard2) {
       // keyboard=true becomes the default map
-      if (_keyboard === true) {
+      if (_keyboard2 === true) {
         return clone(DEFAULTS.keyboard);
       }
 
-      return _keyboard;
+      return _keyboard2;
     },
     autorotateLat: function autorotateLat(_autorotateLat, config) {
       // default autorotateLat is defaultLat
@@ -3266,8 +4015,8 @@
         return parseAngle(config.defaultLat, true);
       } // autorotateLat is between -PI/2 and PI/2
       else {
-          return parseAngle(_autorotateLat, true);
-        }
+        return parseAngle(_autorotateLat, true);
+      }
     },
     autorotateSpeed: function autorotateSpeed(_autorotateSpeed) {
       return parseSpeed(_autorotateSpeed);
@@ -3285,9 +4034,9 @@
     plugins: function plugins(_plugins) {
       return _plugins.map(function (plugin) {
         if (Array.isArray(plugin)) {
-          return plugin;
+          return [pluginInterop(plugin[0], AbstractPlugin), plugin[1]];
         } else {
-          return [plugin];
+          return [pluginInterop(plugin, AbstractPlugin)];
         }
       }).filter(function (plugin) {
         return !!plugin[0];
@@ -3307,6 +4056,11 @@
     deepmerge(tempConfig, options);
     var config = {};
     each(tempConfig, function (value, key) {
+      if (DEPRECATED_OPTIONS[key]) {
+        logWarn(DEPRECATED_OPTIONS[key]);
+        return;
+      }
+
       if (!Object.prototype.hasOwnProperty.call(DEFAULTS, key)) {
         throw new PSVError("Unknown option " + key);
       }
@@ -3530,7 +4284,7 @@
 
     AVAILABLE_BUTTONS[button.id] = button;
   }
-  [AutorotateButton, ZoomInButton, ZoomRangeButton, ZoomOutButton, DownloadButton, FullscreenButton].forEach(registerButton);
+  [AutorotateButton, ZoomInButton, ZoomRangeButton, ZoomOutButton, DownloadButton, FullscreenButton, MoveRightButton, MoveLeftButton, MoveUpButton, MoveDownButton].forEach(registerButton);
   /**
    * @summary Navigation bar class
    * @extends PSV.components.AbstractComponent
@@ -3591,6 +4345,11 @@
           new ZoomOutButton(_this2);
           new ZoomRangeButton(_this2);
           new ZoomInButton(_this2);
+        } else if (button === 'move') {
+          new MoveLeftButton(_this2);
+          new MoveRightButton(_this2);
+          new MoveUpButton(_this2);
+          new MoveDownButton(_this2);
         } else {
           throw new PSVError('Unknown button ' + button);
         }
@@ -3728,66 +4487,14 @@
         return clone(DEFAULTS.navbar);
       } // can be a space or coma separated list
       else if (typeof buttons === 'string') {
-          return buttons.split(/[ ,]/);
-        } else {
-          return buttons || [];
-        }
+        return buttons.split(/[ ,]/);
+      } else {
+        return buttons || [];
+      }
     };
 
     return Navbar;
   }(AbstractComponent);
-
-  /**
-   * @namespace PSV.plugins
-   */
-
-  /**
-   * @summary Base plugins class
-   * @memberof PSV.plugins
-   * @abstract
-   */
-
-  var AbstractPlugin = /*#__PURE__*/function (_EventEmitter) {
-    _inheritsLoose(AbstractPlugin, _EventEmitter);
-
-    /**
-     * @summary Unique identifier of the plugin
-     * @member {string}
-     * @readonly
-     * @static
-     */
-
-    /**
-     * @param {PSV.Viewer} psv
-     */
-    function AbstractPlugin(psv) {
-      var _this;
-
-      _this = _EventEmitter.call(this) || this;
-      /**
-       * @summary Reference to main controller
-       * @type {PSV.Viewer}
-       * @readonly
-       */
-
-      _this.psv = psv;
-      return _this;
-    }
-    /**
-     * @summary Destroys the plugin
-     * @package
-     */
-
-
-    var _proto = AbstractPlugin.prototype;
-
-    _proto.destroy = function destroy() {
-      delete this.psv;
-    };
-
-    return AbstractPlugin;
-  }(uevent.EventEmitter);
-  AbstractPlugin.id = null;
 
   /**
    * @summary Loader class
@@ -3993,7 +4700,7 @@
       if (typeof config === 'string') {
         config = {
           content: config
-        }; // eslint-disable-line no-param-reassign
+        };
       }
 
       this.content.innerHTML = config.content;
@@ -4086,13 +4793,9 @@
 
       _this.container.appendChild(_this.subtext);
 
-      _this.container.addEventListener('mouseup', function (e) {
-        e.stopPropagation();
+      _this.container.addEventListener('mouseup', _assertThisInitialized(_this));
 
-        if (_this.prop.dissmisable) {
-          _this.hide();
-        }
-      }, true);
+      document.addEventListener('keydown', _assertThisInitialized(_this));
 
       _AbstractComponent.prototype.hide.call(_assertThisInitialized(_this));
 
@@ -4106,11 +4809,35 @@
     var _proto = Overlay.prototype;
 
     _proto.destroy = function destroy() {
+      document.removeEventListener('keydown', this);
       delete this.image;
       delete this.text;
       delete this.subtext;
 
       _AbstractComponent.prototype.destroy.call(this);
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} e
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(e) {
+      /* eslint-disable */
+      switch (e.type) {
+        // @formatter:off
+        case 'mouseup':
+          this.prop.dissmisable && this.hide();
+          break;
+
+        case 'keydown':
+          getEventKey(e) === KEY_CODES.Escape && this.prop.dissmisable && this.hide();
+          break;
+        // @formatter:on
+      }
+      /* eslint-enable */
+
     }
     /**
      * @override
@@ -4145,7 +4872,7 @@
       if (typeof config === 'string') {
         config = {
           text: config
-        }; // eslint-disable-line no-param-reassign
+        };
       }
 
       this.prop.contentId = config.id;
@@ -4210,6 +4937,7 @@
        * @property {number} mouseY
        * @property {boolean} mousedown
        * @property {function} clickHandler
+       * @property {function} keyHandler
        */
 
       _this.prop = _extends({}, _this.prop, {
@@ -4219,6 +4947,7 @@
         mouseY: 0,
         mousedown: false,
         clickHandler: null,
+        keyHandler: null,
         width: {}
       });
       var resizer = document.createElement('div');
@@ -4241,7 +4970,7 @@
       _this.content = document.createElement('div');
       _this.content.className = 'psv-panel-content';
 
-      _this.container.appendChild(_this.content); // Stop wheel event bubling from panel
+      _this.container.appendChild(_this.content); // Stop wheel event bubbling from panel
 
 
       _this.container.addEventListener(SYSTEM.mouseWheelEvent, function (e) {
@@ -4263,6 +4992,7 @@
 
       _this.psv.container.addEventListener('touchmove', _assertThisInitialized(_this));
 
+      document.addEventListener('keydown', _assertThisInitialized(_this));
       return _this;
     }
     /**
@@ -4277,6 +5007,7 @@
       this.psv.container.removeEventListener('touchmove', this);
       this.psv.container.removeEventListener('mouseup', this);
       this.psv.container.removeEventListener('touchend', this);
+      document.removeEventListener('keydown', this);
       delete this.prop;
       delete this.content;
 
@@ -4322,6 +5053,10 @@
           this.__onMouseUp(e);
 
           break;
+
+        case 'keydown':
+          getEventKey(e) === KEY_CODES.Escape && this.hide();
+          break;
         // @formatter:on
       }
       /* eslint-enable */
@@ -4351,16 +5086,18 @@
      * @param {string} config.content - HTML content of the panel
      * @param {boolean} [config.noMargin=false] - remove the default margins
      * @param {string} [config.width] - initial width, if not specified the default width will be used
-     * @param {Function} [config.clickHandler] - called when the user clicks inside the panel
+     * @param {Function} [config.clickHandler] - called when the user clicks inside the panel or presses the Enter key while an element focused
      * @fires PSV.open-panel
      */
     ;
 
     _proto.show = function show(config) {
+      var _this2 = this;
+
       if (typeof config === 'string') {
         config = {
           content: config
-        }; // eslint-disable-line no-param-reassign
+        };
       }
 
       this.prop.contentId = config.id;
@@ -4368,7 +5105,9 @@
 
       if (this.prop.clickHandler) {
         this.content.removeEventListener('click', this.prop.clickHandler);
+        this.content.removeEventListener('keydown', this.prop.keyHandler);
         this.prop.clickHandler = null;
+        this.prop.keyHandler = null;
       }
 
       if (config.id && this.prop.width[config.id]) {
@@ -4386,7 +5125,21 @@
 
       if (config.clickHandler) {
         this.prop.clickHandler = config.clickHandler;
-        this.content.addEventListener('click', config.clickHandler);
+
+        this.prop.keyHandler = function (e) {
+          if (getEventKey(e) === KEY_CODES.Enter) {
+            config.clickHandler(e);
+          }
+        };
+
+        this.content.addEventListener('click', this.prop.clickHandler);
+        this.content.addEventListener('keydown', this.prop.keyHandler); // focus the first element if possible, after animation ends
+
+        setTimeout(function () {
+          var _this2$content$queryS;
+
+          (_this2$content$queryS = _this2.content.querySelector('a,button,[tabindex]')) == null ? void 0 : _this2$content$queryS.focus();
+        }, 300);
       }
 
       this.psv.trigger(EVENTS.OPEN_PANEL, config.id);
@@ -4568,6 +5321,8 @@
     return AbstractService;
   }();
 
+  var vector2 = new THREE.Vector2();
+  var vector3 = new THREE.Vector3();
   /**
    * @summary Collections of data converters for the current viewer
    * @extends PSV.services.AbstractService
@@ -4642,11 +5397,12 @@
     ;
 
     _proto.textureCoordsToSphericalCoords = function textureCoordsToSphericalCoords(point) {
-      if (this.prop.isCubemap) {
-        throw new PSVError('Unable to use texture coords with cubemap.');
+      var panoData = this.prop.panoData;
+
+      if (!panoData) {
+        throw new PSVError('Current adapter does not support texture coordinates.');
       }
 
-      var panoData = this.prop.panoData;
       var relativeX = (point.x + panoData.croppedX) / panoData.fullWidth * Math.PI * 2;
       var relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI;
       return {
@@ -4662,11 +5418,12 @@
     ;
 
     _proto.sphericalCoordsToTextureCoords = function sphericalCoordsToTextureCoords(position) {
-      if (this.prop.isCubemap) {
-        throw new PSVError('Unable to use texture coords with cubemap.');
+      var panoData = this.prop.panoData;
+
+      if (!panoData) {
+        throw new PSVError('Current adapter does not support texture coordinates.');
       }
 
-      var panoData = this.prop.panoData;
       var relativeLong = position.longitude / Math.PI / 2 * panoData.fullWidth;
       var relativeLat = position.latitude / Math.PI * panoData.fullHeight;
       return {
@@ -4677,12 +5434,20 @@
     /**
      * @summary Converts spherical radians coordinates to a THREE.Vector3
      * @param {PSV.Position} position
+     * @param {external:THREE.Vector3} [vector]
      * @returns {external:THREE.Vector3}
      */
     ;
 
-    _proto.sphericalCoordsToVector3 = function sphericalCoordsToVector3(position) {
-      return new THREE.Vector3(SPHERE_RADIUS * -Math.cos(position.latitude) * Math.sin(position.longitude), SPHERE_RADIUS * Math.sin(position.latitude), SPHERE_RADIUS * Math.cos(position.latitude) * Math.cos(position.longitude));
+    _proto.sphericalCoordsToVector3 = function sphericalCoordsToVector3(position, vector) {
+      if (!vector) {
+        vector = new THREE.Vector3();
+      }
+
+      vector.x = SPHERE_RADIUS * -Math.cos(position.latitude) * Math.sin(position.longitude);
+      vector.y = SPHERE_RADIUS * Math.sin(position.latitude);
+      vector.z = SPHERE_RADIUS * Math.cos(position.latitude) * Math.cos(position.longitude);
+      return vector;
     }
     /**
      * @summary Converts a THREE.Vector3 to spherical radians coordinates
@@ -4707,8 +5472,9 @@
     ;
 
     _proto.viewerCoordsToVector3 = function viewerCoordsToVector3(viewerPoint) {
-      var screen = new THREE.Vector2(2 * viewerPoint.x / this.prop.size.width - 1, -2 * viewerPoint.y / this.prop.size.height + 1);
-      this.psv.renderer.raycaster.setFromCamera(screen, this.psv.renderer.camera);
+      vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
+      vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
+      this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
       var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
 
       if (intersects.length === 1) {
@@ -4731,6 +5497,16 @@
         x: Math.round((vectorClone.x + 1) / 2 * this.prop.size.width),
         y: Math.round((1 - vectorClone.y) / 2 * this.prop.size.height)
       };
+    }
+    /**
+     * @summary Converts spherical radians coordinates to position on the viewer
+     * @param {PSV.Position} position
+     * @returns {PSV.Point}
+     */
+    ;
+
+    _proto.sphericalCoordsToViewerCoords = function sphericalCoordsToViewerCoords(position) {
+      return this.vector3ToViewerCoords(this.sphericalCoordsToVector3(position, vector3));
     }
     /**
      * @summary Converts x/y to latitude/longitude if present and ensure boundaries
@@ -4798,6 +5574,7 @@
        * @property {number} mouseY - current y position of the cursor
        * @property {number[][]} mouseHistory - list of latest positions of the cursor, [time, x, y]
        * @property {number} pinchDist - distance between fingers when zooming
+       * @property {PressHandler} keyHandler
        * @property {boolean} ctrlKeyDown - when the Ctrl key is pressed
        * @property {PSV.ClickData} dblclickData - temporary storage of click data between two clicks
        * @property {number} dblclickTimeout - timeout id for double click
@@ -4816,6 +5593,7 @@
         mouseY: 0,
         mouseHistory: [],
         pinchDist: 0,
+        keyHandler: new PressHandler(),
         ctrlKeyDown: false,
         dblclickData: null,
         dblclickTimeout: null,
@@ -5009,7 +5787,7 @@
       var key = getEventKey(evt);
 
       if (this.config.mousewheelCtrlKey) {
-        this.state.ctrlKeyDown = key === 'Control';
+        this.state.ctrlKeyDown = key === KEY_CODES.Control;
 
         if (this.state.ctrlKeyDown) {
           clearTimeout(this.state.ctrlZoomTimeout);
@@ -5021,52 +5799,49 @@
         return;
       }
 
-      var dLong = 0;
-      var dLat = 0;
-      var dZoom = 0;
-      /* eslint-disable */
+      if (this.config.keyboard[key] === ACTIONS.TOGGLE_AUTOROTATE) {
+        this.psv.toggleAutorotate();
+      } else if (this.config.keyboard[key] && !this.state.keyHandler.time) {
+        /* eslint-disable */
+        switch (this.config.keyboard[key]) {
+          // @formatter:off
+          case ACTIONS.ROTATE_LAT_UP:
+            this.psv.dynamics.position.roll({
+              latitude: false
+            });
+            break;
 
-      switch (this.config.keyboard[key]) {
-        // @formatter:off
-        case ACTIONS.ROTATE_LAT_UP:
-          dLat = 0.01;
-          break;
+          case ACTIONS.ROTATE_LAT_DOWN:
+            this.psv.dynamics.position.roll({
+              latitude: true
+            });
+            break;
 
-        case ACTIONS.ROTATE_LAT_DOWN:
-          dLat = -0.01;
-          break;
+          case ACTIONS.ROTATE_LONG_RIGHT:
+            this.psv.dynamics.position.roll({
+              longitude: false
+            });
+            break;
 
-        case ACTIONS.ROTATE_LONG_RIGHT:
-          dLong = 0.01;
-          break;
+          case ACTIONS.ROTATE_LONG_LEFT:
+            this.psv.dynamics.position.roll({
+              longitude: true
+            });
+            break;
 
-        case ACTIONS.ROTATE_LONG_LEFT:
-          dLong = -0.01;
-          break;
+          case ACTIONS.ZOOM_IN:
+            this.psv.dynamics.zoom.roll(false);
+            break;
 
-        case ACTIONS.ZOOM_IN:
-          dZoom = 1;
-          break;
-
-        case ACTIONS.ZOOM_OUT:
-          dZoom = -1;
-          break;
-
-        case ACTIONS.TOGGLE_AUTOROTATE:
-          this.psv.toggleAutorotate();
-          break;
-        // @formatter:on
-      }
-      /* eslint-enable */
+          case ACTIONS.ZOOM_OUT:
+            this.psv.dynamics.zoom.roll(true);
+            break;
+          // @formatter:on
+        }
+        /* eslint-enable */
 
 
-      if (dZoom !== 0) {
-        this.psv.zoom(this.prop.zoomLvl + dZoom * this.config.zoomButtonIncrement);
-      } else if (dLat !== 0 || dLong !== 0) {
-        this.psv.rotate({
-          longitude: this.prop.position.longitude + dLong * this.prop.moveSpeed * this.prop.hFov,
-          latitude: this.prop.position.latitude + dLat * this.prop.moveSpeed * this.prop.vFov
-        });
+        this.state.keyHandler.down();
       }
     }
     /**
@@ -5076,7 +5851,19 @@
     ;
 
     _proto.__onKeyUp = function __onKeyUp() {
+      var _this2 = this;
+
       this.state.ctrlKeyDown = false;
+
+      if (!this.state.keyboardEnabled) {
+        return;
+      }
+
+      this.state.keyHandler.up(function () {
+        _this2.psv.dynamics.position.stop();
+
+        _this2.psv.dynamics.zoom.stop();
+      });
     }
     /**
      * @summary Handles mouse down events
@@ -5162,7 +5949,7 @@
     ;
 
     _proto.__onTouchStart = function __onTouchStart(evt) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (!this.config.mousemove) {
         return;
@@ -5177,9 +5964,9 @@
 
         if (!this.prop.longtouchTimeout) {
           this.prop.longtouchTimeout = setTimeout(function () {
-            _this2.__click(evt.touches[0], true);
+            _this3.__click(evt.touches[0], true);
 
-            _this2.prop.longtouchTimeout = null;
+            _this3.prop.longtouchTimeout = null;
           }, LONGTOUCH_DELAY);
         }
       } else if (evt.touches.length === 2) {
@@ -5224,7 +6011,7 @@
     ;
 
     _proto.__onTouchMove = function __onTouchMove(evt) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (!this.config.mousemove) {
         return;
@@ -5234,10 +6021,10 @@
         if (this.config.touchmoveTwoFingers) {
           if (!this.prop.twofingersTimeout) {
             this.prop.twofingersTimeout = setTimeout(function () {
-              _this3.psv.overlay.show({
+              _this4.psv.overlay.show({
                 id: IDS.TWO_FINGERS,
                 image: gestureIcon,
-                text: _this3.config.lang.twoFingers
+                text: _this4.config.lang.twoFingers
               });
             }, TWOFINGERSOVERLAY_DELAY);
           }
@@ -5288,7 +6075,7 @@
     ;
 
     _proto.__onMouseWheel = function __onMouseWheel(evt) {
-      var _this4 = this;
+      var _this5 = this;
 
       if (!this.config.mousewheel) {
         return;
@@ -5302,17 +6089,17 @@
         });
         clearTimeout(this.state.ctrlZoomTimeout);
         this.state.ctrlZoomTimeout = setTimeout(function () {
-          return _this4.psv.overlay.hide(IDS.CTRL_ZOOM);
+          return _this5.psv.overlay.hide(IDS.CTRL_ZOOM);
         }, CTRLZOOM_TIMEOUT);
         return;
       }
 
       evt.preventDefault();
       evt.stopPropagation();
-      var delta = normalizeWheel(evt).spinY * 5;
+      var delta = normalizeWheel(evt).spinY * 5 * this.config.zoomSpeed;
 
       if (delta !== 0) {
-        this.psv.zoom(this.prop.zoomLvl - delta * this.config.mousewheelSpeed);
+        this.psv.dynamics.zoom.step(-delta, 5);
       }
     }
     /**
@@ -5344,19 +6131,19 @@
     ;
 
     _proto.__startMove = function __startMove(evt) {
-      var _this5 = this;
+      var _this6 = this;
 
       this.psv.stopAutorotate();
       this.psv.stopAnimation().then(function () {
-        _this5.state.mouseX = evt.clientX;
-        _this5.state.mouseY = evt.clientY;
-        _this5.state.startMouseX = _this5.state.mouseX;
-        _this5.state.startMouseY = _this5.state.mouseY;
-        _this5.state.moving = true;
-        _this5.state.zooming = false;
-        _this5.state.mouseHistory.length = 0;
+        _this6.state.mouseX = evt.clientX;
+        _this6.state.mouseY = evt.clientY;
+        _this6.state.startMouseX = _this6.state.mouseX;
+        _this6.state.startMouseY = _this6.state.mouseY;
+        _this6.state.moving = true;
+        _this6.state.zooming = false;
+        _this6.state.mouseHistory.length = 0;
 
-        _this5.__logMouseMove(evt);
+        _this6.__logMouseMove(evt);
       });
     }
     /**
@@ -5406,12 +6193,12 @@
           this.state.moving = false;
         } // inertia animation
         else if (this.config.moveInertia) {
-            this.__logMouseMove(evt);
+          this.__logMouseMove(evt);
 
-            this.__stopMoveInertia(evt);
-          } else {
-            this.state.moving = false;
-          }
+          this.__stopMoveInertia(evt);
+        } else {
+          this.state.moving = false;
+        }
 
         this.state.mouseHistory.length = 0;
       }
@@ -5435,7 +6222,7 @@
     ;
 
     _proto.__stopMoveInertia = function __stopMoveInertia(evt) {
-      var _this6 = this;
+      var _this7 = this;
 
       var direction = {
         x: evt.clientX - this.state.mouseHistory[0][1],
@@ -5456,10 +6243,10 @@
         duration: norm * INERTIA_WINDOW / 100,
         easing: 'outCirc',
         onTick: function onTick(properties) {
-          _this6.__move(properties, false);
+          _this7.__move(properties, false);
         }
       }).finally(function () {
-        _this6.state.moving = false;
+        _this7.state.moving = false;
       });
     }
     /**
@@ -5473,7 +6260,7 @@
     ;
 
     _proto.__click = function __click(evt, longtouch) {
-      var _this7 = this;
+      var _this8 = this;
 
       if (longtouch === void 0) {
         longtouch = false;
@@ -5500,20 +6287,23 @@
       if (intersect) {
         var sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(intersect);
         data.longitude = sphericalCoords.longitude;
-        data.latitude = sphericalCoords.latitude; // TODO: for cubemap, computes texture's index and coordinates
+        data.latitude = sphericalCoords.latitude;
 
-        if (!this.prop.isCubemap) {
+        try {
           var textureCoords = this.psv.dataHelper.sphericalCoordsToTextureCoords(data);
           data.textureX = textureCoords.x;
           data.textureY = textureCoords.y;
+        } catch (e) {
+          data.textureX = NaN;
+          data.textureY = NaN;
         }
 
         if (!this.state.dblclickTimeout) {
           this.psv.trigger(EVENTS.CLICK, data);
           this.state.dblclickData = clone(data);
           this.state.dblclickTimeout = setTimeout(function () {
-            _this7.state.dblclickTimeout = null;
-            _this7.state.dblclickData = null;
+            _this8.state.dblclickTimeout = null;
+            _this8.state.dblclickData = null;
           }, DBLCLICK_DELAY);
         } else {
           if (Math.abs(this.state.dblclickData.clientX - data.clientX) < MOVE_THRESHOLD && Math.abs(this.state.dblclickData.clientY - data.clientY) < MOVE_THRESHOLD) {
@@ -5539,12 +6329,13 @@
         var x = evt.clientX;
         var y = evt.clientY;
         var rotation = {
-          longitude: (x - this.state.mouseX) / this.prop.size.width * this.prop.moveSpeed * this.prop.hFov * SYSTEM.pixelRatio,
-          latitude: (y - this.state.mouseY) / this.prop.size.height * this.prop.moveSpeed * this.prop.vFov * SYSTEM.pixelRatio
+          longitude: (x - this.state.mouseX) / this.prop.size.width * this.config.moveSpeed * THREE.Math.degToRad(this.prop.hFov),
+          latitude: (y - this.state.mouseY) / this.prop.size.height * this.config.moveSpeed * THREE.Math.degToRad(this.prop.vFov)
         };
+        var currentPosition = this.psv.getPosition();
         this.psv.rotate({
-          longitude: this.prop.position.longitude - rotation.longitude,
-          latitude: this.prop.position.latitude + rotation.latitude
+          longitude: currentPosition.longitude - rotation.longitude,
+          latitude: currentPosition.latitude + rotation.latitude
         });
         this.state.mouseX = x;
         this.state.mouseY = y;
@@ -5564,10 +6355,10 @@
     _proto.__moveAbsolute = function __moveAbsolute(evt) {
       if (this.state.moving) {
         var containerRect = this.psv.container.getBoundingClientRect();
-        this.psv.rotate({
+        this.psv.dynamics.position.goto({
           longitude: ((evt.clientX - containerRect.left) / containerRect.width - 0.5) * Math.PI * 2,
           latitude: -((evt.clientY - containerRect.top) / containerRect.height - 0.5) * Math.PI
-        });
+        }, 10);
       }
     }
     /**
@@ -5588,8 +6379,8 @@
           y: evt.touches[1].clientY
         };
         var p = distance(p1, p2);
-        var delta = 80 * (p - this.state.pinchDist) / this.prop.size.width;
-        this.psv.zoom(this.prop.zoomLvl + delta);
+        var delta = 80 * (p - this.state.pinchDist) / this.prop.size.width * this.config.zoomSpeed;
+        this.psv.zoom(this.psv.getZoomLevel() + delta);
 
         this.__move({
           clientX: (p1.x + p2.x) / 2,
@@ -5695,6 +6486,12 @@
 
       _this.raycaster = null;
       /**
+       * @member {number}
+       * @private
+       */
+
+      _this.timestamp = null;
+      /**
        * @member {HTMLElement}
        * @readonly
        * @package
@@ -5777,7 +6574,12 @@
     _proto.__renderLoop = function __renderLoop(timestamp) {
       var _this2 = this;
 
-      this.psv.trigger(EVENTS.BEFORE_RENDER, timestamp);
+      var elapsed = this.timestamp !== null ? timestamp - this.timestamp : 0;
+      this.timestamp = timestamp;
+      this.psv.trigger(EVENTS.BEFORE_RENDER, timestamp, elapsed);
+      each(this.psv.dynamics, function (d) {
+        return d.update(elapsed);
+      });
 
       if (this.prop.needsUpdate) {
         this.render();
@@ -5797,7 +6599,6 @@
     ;
 
     _proto.render = function render() {
-      this.prop.direction = this.psv.dataHelper.sphericalCoordsToVector3(this.prop.position);
       this.camera.position.set(0, 0, 0);
       this.camera.lookAt(this.prop.direction);
 
@@ -5805,11 +6606,22 @@
         this.camera.position.copy(this.prop.direction).multiplyScalar(this.config.fisheye / 2).negate();
       }
 
-      this.camera.aspect = this.prop.aspect;
-      this.camera.fov = this.prop.vFov;
-      this.camera.updateProjectionMatrix();
+      this.updateCameraMatrix();
       this.renderer.render(this.scene, this.camera);
       this.psv.trigger(EVENTS.RENDER);
+    }
+    /**
+     * @summary Updates the camera matrix
+     * @package
+     */
+    ;
+
+    _proto.updateCameraMatrix = function updateCameraMatrix() {
+      if (this.camera) {
+        this.camera.aspect = this.prop.aspect;
+        this.camera.fov = this.prop.vFov;
+        this.camera.updateProjectionMatrix();
+      }
     }
     /**
      * @summary Applies the texture to the scene, creates the scene if needed
@@ -5820,30 +6632,12 @@
     ;
 
     _proto.setTexture = function setTexture(textureData) {
-      var texture = textureData.texture,
-          panoData = textureData.panoData;
-      this.prop.panoData = panoData;
-
       if (!this.scene) {
         this.__createScene();
       }
 
-      if (this.prop.isCubemap) {
-        for (var i = 0; i < 6; i++) {
-          if (this.mesh.material[i].map) {
-            this.mesh.material[i].map.dispose();
-          }
-
-          this.mesh.material[i].map = texture[i];
-        }
-      } else {
-        if (this.mesh.material.map) {
-          this.mesh.material.map.dispose();
-        }
-
-        this.mesh.material.map = texture;
-      }
-
+      this.prop.panoData = textureData.panoData;
+      this.psv.adapter.setTexture(this.mesh, textureData);
       this.psv.needsUpdate();
       this.psv.trigger(EVENTS.PANORAMA_LOADED);
     }
@@ -5883,16 +6677,7 @@
 
       if (sphereCorrection) {
         var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
-
-        if (!this.config.sphereCorrectionReorder) {
-          var nonZeros = (cleanCorrection.tilt !== 0) + (cleanCorrection.pan !== 0) + (cleanCorrection.roll !== 0);
-
-          if (nonZeros > 1) {
-            logWarn("\"sphereCorrection\" computation will change in a future version. \n            Please set \"sphereCorrectionReorder: true\" and modify your correction accordingly.");
-          }
-        }
-
-        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll, this.config.sphereCorrectionReorder ? 'ZXY' : 'XYZ');
+        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll, 'ZXY');
       } else {
         mesh.rotation.set(0, 0, 0);
       }
@@ -5910,72 +6695,17 @@
       });
       this.renderer.setSize(this.prop.size.width, this.prop.size.height);
       this.renderer.setPixelRatio(SYSTEM.pixelRatio);
-      this.camera = new THREE.PerspectiveCamera(this.prop.vFov, this.prop.size.width / this.prop.size.height, 1, 3 * SPHERE_RADIUS);
+      this.camera = new THREE.PerspectiveCamera(this.prop.vFov, this.prop.size.width / this.prop.size.height, 1, 2 * SPHERE_RADIUS);
       this.camera.position.set(0, 0, 0);
       this.scene = new THREE.Scene();
       this.scene.add(this.camera);
-
-      if (this.prop.isCubemap) {
-        this.mesh = this.__createCubemap();
-      } else {
-        this.mesh = this.__createSphere();
-      }
-
+      this.mesh = this.psv.adapter.createMesh();
       this.meshContainer = new THREE.Group();
       this.meshContainer.add(this.mesh);
       this.scene.add(this.meshContainer); // create canvas container
 
       this.renderer.domElement.className = 'psv-canvas';
       this.canvasContainer.appendChild(this.renderer.domElement);
-    }
-    /**
-     * @summary Creates the sphere mesh
-     * @param {number} [scale=1]
-     * @returns {external:THREE.Mesh}
-     * @private
-     */
-    ;
-
-    _proto.__createSphere = function __createSphere(scale) {
-      if (scale === void 0) {
-        scale = 1;
-      }
-
-      // The middle of the panorama is placed at longitude=0
-      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, SPHERE_VERTICES, SPHERE_VERTICES, -Math.PI / 2);
-      var material = new THREE.MeshBasicMaterial({
-        side: THREE.BackSide
-      });
-      var mesh = new THREE.Mesh(geometry, material);
-      mesh.scale.set(-1, 1, 1);
-      return mesh;
-    }
-    /**
-     * @summary Creates the cube mesh
-     * @param {number} [scale=1]
-     * @returns {external:THREE.Mesh}
-     * @private
-     */
-    ;
-
-    _proto.__createCubemap = function __createCubemap(scale) {
-      if (scale === void 0) {
-        scale = 1;
-      }
-
-      var cubeSize = SPHERE_RADIUS * 2 * scale;
-      var geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize, CUBE_VERTICES, CUBE_VERTICES, CUBE_VERTICES);
-      var materials = [];
-
-      for (var i = 0; i < 6; i++) {
-        materials.push(new THREE.MeshBasicMaterial({
-          side: THREE.BackSide
-        }));
-      }
-
-      var mesh = new THREE.Mesh(geometry, materials);
-      mesh.scale.set(1, 1, -1);
-      return mesh;
     }
     /**
      * @summary Performs transition between the current and a new texture
@@ -5989,49 +6719,24 @@
     _proto.transition = function transition(textureData, options) {
       var _this3 = this;
 
-      var texture = textureData.texture,
-          panoData = textureData.panoData;
       var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
       var group = new THREE.Group();
-      var mesh;
-
-      if (this.prop.isCubemap) {
-        if (positionProvided) {
-          logWarn('cannot perform cubemap transition to different position');
-          positionProvided = false;
-        }
-
-        mesh = this.__createCubemap(0.9);
-        mesh.material.forEach(function (material, i) {
-          material.map = texture[i];
-          material.transparent = true;
-          material.opacity = 0;
-        });
-      } else {
-        mesh = this.__createSphere(0.9);
-        mesh.material.map = texture;
-        mesh.material.transparent = true;
-        mesh.material.opacity = 0;
-        this.setPanoramaPose(panoData, mesh);
-        this.setSphereCorrection(options.sphereCorrection, group);
-      } // rotate the new sphere to make the target position face the camera
-
+      var mesh = this.psv.adapter.createMesh(0.5);
+      this.psv.adapter.setTexture(mesh, textureData);
+      this.psv.adapter.setTextureOpacity(mesh, 0);
+      this.setPanoramaPose(options.panoData, mesh);
+      this.setSphereCorrection(options.sphereCorrection, group); // rotate the new sphere to make the target position face the camera
 
       if (positionProvided) {
-        var cleanPosition = this.psv.dataHelper.cleanPosition(options); // Longitude rotation along the vertical axis
+        var cleanPosition = this.psv.dataHelper.cleanPosition(options);
+        var currentPosition = this.psv.getPosition(); // Longitude rotation along the vertical axis
 
         var verticalAxis = new THREE.Vector3(0, 1, 0);
-        group.rotateOnWorldAxis(verticalAxis, cleanPosition.longitude - this.prop.position.longitude); // Latitude rotation along the camera horizontal axis
+        group.rotateOnWorldAxis(verticalAxis, cleanPosition.longitude - currentPosition.longitude); // Latitude rotation along the camera horizontal axis
 
         var horizontalAxis = new THREE.Vector3(0, 1, 0).cross(this.camera.getWorldDirection(new THREE.Vector3())).normalize();
-        group.rotateOnWorldAxis(horizontalAxis, cleanPosition.latitude - this.prop.position.latitude); // TODO: find a better way to handle ranges
-
-        if (this.config.latitudeRange || this.config.longitudeRange) {
-          this.config.longitudeRange = null;
-          this.config.latitudeRange = null;
-          logWarn('trying to perform transition with longitudeRange and/or latitudeRange, ranges cleared');
-        }
+        group.rotateOnWorldAxis(horizontalAxis, cleanPosition.latitude - currentPosition.latitude);
       }
 
       group.add(mesh);
@@ -6044,20 +6749,14 @@
             end: 1.0
           },
           zoom: zoomProvided ? {
-            start: this.prop.zoomLvl,
+            start: this.psv.getZoomLevel(),
             end: options.zoom
           } : undefined
         },
         duration: options.transition,
         easing: 'outCubic',
         onTick: function onTick(properties) {
-          if (_this3.prop.isCubemap) {
-            for (var i = 0; i < 6; i++) {
-              mesh.material[i].opacity = properties.opacity;
-            }
-          } else {
-            mesh.material.opacity = properties.opacity;
-          }
+          _this3.psv.adapter.setTextureOpacity(mesh, properties.opacity);
 
           if (zoomProvided) {
             _this3.psv.zoom(properties.zoom);
@@ -6069,17 +6768,14 @@
         // remove temp sphere and transfer the texture to the main sphere
         _this3.setTexture(textureData);
 
+        _this3.setPanoramaPose(options.panoData);
+
+        _this3.setSphereCorrection(options.sphereCorrection);
+
         _this3.scene.remove(group);
 
         mesh.geometry.dispose();
-        mesh.geometry = null;
-
-        if (!_this3.prop.isCubemap) {
-          _this3.setPanoramaPose(panoData);
-
-          _this3.setSphereCorrection(options.sphereCorrection);
-        } // actually rotate the camera
-
+        mesh.geometry = null; // actually rotate the camera
 
         if (positionProvided) {
           _this3.psv.rotate(options);
@@ -6155,6 +6851,24 @@
        */
 
       _this.requests = [];
+      /**
+       * @summary THREE file loader
+       * @type {external:THREE:FileLoader}
+       * @private
+       */
+
+      _this.loader = new THREE.FileLoader();
+
+      _this.loader.setResponseType('blob');
+
+      if (_this.config.withCredentials) {
+        _this.loader.setWithCredentials(true);
+      }
+
+      if (_this.config.requestHeaders && typeof _this.config.requestHeaders === 'object') {
+        _this.loader.setRequestHeader(_this.config.requestHeaders);
+      }
+
       return _this;
     }
     /**
@@ -6171,7 +6885,7 @@
     }
     /**
      * @summary Loads the panorama texture(s)
-     * @param {string|string[]|PSV.Cubemap} panorama
+     * @param {*} panorama
      * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
@@ -6180,34 +6894,7 @@
     ;
 
     _proto.loadTexture = function loadTexture(panorama, newPanoData) {
-      var tempPanorama = [];
-
-      if (Array.isArray(panorama)) {
-        if (panorama.length !== 6) {
-          throw new PSVError('Must provide exactly 6 image paths when using cubemap.');
-        } // reorder images
-
-
-        for (var i = 0; i < 6; i++) {
-          tempPanorama[i] = panorama[CUBE_MAP[i]];
-        }
-
-        return this.__loadCubemapTexture(tempPanorama);
-      } else if (typeof panorama === 'object') {
-        if (!CUBE_HASHMAP.every(function (side) {
-          return !!panorama[side];
-        })) {
-          throw new PSVError('Must provide exactly left, front, right, back, top, bottom when using cubemap.');
-        } // transform into array
-
-
-        CUBE_HASHMAP.forEach(function (side, i) {
-          tempPanorama[i] = panorama[side];
-        });
-        return this.__loadCubemapTexture(tempPanorama);
-      } else {
-        return this.__loadEquirectangularTexture(panorama, newPanoData);
-      }
+      return this.psv.adapter.loadTexture(panorama, newPanoData);
     }
     /**
      * @summary Cancels current HTTP requests
@@ -6225,24 +6912,21 @@
      * @param {string} url
      * @param {function(number)} [onProgress]
      * @returns {Promise<Blob>}
-     * @private
      */
     ;
 
-    _proto.__loadFile = function __loadFile(url, onProgress) {
+    _proto.loadFile = function loadFile(url, onProgress) {
       var _this2 = this;
+
+      if (this.config.requestHeaders && typeof this.config.requestHeaders === 'function') {
+        this.loader.setRequestHeader(this.config.requestHeaders(url));
+      }
 
       return new Promise(function (resolve, reject) {
         var progress = 0;
         onProgress && onProgress(progress);
-        var loader = new THREE.FileLoader();
 
-        if (_this2.config.withCredentials) {
-          loader.setWithCredentials(true);
-        }
-
-        loader.setResponseType('blob');
-        var request = loader.load(url, function (result) {
+        var request = _this2.loader.load(url, function (result) {
           var rIdx = _this2.requests.indexOf(request);
 
           if (rIdx !== -1) _this2.requests.splice(rIdx, 1);
@@ -6265,6 +6949,7 @@
           reject(err);
         }); // when we hit the cache, the result is the cache value
 
+
         if (request instanceof XMLHttpRequest) {
           _this2.requests.push(request);
         }
@@ -6274,13 +6959,12 @@
      * @summary Loads an Image using FileLoader to have progress events
      * @param {string} url
      * @param {function(number)} [onProgress]
-     * @returns {Promise<Image>}
-     * @private
+     * @returns {Promise<HTMLImageElement>}
      */
     ;
 
-    _proto.__loadImage = function __loadImage(url, onProgress) {
-      return this.__loadFile(url, onProgress).then(function (result) {
+    _proto.loadImage = function loadImage(url, onProgress) {
+      return this.loadFile(url, onProgress).then(function (result) {
         return new Promise(function (resolve, reject) {
           var img = document.createElementNS('http://www.w3.org/1999/xhtml', 'img');
 
@@ -6295,253 +6979,14 @@
       });
     }
     /**
-     * @summmary read a Blob as string
-     * @param {Blob} blob
-     * @returns {Promise<string>}
-     * @private
-     */
-    ;
-
-    _proto.__loadBlobAsString = function __loadBlobAsString(blob) {
-      return new Promise(function (resolve, reject) {
-        var reader = new FileReader();
-
-        reader.onload = function () {
-          return resolve(reader.result);
-        };
-
-        reader.onerror = reject;
-        reader.readAsText(blob);
-      });
-    }
-    /**
-     * @summary Loads the sphere texture
-     * @param {string} panorama
-     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
-     * @returns {Promise.<PSV.TextureData>}
-     * @throws {PSV.PSVError} when the image cannot be loaded
-     * @private
-     */
-    ;
-
-    _proto.__loadEquirectangularTexture = function __loadEquirectangularTexture(panorama, newPanoData) {
-      var _this3 = this;
-
-      if (this.prop.isCubemap === true) {
-        throw new PSVError('The viewer was initialized with an cubemap, cannot switch to equirectangular panorama.');
-      }
-
-      this.prop.isCubemap = false;
-      return (!this.config.useXmpData ? this.__loadImage(panorama, function (p) {
-        return _this3.psv.loader.setProgress(p);
-      }).then(function (img) {
-        return {
-          img: img,
-          xmpPanoData: null
-        };
-      }) : this.__loadXMP(panorama, function (p) {
-        return _this3.psv.loader.setProgress(p);
-      }).then(function (xmpPanoData) {
-        return _this3.__loadImage(panorama).then(function (img) {
-          return {
-            img: img,
-            xmpPanoData: xmpPanoData
-          };
-        });
-      })).then(function (_ref) {
-        var _newPanoData, _newPanoData2, _newPanoData3, _newPanoData4, _newPanoData5, _newPanoData6, _newPanoData7, _newPanoData8, _newPanoData9;
-
-        var img = _ref.img,
-            xmpPanoData = _ref.xmpPanoData;
-
-        if (typeof newPanoData === 'function') {
-          // eslint-disable-next-line no-param-reassign
-          newPanoData = newPanoData(img);
-        }
-
-        var panoData = {
-          fullWidth: firstNonNull((_newPanoData = newPanoData) == null ? void 0 : _newPanoData.fullWidth, xmpPanoData == null ? void 0 : xmpPanoData.fullWidth, img.width),
-          fullHeight: firstNonNull((_newPanoData2 = newPanoData) == null ? void 0 : _newPanoData2.fullHeight, xmpPanoData == null ? void 0 : xmpPanoData.fullHeight, img.height),
-          croppedWidth: firstNonNull((_newPanoData3 = newPanoData) == null ? void 0 : _newPanoData3.croppedWidth, xmpPanoData == null ? void 0 : xmpPanoData.croppedWidth, img.width),
-          croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
-          croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
-          croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
-          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading),
-          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch),
-          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll)
-        };
-
-        if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
-          logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
-        }
-
-        var texture = _this3.__createEquirectangularTexture(img, panoData);
-
-        return {
-          texture: texture,
-          panoData: panoData
-        };
-      });
-    }
-    /**
-     * @summary Loads the XMP data of an image
-     * @param {string} panorama
-     * @param {function(number)} [onProgress]
-     * @returns {Promise<PSV.PanoData>}
-     * @throws {PSV.PSVError} when the image cannot be loaded
-     * @private
-     */
-    ;
-
-    _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
-      var _this4 = this;
-
-      return this.__loadFile(panorama, onProgress).then(function (blob) {
-        return _this4.__loadBlobAsString(blob);
-      }).then(function (binary) {
-        var a = binary.indexOf('<x:xmpmeta');
-        var b = binary.indexOf('</x:xmpmeta>');
-        var data = binary.substring(a, b);
-
-        if (a !== -1 && b !== -1 && data.indexOf('GPano:') !== -1) {
-          return {
-            fullWidth: getXMPValue(data, 'FullPanoWidthPixels'),
-            fullHeight: getXMPValue(data, 'FullPanoHeightPixels'),
-            croppedWidth: getXMPValue(data, 'CroppedAreaImageWidthPixels'),
-            croppedHeight: getXMPValue(data, 'CroppedAreaImageHeightPixels'),
-            croppedX: getXMPValue(data, 'CroppedAreaLeftPixels'),
-            croppedY: getXMPValue(data, 'CroppedAreaTopPixels'),
-            poseHeading: getXMPValue(data, 'PoseHeadingDegrees'),
-            posePitch: getXMPValue(data, 'PosePitchDegrees'),
-            poseRoll: getXMPValue(data, 'PoseRollDegrees')
-          };
-        }
-
-        return null;
-      });
-    }
-    /**
-     * @summary Creates the final texture from image and panorama data
-     * @param {Image} img
-     * @param {PSV.PanoData} panoData
-     * @returns {external:THREE.Texture}
-     * @private
-     */
-    ;
-
-    _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
-      var texture; // resize image / fill cropped parts with black
-
-      if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
-        var resizedPanoData = _extends({}, panoData);
-
-        var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
-
-        if (ratio < 1) {
-          resizedPanoData.fullWidth *= ratio;
-          resizedPanoData.fullHeight *= ratio;
-          resizedPanoData.croppedWidth *= ratio;
-          resizedPanoData.croppedHeight *= ratio;
-          resizedPanoData.croppedX *= ratio;
-          resizedPanoData.croppedY *= ratio;
-        }
-
-        var buffer = document.createElement('canvas');
-        buffer.width = resizedPanoData.fullWidth;
-        buffer.height = resizedPanoData.fullHeight;
-        var ctx = buffer.getContext('2d');
-        ctx.drawImage(img, resizedPanoData.croppedX, resizedPanoData.croppedY, resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
-        texture = new THREE.Texture(buffer);
-      } else {
-        texture = new THREE.Texture(img);
-      }
-
-      texture.needsUpdate = true;
-      texture.minFilter = THREE.LinearFilter;
-      texture.generateMipmaps = false;
-      return texture;
-    }
-    /**
-     * @summary Load the six textures of the cube
-     * @param {string[]} panorama
-     * @returns {Promise.<PSV.TextureData>}
-     * @throws {PSV.PSVError} when the image cannot be loaded
-     * @private
-     */
-    ;
-
-    _proto.__loadCubemapTexture = function __loadCubemapTexture(panorama) {
-      var _this5 = this;
-
-      if (this.prop.isCubemap === false) {
-        throw new PSVError('The viewer was initialized with an equirectangular panorama, cannot switch to cubemap.');
-      }
-
-      if (this.config.fisheye) {
-        logWarn('fisheye effect with cubemap texture can generate distorsion');
-      }
-
-      this.prop.isCubemap = true;
-      var promises = [];
-      var progress = [0, 0, 0, 0, 0, 0];
-
-      var _loop = function _loop(i) {
-        promises.push(_this5.__loadImage(panorama[i], function (p) {
-          progress[i] = p;
-
-          _this5.psv.loader.setProgress(sum(progress) / 6);
-        }).then(function (img) {
-          return _this5.__createCubemapTexture(img);
-        }));
-      };
-
-      for (var i = 0; i < 6; i++) {
-        _loop(i);
-      }
-
-      return Promise.all(promises).then(function (texture) {
-        return {
-          texture: texture
-        };
-      });
-    }
-    /**
-     * @summary Creates the final texture from image
-     * @param {Image} img
-     * @returns {external:THREE.Texture}
-     * @private
-     */
-    ;
-
-    _proto.__createCubemapTexture = function __createCubemapTexture(img) {
-      var texture; // resize image
-
-      if (img.width > SYSTEM.maxTextureWidth) {
-        var buffer = document.createElement('canvas');
-        var ratio = SYSTEM.getMaxCanvasWidth() / img.width;
-        buffer.width = img.width * ratio;
-        buffer.height = img.height * ratio;
-        var ctx = buffer.getContext('2d');
-        ctx.drawImage(img, 0, 0, buffer.width, buffer.height);
-        texture = new THREE.Texture(buffer);
-      } else {
-        texture = new THREE.Texture(img);
-      }
-
-      texture.needsUpdate = true;
-      texture.minFilter = THREE.LinearFilter;
-      texture.generateMipmaps = false;
-      return texture;
-    }
-    /**
      * @summary Preload a panorama file without displaying it
-     * @param {string|string[]|PSV.Cubemap} panorama
+     * @param {*} panorama
      * @returns {Promise}
      */
     ;
 
     _proto.preloadPanorama = function preloadPanorama(panorama) {
-      return this.loadTexture(panorama);
+      return this.psv.adapter.loadTexture(panorama);
     };
 
     return TextureLoader;
@@ -6976,6 +7421,399 @@
     return TooltipRenderer;
   }(AbstractService);
 
+  /**
+   * @summary Represents a variable that can dynamically change with time (using requestAnimationFrame)
+   * @memberOf PSV
+   * @package
+   */
+
+  var Dynamic = /*#__PURE__*/function () {
+    /**
+     * @param {Function} fn Callback function
+     * @param {number} [min] Minimum position
+     * @param {number} [max] Maximum position
+     */
+    function Dynamic(fn, min, max) {
+      if (min === void 0) {
+        min = -Infinity;
+      }
+
+      if (max === void 0) {
+        max = Infinity;
+      }
+
+      /**
+       * @type {Function}
+       * @private
+       * @readonly
+       */
+      this.fn = fn;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.mode = Dynamic.STOP;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.speed = 0;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.speedMult = 1;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.currentSpeed = 0;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.target = 0;
+      /**
+       * @type {number}
+       * @readonly
+       */
+
+      this.current = 0;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.min = min;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.max = max;
+    }
+    /**
+     * Changes base speed
+     * @param {number} speed
+     */
+
+
+    var _proto = Dynamic.prototype;
+
+    _proto.setSpeed = function setSpeed(speed) {
+      this.speed = speed;
+    }
+    /**
+     * Defines the target position
+     * @param {number} position
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.goto = function goto(position, speedMult) {
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      this.mode = Dynamic.POSITION;
+      this.target = bound(position, this.min, this.max);
+      this.speedMult = speedMult;
+    }
+    /**
+     * Increase/decrease the target position
+     * @param {number} step
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.step = function step(_step, speedMult) {
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      if (this.mode !== Dynamic.POSITION) {
+        this.target = this.current;
+      }
+
+      this.goto(this.target + _step, speedMult);
+    }
+    /**
+     * Starts infinite movement
+     * @param {boolean} [invert=false]
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.roll = function roll(invert, speedMult) {
+      if (invert === void 0) {
+        invert = false;
+      }
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      this.mode = Dynamic.INFINITE;
+      this.target = invert ? -Infinity : Infinity;
+      this.speedMult = speedMult;
+    }
+    /**
+     * Stops movement
+     */
+    ;
+
+    _proto.stop = function stop() {
+      this.mode = Dynamic.STOP;
+    }
+    /**
+     * Defines the current position and immediately stops movement
+     * @param {number} values
+     */
+    ;
+
+    _proto.setValue = function setValue(values) {
+      var next = bound(values, this.min, this.max);
+      this.target = next;
+      this.mode = Dynamic.STOP;
+
+      if (next !== this.current) {
+        this.current = next;
+
+        if (this.fn) {
+          this.fn(this.current);
+        }
+
+        return true;
+      }
+
+      return false;
+    }
+    /**
+     * @package
+     */
+    ;
+
+    _proto.update = function update(elapsed) {
+      // in position mode switch to stop mode when in the decceleration window
+      if (this.mode === Dynamic.POSITION) {
+        var dstStop = this.currentSpeed * this.currentSpeed / (this.speed * this.speedMult * 4);
+
+        if (Math.abs(this.target - this.current) <= dstStop) {
+          this.mode = Dynamic.STOP;
+        }
+      } // compute speed
+
+
+      var targetSpeed = this.mode === Dynamic.STOP ? 0 : this.speed * this.speedMult;
+
+      if (this.target < this.current) {
+        targetSpeed = -targetSpeed;
+      }
+
+      if (this.currentSpeed < targetSpeed) {
+        this.currentSpeed = Math.min(targetSpeed, this.currentSpeed + elapsed / 1000 * this.speed * this.speedMult * 2);
+      } else if (this.currentSpeed > targetSpeed) {
+        this.currentSpeed = Math.max(targetSpeed, this.currentSpeed - elapsed / 1000 * this.speed * this.speedMult * 2);
+      } // compute new position
+
+
+      var next = null;
+
+      if (this.current > this.target && this.currentSpeed) {
+        next = Math.max(this.target, this.current + this.currentSpeed * elapsed / 1000);
+      } else if (this.current < this.target && this.currentSpeed) {
+        next = Math.min(this.target, this.current + this.currentSpeed * elapsed / 1000);
+      } // apply value
+
+
+      if (next !== null) {
+        next = bound(next, this.min, this.max);
+
+        if (next !== this.current) {
+          this.current = next;
+
+          if (this.fn) {
+            this.fn(this.current);
+          }
+
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    return Dynamic;
+  }();
+  Dynamic.STOP = 0;
+  Dynamic.INFINITE = 1;
+  Dynamic.POSITION = 2;
+
+  /**
+   * @summary Wrapper for multiple {@link PSV.Dynamic} evolving together
+   * @memberOf PSV
+   * @package
+   */
+
+  var MultiDynamic = /*#__PURE__*/function () {
+    /**
+     * @param {Record<string, PSV.Dynamic>} dynamics
+     * @param {Function} fn Callback function
+     */
+    function MultiDynamic(dynamics, fn) {
+      /**
+       * @type {Function}
+       * @private
+       * @readonly
+       */
+      this.fn = fn;
+      /**
+       * @type {Record<string, PSV.Dynamic>}
+       * @private
+       * @readonly
+       */
+
+      this.dynamics = dynamics;
+    }
+    /**
+     * Changes base speed
+     * @param {number} speed
+     */
+
+
+    var _proto = MultiDynamic.prototype;
+
+    _proto.setSpeed = function setSpeed(speed) {
+      each(this.dynamics, function (d) {
+        d.setSpeed(speed);
+      });
+    }
+    /**
+     * Defines the target positions
+     * @param {Record<string, number>} positions
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.goto = function goto(positions, speedMult) {
+      var _this = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(positions, function (position, name) {
+        _this.dynamics[name].goto(position, speedMult);
+      });
+    }
+    /**
+     * Increase/decrease the target positions
+     * @param {Record<string, number>} steps
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.step = function step(steps, speedMult) {
+      var _this2 = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(steps, function (step, name) {
+        _this2.dynamics[name].step(step, speedMult);
+      });
+    }
+    /**
+     * Starts infinite movements
+     * @param {Record<string, boolean>} rolls
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.roll = function roll(rolls, speedMult) {
+      var _this3 = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(rolls, function (roll, name) {
+        _this3.dynamics[name].roll(roll, speedMult);
+      });
+    }
+    /**
+     * Stops movements
+     */
+    ;
+
+    _proto.stop = function stop() {
+      each(this.dynamics, function (d) {
+        return d.stop();
+      });
+    }
+    /**
+     * Defines the current positions and immediately stops movements
+     * @param {Record<string, number>} values
+     */
+    ;
+
+    _proto.setValue = function setValue(values) {
+      var _this4 = this;
+
+      var hasUpdates = false;
+      each(values, function (value, name) {
+        hasUpdates |= _this4.dynamics[name].setValue(value);
+      });
+
+      if (hasUpdates && this.fn) {
+        this.fn(this.current);
+      }
+
+      return hasUpdates;
+    }
+    /**
+     * @package
+     */
+    ;
+
+    _proto.update = function update(elapsed) {
+      var hasUpdates = false;
+      each(this.dynamics, function (dynamic) {
+        hasUpdates |= dynamic.update(elapsed);
+      });
+
+      if (hasUpdates && this.fn) {
+        this.fn(this.current);
+      }
+
+      return hasUpdates;
+    };
+
+    _createClass(MultiDynamic, [{
+      key: "current",
+      get:
+      /**
+       * @type {Object<string, number>}
+       * @readonly
+       */
+      function get() {
+        var values = {};
+        each(this.dynamics, function (dynamic, name) {
+          values[name] = dynamic.current;
+        });
+        return values;
+      }
+    }]);
+
+    return MultiDynamic;
+  }();
+
   THREE.Cache.enabled = true;
   /**
    * @summary Main class
@@ -7010,15 +7848,11 @@
        * @protected
        * @property {boolean} ready - when all components are loaded
        * @property {boolean} needsUpdate - if the view needs to be renderer
-       * @property {boolean} isCubemap - if the panorama is a cubemap
-       * @property {PSV.Position} position - current direction of the camera
        * @property {external:THREE.Vector3} direction - direction of the camera
-       * @property {number} zoomLvl - current zoom level
        * @property {number} vFov - vertical FOV
        * @property {number} hFov - horizontal FOV
        * @property {number} aspect - viewer aspect ratio
-       * @property {number} moveSpeed - move speed (computed with pixel ratio and configuration moveSpeed)
-       * @property {Function} autorotateCb - update callback of the automatic rotation
+       * @property {boolean} autorotateEnabled - automatic rotation is enabled
        * @property {PSV.Animation} animationPromise - promise of the current animation (either go to position or image transition)
        * @property {Promise} loadingPromise - promise of the setPanorama method
        * @property startTimeout - timeout id of the automatic rotation delay
@@ -7032,18 +7866,11 @@
         uiRefresh: false,
         needsUpdate: false,
         fullscreen: false,
-        isCubemap: undefined,
-        position: {
-          longitude: 0,
-          latitude: 0
-        },
-        direction: null,
-        zoomLvl: null,
+        direction: new THREE.Vector3(0, 0, SPHERE_RADIUS),
         vFov: null,
         hFov: null,
         aspect: null,
-        moveSpeed: 0.1,
-        autorotateCb: null,
+        autorotateEnabled: false,
         animationPromise: null,
         loadingPromise: null,
         startTimeout: null,
@@ -7087,12 +7914,21 @@
 
       _this.parent.appendChild(_this.container);
       /**
+       * @summary Render adapter
+       * @type {PSV.adapters.AbstractAdapter}
+       * @readonly
+       * @package
+       */
+
+
+      _this.adapter = new _this.config.adapter[0](_assertThisInitialized(_this), _this.config.adapter[1]); // eslint-disable-line new-cap
+
+      /**
        * @summary All child components
        * @type {PSV.components.AbstractComponent[]}
        * @readonly
        * @package
        */
-
 
       _this.children = [];
       /**
@@ -7167,6 +8003,33 @@
        */
 
       _this.overlay = new Overlay(_assertThisInitialized(_this));
+      /**
+       * @member {Record<string, PSV.Dynamic>}
+       * @package
+       */
+
+      _this.dynamics = {
+        zoom: new Dynamic(function (value) {
+          _this.prop.vFov = _this.dataHelper.zoomLevelToFov(value);
+          _this.prop.hFov = _this.dataHelper.vFovToHFov(_this.prop.vFov);
+
+          _this.needsUpdate();
+
+          _this.trigger(EVENTS.ZOOM_UPDATED, value);
+        }, 0, 100),
+        position: new MultiDynamic({
+          longitude: new Dynamic(null),
+          latitude: new Dynamic(null, -Math.PI / 2, Math.PI / 2)
+        }, function (position) {
+          _this.dataHelper.sphericalCoordsToVector3(position, _this.prop.direction);
+
+          _this.needsUpdate();
+
+          _this.trigger(EVENTS.POSITION_UPDATED, position);
+        })
+      };
+
+      _this.__updateSpeeds();
 
       _this.eventsHandler.init();
 
@@ -7174,10 +8037,8 @@
         return _this.refreshUi('resize');
       }, 500); // apply container size
 
-      _this.resize(_this.config.size); // actual move speed depends on pixel-ratio
+      _this.resize(_this.config.size); // init plugins
 
-
-      _this.prop.moveSpeed = THREE.Math.degToRad(_this.config.moveSpeed / SYSTEM.pixelRatio); // init plugins
 
       _this.config.plugins.forEach(function (_ref) {
         var plugin = _ref[0],
@@ -7238,6 +8099,7 @@
       this.renderer.destroy();
       this.textureLoader.destroy();
       this.dataHelper.destroy();
+      this.adapter.destroy();
       this.children.slice().forEach(function (child) {
         return child.destroy();
       });
@@ -7297,7 +8159,12 @@
     ;
 
     _proto.getPlugin = function getPlugin(pluginId) {
-      return pluginId ? this.plugins[typeof pluginId === 'function' ? pluginId.id : pluginId] : null;
+      if (typeof pluginId === 'string') {
+        return this.plugins[pluginId];
+      } else {
+        var pluginCtor = pluginInterop(pluginId, AbstractPlugin);
+        return pluginCtor ? this.plugins[pluginCtor.id] : undefined;
+      }
     }
     /**
      * @summary Returns the current position of the camera
@@ -7306,10 +8173,7 @@
     ;
 
     _proto.getPosition = function getPosition() {
-      return {
-        longitude: this.prop.position.longitude,
-        latitude: this.prop.position.latitude
-      };
+      return this.dynamics.position.current;
     }
     /**
      * @summary Returns the current zoom level
@@ -7318,7 +8182,7 @@
     ;
 
     _proto.getZoomLevel = function getZoomLevel() {
-      return this.prop.zoomLvl;
+      return this.dynamics.zoom.current;
     }
     /**
      * @summary Returns the current viewer size
@@ -7339,7 +8203,7 @@
     ;
 
     _proto.isAutorotateEnabled = function isAutorotateEnabled() {
-      return !!this.prop.autorotateCb;
+      return this.prop.autorotateEnabled;
     }
     /**
      * @summary Checks if the viewer is in fullscreen
@@ -7378,6 +8242,7 @@
         this.prop.size.height = Math.round(this.container.clientHeight);
         this.prop.aspect = this.prop.size.width / this.prop.size.height;
         this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
+        this.renderer.updateCameraMatrix();
         this.needsUpdate();
         this.trigger(EVENTS.SIZE_UPDATED, this.getSize());
 
@@ -7389,7 +8254,7 @@
      * @description Loads a new panorama file, optionally changing the camera position/zoom and activating the transition animation.<br>
      * If the "options" parameter is not defined, the camera will not move and the ongoing animation will continue.<br>
      * If another loading is already in progress it will be aborted.
-     * @param {string|string[]|PSV.Cubemap} path - URL of the new panorama file
+     * @param {*} path - URL of the new panorama file
      * @param {PSV.PanoramaOptions} [options]
      * @returns {Promise}
      */
@@ -7408,11 +8273,11 @@
 
 
       if (!this.prop.ready) {
-        if (!('longitude' in options) && !this.prop.isCubemap) {
+        if (!('longitude' in options)) {
           options.longitude = this.config.defaultLong;
         }
 
-        if (!('latitude' in options) && !this.prop.isCubemap) {
+        if (!('latitude' in options)) {
           options.latitude = this.config.defaultLat;
         }
 
@@ -7469,12 +8334,12 @@
         }
       };
 
-      if (!options.transition || !this.prop.ready) {
+      if (!options.transition || !this.prop.ready || !this.adapter.constructor.supportsTransition) {
         if (options.showLoader || !this.prop.ready) {
           this.loader.show();
         }
 
-        this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
+        this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
           _this3.renderer.setTexture(textureData);
 
           _this3.renderer.setPanoramaPose(textureData.panoData);
@@ -7494,7 +8359,7 @@
           this.loader.show();
         }
 
-        this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
+        this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
           _this3.loader.hide();
 
           return _this3.renderer.transition(textureData, options);
@@ -7514,6 +8379,11 @@
       var _this4 = this;
 
       each(options, function (value, key) {
+        if (DEPRECATED_OPTIONS[key]) {
+          logWarn(DEPRECATED_OPTIONS[key]);
+          return;
+        }
+
         if (!Object.prototype.hasOwnProperty.call(DEFAULTS, key)) {
           throw new PSVError("Unknown option " + key);
         }
@@ -7551,12 +8421,14 @@
             break;
 
           case 'moveSpeed':
-            _this4.prop.moveSpeed = THREE.Math.degToRad(value / SYSTEM.pixelRatio);
+          case 'zoomSpeed':
+            _this4.__updateSpeeds();
+
             break;
 
           case 'minFov':
           case 'maxFov':
-            _this4.prop.zoomLvl = _this4.dataHelper.fovToZoomLevel(_this4.prop.vFov);
+            _this4.dynamics.zoom.setValue(_this4.dataHelper.fovToZoomLevel(_this4.prop.vFov));
 
             _this4.trigger(EVENTS.ZOOM_UPDATED, _this4.getZoomLevel());
 
@@ -7591,25 +8463,15 @@
     ;
 
     _proto.startAutorotate = function startAutorotate() {
-      var _this5 = this;
-
       this.__stopAll();
 
-      this.prop.autorotateCb = function () {
-        var last;
-        var elapsed;
-        return function (e, timestamp) {
-          elapsed = last === undefined ? 0 : timestamp - last;
-          last = timestamp;
-
-          _this5.rotate({
-            longitude: _this5.prop.position.longitude + _this5.config.autorotateSpeed * elapsed / 1000,
-            latitude: _this5.prop.position.latitude - (_this5.prop.position.latitude - _this5.config.autorotateLat) / 200
-          });
-        };
-      }();
-
-      this.on(EVENTS.BEFORE_RENDER, this.prop.autorotateCb);
+      this.dynamics.position.roll({
+        longitude: this.config.autorotateSpeed < 0
+      }, Math.abs(this.config.autorotateSpeed / this.config.moveSpeed));
+      this.dynamics.position.goto({
+        latitude: this.config.autorotateLat
+      }, Math.abs(this.config.autorotateSpeed / this.config.moveSpeed));
+      this.prop.autorotateEnabled = true;
       this.trigger(EVENTS.AUTOROTATE, true);
     }
     /**
@@ -7625,8 +8487,8 @@
       }
 
       if (this.isAutorotateEnabled()) {
-        this.off(EVENTS.BEFORE_RENDER, this.prop.autorotateCb);
-        this.prop.autorotateCb = null;
+        this.dynamics.position.stop();
+        this.prop.autorotateEnabled = false;
         this.trigger(EVENTS.AUTOROTATE, false);
       }
     }
@@ -7681,13 +8543,7 @@
       }
 
       var cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
-
-      if (this.prop.position.longitude !== cleanPosition.longitude || this.prop.position.latitude !== cleanPosition.latitude) {
-        this.prop.position.longitude = cleanPosition.longitude;
-        this.prop.position.latitude = cleanPosition.latitude;
-        this.needsUpdate();
-        this.trigger(EVENTS.POSITION_UPDATED, this.getPosition());
-      }
+      this.dynamics.position.setValue(cleanPosition);
     }
     /**
      * @summary Rotates and zooms the view with a smooth animation
@@ -7697,7 +8553,7 @@
     ;
 
     _proto.animate = function animate(options) {
-      var _this6 = this;
+      var _this5 = this;
 
       this.__stopAll();
 
@@ -7707,25 +8563,26 @@
       var duration; // clean/filter position and compute duration
 
       if (positionProvided) {
-        var cleanPosition = this.change(CHANGE_EVENTS.GET_ANIMATE_POSITION, this.dataHelper.cleanPosition(options)); // longitude offset for shortest arc
+        var cleanPosition = this.change(CHANGE_EVENTS.GET_ANIMATE_POSITION, this.dataHelper.cleanPosition(options));
+        var currentPosition = this.getPosition(); // longitude offset for shortest arc
 
-        var tOffset = getShortestArc(this.prop.position.longitude, cleanPosition.longitude);
+        var tOffset = getShortestArc(currentPosition.longitude, cleanPosition.longitude);
         animProperties.longitude = {
-          start: this.prop.position.longitude,
-          end: this.prop.position.longitude + tOffset
+          start: currentPosition.longitude,
+          end: currentPosition.longitude + tOffset
         };
         animProperties.latitude = {
-          start: this.prop.position.latitude,
+          start: currentPosition.latitude,
           end: cleanPosition.latitude
         };
-        duration = this.dataHelper.speedToDuration(options.speed, getAngle(this.prop.position, cleanPosition));
+        duration = this.dataHelper.speedToDuration(options.speed, getAngle(currentPosition, cleanPosition));
       } // clean/filter zoom and compute duration
 
 
       if (zoomProvided) {
-        var dZoom = Math.abs(options.zoom - this.prop.zoomLvl);
+        var dZoom = Math.abs(options.zoom - this.getZoomLevel());
         animProperties.zoom = {
-          start: this.prop.zoomLvl,
+          start: this.getZoomLevel(),
           end: options.zoom
         };
 
@@ -7754,11 +8611,11 @@
         easing: 'inOutSine',
         onTick: function onTick(properties) {
           if (positionProvided) {
-            _this6.rotate(properties);
+            _this5.rotate(properties);
           }
 
           if (zoomProvided) {
-            _this6.zoom(properties.zoom);
+            _this5.zoom(properties.zoom);
           }
         }
       });
@@ -7772,15 +8629,15 @@
     ;
 
     _proto.stopAnimation = function stopAnimation() {
-      var _this7 = this;
+      var _this6 = this;
 
       if (this.prop.animationPromise) {
         return new Promise(function (resolve) {
-          _this7.prop.animationPromise.finally(resolve);
+          _this6.prop.animationPromise.finally(resolve);
 
-          _this7.prop.animationPromise.cancel();
+          _this6.prop.animationPromise.cancel();
 
-          _this7.prop.animationPromise = null;
+          _this6.prop.animationPromise = null;
         });
       } else {
         return Promise.resolve();
@@ -7794,32 +8651,33 @@
     ;
 
     _proto.zoom = function zoom(level) {
-      var newZoomLvl = bound(level, 0, 100);
+      this.dynamics.zoom.setValue(level);
+    }
+    /**
+     * @summary Increases the zoom level
+     * @param {number} [step=1]
+     */
+    ;
 
-      if (this.prop.zoomLvl !== newZoomLvl) {
-        this.prop.zoomLvl = newZoomLvl;
-        this.prop.vFov = this.dataHelper.zoomLevelToFov(this.prop.zoomLvl);
-        this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
-        this.needsUpdate();
-        this.trigger(EVENTS.ZOOM_UPDATED, this.getZoomLevel());
-        this.rotate(this.prop.position);
+    _proto.zoomIn = function zoomIn(step) {
+      if (step === void 0) {
+        step = 1;
       }
+
+      this.dynamics.zoom.step(step);
     }
     /**
-     * @summary Increases the zoom level by 1
+     * @summary Decreases the zoom level
+     * @param {number} [step=1]
      */
     ;
 
-    _proto.zoomIn = function zoomIn() {
-      this.zoom(this.prop.zoomLvl + this.config.zoomButtonIncrement);
-    }
-    /**
-     * @summary Decreases the zoom level by 1
-     */
-    ;
+    _proto.zoomOut = function zoomOut(step) {
+      if (step === void 0) {
+        step = 1;
+      }
 
-    _proto.zoomOut = function zoomOut() {
-      this.zoom(this.prop.zoomLvl - this.config.zoomButtonIncrement);
+      this.dynamics.zoom.step(-step);
     }
     /**
      * @summary Resizes the viewer
@@ -7828,7 +8686,7 @@
     ;
 
     _proto.resize = function resize(size) {
-      var _this8 = this;
+      var _this7 = this;
 
       ['width', 'height'].forEach(function (dim) {
         if (size && size[dim]) {
@@ -7836,7 +8694,7 @@
             size[dim] += 'px';
           }
 
-          _this8.parent.style[dim] = size[dim];
+          _this7.parent.style[dim] = size[dim];
         }
       });
       this.autoSize();
@@ -7906,7 +8764,7 @@
     }
     /**
      * @summary Stops all current animations
-     * @private
+     * @package
      */
     ;
 
@@ -7914,11 +8772,22 @@
       this.stopAutorotate();
       this.stopAnimation();
       this.trigger(EVENTS.STOP_ALL);
+    }
+    /**
+     * @summary Recomputes dynamics speeds
+     * @private
+     */
+    ;
+
+    _proto.__updateSpeeds = function __updateSpeeds() {
+      this.dynamics.zoom.setSpeed(this.config.zoomSpeed * 50);
+      this.dynamics.position.setSpeed(THREE.Math.degToRad(this.config.moveSpeed * 50));
     };
 
     return Viewer;
   }(uevent.EventEmitter);
 
+  exports.AbstractAdapter = AbstractAdapter;
   exports.AbstractButton = AbstractButton;
   exports.AbstractPlugin = AbstractPlugin;
   exports.Animation = Animation;

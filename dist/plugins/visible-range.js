@@ -1,19 +1,29 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('three')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VisibleRangePlugin = factory(global.PhotoSphereViewer, global.THREE)));
-}(this, (function (photoSphereViewer, THREE) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VisibleRangePlugin = {}), global.THREE, global.PhotoSphereViewer));
+}(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -69,6 +79,8 @@
 
       _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, _assertThisInitialized(_this));
 
+      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
+
       _this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, _assertThisInitialized(_this));
 
       _this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, _assertThisInitialized(_this));
@@ -84,6 +96,7 @@
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
 
@@ -117,6 +130,15 @@
         if (this.config.usePanoData) {
           this.setRangesFromPanoData();
         }
+      } else if (e.type === photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED) {
+        var currentPosition = this.psv.getPosition();
+
+        var _this$applyRanges3 = this.applyRanges(currentPosition),
+            _rangedPosition2 = _this$applyRanges3.rangedPosition;
+
+        if (currentPosition.longitude !== _rangedPosition2.longitude || currentPosition.latitude !== _rangedPosition2.latitude) {
+          this.psv.rotate(_rangedPosition2);
+        }
       }
     }
     /**
@@ -128,15 +150,13 @@
     _proto.setLatitudeRange = function setLatitudeRange(range) {
       // latitude range must have two values
       if (range && range.length !== 2) {
-        photoSphereViewer.utils.logWarn('latitude range must have exactly two elements'); // eslint-disable-next-line no-param-reassign
-
+        photoSphereViewer.utils.logWarn('latitude range must have exactly two elements');
         range = null;
       } // latitude range must be ordered
       else if (range && range[0] > range[1]) {
-          photoSphereViewer.utils.logWarn('latitude range values must be ordered'); // eslint-disable-next-line no-param-reassign
-
-          range = [range[1], range[0]];
-        } // latitude range is between -PI/2 and PI/2
+        photoSphereViewer.utils.logWarn('latitude range values must be ordered');
+        range = [range[1], range[0]];
+      } // latitude range is between -PI/2 and PI/2
 
 
       if (range) {
@@ -160,8 +180,7 @@
     _proto.setLongitudeRange = function setLongitudeRange(range) {
       // longitude range must have two values
       if (range && range.length !== 2) {
-        photoSphereViewer.utils.logWarn('longitude range must have exactly two elements'); // eslint-disable-next-line no-param-reassign
-
+        photoSphereViewer.utils.logWarn('longitude range must have exactly two elements');
         range = null;
       } // longitude range is between 0 and 2*PI
 
@@ -336,10 +355,11 @@
 
     return VisibleRangePlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   VisibleRangePlugin.id = 'visible-range';
 
-  return VisibleRangePlugin;
+  exports.VisibleRangePlugin = VisibleRangePlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=visible-range.js.map

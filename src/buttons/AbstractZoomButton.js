@@ -1,5 +1,7 @@
-import { Animation } from '../Animation';
+import { KEY_CODES } from '../data/constants';
 import { SYSTEM } from '../data/system';
+import { getEventKey } from '../utils';
+import { PressHandler } from '../utils/PressHandler';
 import { AbstractButton } from './AbstractButton';
 
 /**
@@ -18,20 +20,18 @@ export class AbstractZoomButton extends AbstractButton {
 
     /**
      * @override
-     * @property {number} value
-     * @property {boolean} buttondown
-     * @property {*} longPressTimeout
-     * @property {PSV.Animation} longPressAnimation
+     * @property {boolean} value
+     * @property {PressHandler} handler
      */
     this.prop = {
       ...this.prop,
-      value             : value,
-      buttondown        : false,
-      longPressTimeout  : null,
-      longPressAnimation: null,
+      value  : value,
+      handler: new PressHandler(),
     };
 
     this.container.addEventListener('mousedown', this);
+    this.container.addEventListener('keydown', this);
+    this.container.addEventListener('keyup', this);
     this.psv.container.addEventListener('mouseup', this);
     this.psv.container.addEventListener('touchend', this);
   }
@@ -60,6 +60,8 @@ export class AbstractZoomButton extends AbstractButton {
       case 'mousedown': this.__onMouseDown(); break;
       case 'mouseup':   this.__onMouseUp(); break;
       case 'touchend':  this.__onMouseUp(); break;
+      case 'keydown':   getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown(); break;
+      case 'keyup':     getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp(); break;
       // @formatter:on
     }
     /* eslint-enable */
@@ -80,8 +82,6 @@ export class AbstractZoomButton extends AbstractButton {
   }
 
   /**
-   * @summary Handles click events
-   * @description Zooms in and register long press timer
    * @private
    */
   __onMouseDown() {
@@ -89,56 +89,19 @@ export class AbstractZoomButton extends AbstractButton {
       return;
     }
 
-    this.prop.buttondown = true;
-    this.prop.longPressTimeout = setTimeout(() => this.__startLongPressInterval(), 100);
+    this.psv.dynamics.zoom.roll(this.prop.value);
+    this.prop.handler.down();
   }
 
   /**
-   * @summary Continues zooming as long as the user presses the button
-   * @private
-   */
-  __startLongPressInterval() {
-    if (!this.prop.buttondown) {
-      return;
-    }
-
-    const end = this.prop.value < 0 ? 0 : 100;
-
-    this.prop.longPressAnimation = new Animation({
-      properties: {
-        zoom: { start: this.psv.prop.zoomLvl, end: end },
-      },
-      duration  : 1500 * Math.abs(this.psv.prop.zoomLvl - end) / 100,
-      easing    : 'linear',
-      onTick    : (properties) => {
-        this.psv.zoom(properties.zoom);
-      },
-    })
-      .catch(() => {}); // ignore cancellation
-  }
-
-  /**
-   * @summary Handles mouse up events
    * @private
    */
   __onMouseUp() {
-    if (!this.prop.enabled || !this.prop.buttondown) {
+    if (!this.prop.enabled) {
       return;
     }
 
-    if (this.prop.longPressAnimation) {
-      this.prop.longPressAnimation.cancel();
-      this.prop.longPressAnimation = null;
-    }
-    else {
-      this.psv.zoom(this.psv.prop.zoomLvl + this.prop.value * this.psv.config.zoomButtonIncrement);
-    }
-
-    if (this.prop.longPressTimeout) {
-      clearTimeout(this.prop.longPressTimeout);
-    }
-
-    this.prop.buttondown = false;
+    this.prop.handler.up(() => this.psv.dynamics.zoom.stop());
   }
 
 }

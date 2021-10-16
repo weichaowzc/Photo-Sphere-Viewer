@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('three')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'three'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.GyroscopePlugin = factory(global.PhotoSphereViewer, global.THREE)));
-}(this, (function (photoSphereViewer, THREE) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.GyroscopePlugin = {}), global.THREE, global.PhotoSphereViewer));
+}(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -31,7 +31,17 @@
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -42,112 +52,116 @@
     return self;
   }
 
-  /**
-   * W3C Device Orientation control (http://w3c.github.io/deviceorientation/spec-source-orientation.html)
-   */
+  const _zee = new THREE.Vector3(0, 0, 1);
 
-  var DeviceOrientationControls = function DeviceOrientationControls(object) {
-    var scope = this;
-    var changeEvent = {
-      type: 'change'
-    };
-    var EPS = 0.000001;
-    this.object = object;
-    this.object.rotation.reorder('YXZ');
-    this.enabled = true;
-    this.deviceOrientation = {};
-    this.screenOrientation = 0;
-    this.alphaOffset = 0; // radians
+  const _euler = new THREE.Euler();
 
-    var onDeviceOrientationChangeEvent = function onDeviceOrientationChangeEvent(event) {
-      scope.deviceOrientation = event;
-    };
+  const _q0 = new THREE.Quaternion();
 
-    var onScreenOrientationChangeEvent = function onScreenOrientationChangeEvent() {
-      scope.screenOrientation = window.orientation || 0;
-    }; // The angles alpha, beta and gamma form a set of intrinsic Tait-Bryan angles of type Z-X'-Y''
+  const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // - PI/2 around the x-axis
 
 
-    var setObjectQuaternion = function () {
-      var zee = new THREE.Vector3(0, 0, 1);
-      var euler = new THREE.Euler();
-      var q0 = new THREE.Quaternion();
-      var q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // - PI/2 around the x-axis
+  const _changeEvent = {
+    type: 'change'
+  };
 
-      return function (quaternion, alpha, beta, gamma, orient) {
-        euler.set(beta, alpha, -gamma, 'YXZ'); // 'ZXY' for the device, but 'YXZ' for us
+  class DeviceOrientationControls extends THREE.EventDispatcher {
+    constructor(object) {
+      super();
 
-        quaternion.setFromEuler(euler); // orient the device
-
-        quaternion.multiply(q1); // camera looks out the back of the device, not the top
-
-        quaternion.multiply(q0.setFromAxisAngle(zee, -orient)); // adjust for screen orientation
-      };
-    }();
-
-    this.connect = function () {
-      onScreenOrientationChangeEvent(); // run once on load
-      // iOS 13+
-
-      if (window.DeviceOrientationEvent !== undefined && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-        window.DeviceOrientationEvent.requestPermission().then(function (response) {
-          if (response == 'granted') {
-            window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
-            window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
-          }
-        }).catch(function (error) {
-          console.error('THREE.DeviceOrientationControls: Unable to use DeviceOrientation API:', error);
-        });
-      } else {
-        window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
-        window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
+      if (window.isSecureContext === false) {
+        console.error('THREE.DeviceOrientationControls: DeviceOrientationEvent is only available in secure contexts (https)');
       }
 
-      scope.enabled = true;
-    };
+      const scope = this;
+      const EPS = 0.000001;
+      const lastQuaternion = new THREE.Quaternion();
+      this.object = object;
+      this.object.rotation.reorder('YXZ');
+      this.enabled = true;
+      this.deviceOrientation = {};
+      this.screenOrientation = 0;
+      this.alphaOffset = 0; // radians
 
-    this.disconnect = function () {
-      window.removeEventListener('orientationchange', onScreenOrientationChangeEvent);
-      window.removeEventListener('deviceorientation', onDeviceOrientationChangeEvent);
-      scope.enabled = false;
-    };
+      const onDeviceOrientationChangeEvent = function (event) {
+        scope.deviceOrientation = event;
+      };
 
-    this.update = function () {
-      var lastQuaternion = new THREE.Quaternion();
-      return function () {
+      const onScreenOrientationChangeEvent = function () {
+        scope.screenOrientation = window.orientation || 0;
+      }; // The angles alpha, beta and gamma form a set of intrinsic Tait-Bryan angles of type Z-X'-Y''
+
+
+      const setObjectQuaternion = function (quaternion, alpha, beta, gamma, orient) {
+        _euler.set(beta, alpha, -gamma, 'YXZ'); // 'ZXY' for the device, but 'YXZ' for us
+
+
+        quaternion.setFromEuler(_euler); // orient the device
+
+        quaternion.multiply(_q1); // camera looks out the back of the device, not the top
+
+        quaternion.multiply(_q0.setFromAxisAngle(_zee, -orient)); // adjust for screen orientation
+      };
+
+      this.connect = function () {
+        onScreenOrientationChangeEvent(); // run once on load
+        // iOS 13+
+
+        if (window.DeviceOrientationEvent !== undefined && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+          window.DeviceOrientationEvent.requestPermission().then(function (response) {
+            if (response == 'granted') {
+              window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
+              window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
+            }
+          }).catch(function (error) {
+            console.error('THREE.DeviceOrientationControls: Unable to use DeviceOrientation API:', error);
+          });
+        } else {
+          window.addEventListener('orientationchange', onScreenOrientationChangeEvent);
+          window.addEventListener('deviceorientation', onDeviceOrientationChangeEvent);
+        }
+
+        scope.enabled = true;
+      };
+
+      this.disconnect = function () {
+        window.removeEventListener('orientationchange', onScreenOrientationChangeEvent);
+        window.removeEventListener('deviceorientation', onDeviceOrientationChangeEvent);
+        scope.enabled = false;
+      };
+
+      this.update = function () {
         if (scope.enabled === false) return;
-        var device = scope.deviceOrientation;
+        const device = scope.deviceOrientation;
 
         if (device) {
-          var alpha = device.alpha ? THREE.MathUtils.degToRad(device.alpha) + scope.alphaOffset : 0; // Z
+          const alpha = device.alpha ? THREE.MathUtils.degToRad(device.alpha) + scope.alphaOffset : 0; // Z
 
-          var beta = device.beta ? THREE.MathUtils.degToRad(device.beta) : 0; // X'
+          const beta = device.beta ? THREE.MathUtils.degToRad(device.beta) : 0; // X'
 
-          var gamma = device.gamma ? THREE.MathUtils.degToRad(device.gamma) : 0; // Y''
+          const gamma = device.gamma ? THREE.MathUtils.degToRad(device.gamma) : 0; // Y''
 
-          var orient = scope.screenOrientation ? THREE.MathUtils.degToRad(scope.screenOrientation) : 0; // O
+          const orient = scope.screenOrientation ? THREE.MathUtils.degToRad(scope.screenOrientation) : 0; // O
 
           setObjectQuaternion(scope.object.quaternion, alpha, beta, gamma, orient);
 
           if (8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS) {
             lastQuaternion.copy(scope.object.quaternion);
-            scope.dispatchEvent(changeEvent);
+            scope.dispatchEvent(_changeEvent);
           }
         }
       };
-    }();
 
-    this.dispose = function () {
-      scope.disconnect();
-    };
+      this.dispose = function () {
+        scope.disconnect();
+      };
 
-    this.connect();
-  };
+      this.connect();
+    }
 
-  DeviceOrientationControls.prototype = Object.create(THREE.EventDispatcher.prototype);
-  DeviceOrientationControls.prototype.constructor = DeviceOrientationControls;
+  }
 
-  var compass = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M50 0a50 50 0 1 0 0 100A50 50 0 0 0 50 0zm0 88.81a38.86 38.86 0 0 1-38.81-38.8 38.86 38.86 0 0 1 38.8-38.82A38.86 38.86 0 0 1 88.82 50 38.87 38.87 0 0 1 50 88.81z\"/><path d=\"M72.07 25.9L40.25 41.06 27.92 74.12l31.82-15.18v-.01l12.32-33.03zM57.84 54.4L44.9 42.58l21.1-10.06-8.17 21.9z\"/><!--Created by iconoci from the Noun Project--></svg>\n";
+  var compass = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M50 0a50 50 0 1 0 0 100A50 50 0 0 0 50 0zm0 88.81a38.86 38.86 0 0 1-38.81-38.8 38.86 38.86 0 0 1 38.8-38.82A38.86 38.86 0 0 1 88.82 50 38.87 38.87 0 0 1 50 88.81z\"/><path fill=\"currentColor\" d=\"M72.07 25.9L40.25 41.06 27.92 74.12l31.82-15.18v-.01l12.32-33.03zM57.84 54.4L44.9 42.58l21.1-10.06-8.17 21.9z\"/><!--Created by iconoci from the Noun Project--></svg>\n";
 
   /**
    * @summary Navigation bar gyroscope button class
@@ -234,11 +248,6 @@
   GyroscopeButton.icon = compass;
 
   /**
-   * @typedef {Object} external:THREE.DeviceOrientationControls
-   * @summary {@link https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/DeviceOrientationControls.js}
-   */
-
-  /**
    * @typedef {Object} PSV.plugins.GyroscopePlugin.Options
    * @property {boolean} [touchmove=true] - allows to pan horizontally when the gyroscope is enabled (requires global `mousemove=true`)
    * @property {boolean} [absolutePosition=false] - when true the view will ignore the current direction when enabling gyroscope control
@@ -248,6 +257,7 @@
   photoSphereViewer.DEFAULTS.navbar.splice(-1, 0, GyroscopeButton.id);
   photoSphereViewer.DEFAULTS.lang[GyroscopeButton.id] = 'Gyroscope';
   photoSphereViewer.registerButton(GyroscopeButton);
+  var direction = new THREE.Vector3();
   /**
    * @summary Adds gyroscope controls on mobile devices
    * @extends PSV.plugins.AbstractPlugin
@@ -277,14 +287,14 @@
        * @private
        * @property {Promise<boolean>} isSupported - indicates of the gyroscope API is available
        * @property {number} alphaOffset - current alpha offset for gyroscope controls
-       * @property {Function} orientationCb - update callback of the device orientation
+       * @property {boolean} enabled
        * @property {boolean} config_moveInertia - original config "moveInertia"
        */
 
       _this.prop = {
         isSupported: _this.__checkSupport(),
         alphaOffset: 0,
-        orientationCb: null,
+        enabled: false,
         config_moveInertia: true
       };
       /**
@@ -307,6 +317,8 @@
 
       _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE, _assertThisInitialized(_this));
 
+      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, _assertThisInitialized(_this));
+
       return _this;
     }
     /**
@@ -319,6 +331,7 @@
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE, this);
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
       this.stop();
       delete this.controls;
       delete this.prop;
@@ -336,8 +349,13 @@
           this.stop();
           break;
 
+        case photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER:
+          this.__onBeforeRender();
+
+          break;
+
         case photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE:
-          this.__onRotate(e);
+          this.__onBeforeRotate(e);
 
           break;
       }
@@ -349,7 +367,7 @@
     ;
 
     _proto.isEnabled = function isEnabled() {
-      return !!this.prop.orientationCb;
+      return this.prop.enabled;
     }
     /**
      * @summary Enables the gyroscope navigation if available
@@ -381,16 +399,20 @@
 
 
         _this2.prop.config_moveInertia = _this2.psv.config.moveInertia;
-        _this2.psv.config.moveInertia = false;
+        _this2.psv.config.moveInertia = false; // enable gyro controls
 
-        _this2.__configure();
-        /**
-         * @event gyroscope-updated
-         * @memberof PSV.plugins.GyroscopePlugin
-         * @summary Triggered when the gyroscope mode is enabled/disabled
-         * @param {boolean} enabled
-         */
+        if (!_this2.controls) {
+          _this2.controls = new DeviceOrientationControls(new THREE.Object3D());
+        } else {
+          _this2.controls.connect();
+        } // force reset
 
+
+        _this2.controls.deviceOrientation = null;
+        _this2.controls.screenOrientation = 0;
+        _this2.controls.alphaOffset = 0;
+        _this2.prop.alphaOffset = _this2.config.absolutePosition ? 0 : null;
+        _this2.prop.enabled = true;
 
         _this2.trigger(GyroscopePlugin.EVENTS.GYROSCOPE_UPDATED, true);
       });
@@ -404,8 +426,7 @@
     _proto.stop = function stop() {
       if (this.isEnabled()) {
         this.controls.disconnect();
-        this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this.prop.orientationCb);
-        this.prop.orientationCb = null;
+        this.prop.enabled = false;
         this.psv.config.moveInertia = this.prop.config_moveInertia;
         this.trigger(GyroscopePlugin.EVENTS.GYROSCOPE_UPDATED, false);
       }
@@ -423,61 +444,39 @@
       }
     }
     /**
-     * @summary Attaches the {@link external:THREE.DeviceOrientationControls} to the camera
+     * @summary Handles gyro movements
      * @private
      */
     ;
 
-    _proto.__configure = function __configure() {
-      var _this3 = this;
+    _proto.__onBeforeRender = function __onBeforeRender() {
+      if (!this.isEnabled()) {
+        return;
+      }
 
-      if (!this.controls) {
-        this.controls = new DeviceOrientationControls(this.psv.renderer.camera);
+      if (!this.controls.deviceOrientation) {
+        return;
+      } // on first run compute the offset depending on the current viewer position and device orientation
+
+
+      if (this.prop.alphaOffset === null) {
+        this.controls.update();
+        this.controls.object.getWorldDirection(direction);
+        var sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
+        this.prop.alphaOffset = sphericalCoords.longitude - this.psv.getPosition().longitude;
       } else {
-        this.controls.connect();
-      } // force reset
+        this.controls.alphaOffset = this.prop.alphaOffset;
+        this.controls.update();
+        this.controls.object.getWorldDirection(direction);
+
+        var _sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction); // TODO use dynamic goto for smooth movement
 
 
-      this.controls.deviceOrientation = null;
-      this.controls.screenOrientation = 0;
-      this.controls.alphaOffset = 0;
-      this.prop.alphaOffset = this.config.absolutePosition ? 0 : null;
-
-      this.prop.orientationCb = function () {
-        if (!_this3.controls.deviceOrientation) {
-          return;
-        } // on first run compute the offset depending on the current viewer position and device orientation
-
-
-        if (_this3.prop.alphaOffset === null) {
-          _this3.controls.update();
-
-          var direction = new THREE.Vector3();
-
-          _this3.psv.renderer.camera.getWorldDirection(direction);
-
-          var sphericalCoords = _this3.psv.dataHelper.vector3ToSphericalCoords(direction);
-
-          _this3.prop.alphaOffset = sphericalCoords.longitude - _this3.psv.prop.position.longitude;
-        } else {
-          _this3.controls.alphaOffset = _this3.prop.alphaOffset;
-
-          _this3.controls.update();
-
-          _this3.psv.renderer.camera.getWorldDirection(_this3.psv.prop.direction);
-
-          _this3.psv.prop.direction.multiplyScalar(photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
-
-          var _sphericalCoords = _this3.psv.dataHelper.vector3ToSphericalCoords(_this3.psv.prop.direction);
-
-          _this3.psv.prop.position.longitude = _sphericalCoords.longitude;
-          _this3.psv.prop.position.latitude = _sphericalCoords.latitude;
-
-          _this3.psv.needsUpdate();
-        }
-      };
-
-      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this.prop.orientationCb);
+        this.psv.dynamics.position.setValue({
+          longitude: _sphericalCoords.longitude,
+          latitude: -_sphericalCoords.latitude
+        });
+      }
     }
     /**
      * @summary Intercepts moves and offsets the alpha angle
@@ -486,12 +485,12 @@
      */
     ;
 
-    _proto.__onRotate = function __onRotate(e) {
+    _proto.__onBeforeRotate = function __onBeforeRotate(e) {
       if (this.isEnabled()) {
         e.preventDefault();
 
         if (this.config.touchmove) {
-          this.prop.alphaOffset -= e.args[0].longitude - this.psv.prop.position.longitude;
+          this.prop.alphaOffset -= e.args[0].longitude - this.psv.getPosition().longitude;
         }
       }
     }
@@ -541,13 +540,20 @@
 
     return GyroscopePlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   GyroscopePlugin.id = 'gyroscope';
   GyroscopePlugin.EVENTS = {
+    /**
+     * @event gyroscope-updated
+     * @memberof PSV.plugins.GyroscopePlugin
+     * @summary Triggered when the gyroscope mode is enabled/disabled
+     * @param {boolean} enabled
+     */
     GYROSCOPE_UPDATED: 'gyroscope-updated'
   };
 
-  return GyroscopePlugin;
+  exports.GyroscopePlugin = GyroscopePlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=gyroscope.js.map

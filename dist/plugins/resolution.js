@@ -1,19 +1,29 @@
 /*!
-* Photo Sphere Viewer 4.2.1
+* Photo Sphere Viewer 4.3.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/settings')) :
-  typeof define === 'function' && define.amd ? define(['photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/settings'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = factory(global.PhotoSphereViewer, global.PhotoSphereViewer.SettingsPlugin)));
-}(this, (function (photoSphereViewer, SettingsPlugin) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/settings')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/settings'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = {}), global.PhotoSphereViewer, global.PhotoSphereViewer.SettingsPlugin));
+}(this, (function (exports, photoSphereViewer, settings) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -63,7 +73,7 @@
    * @typedef {Object} PSV.plugins.ResolutionPlugin.Resolution
    * @property {string} id
    * @property {string} label
-   * @property {string|string[]|PSV.Cubemap} panorama
+   * @property {*} panorama
    */
 
   /**
@@ -101,7 +111,7 @@
        * @private
        */
 
-      _this.settings = SettingsPlugin ? psv.getPlugin(SettingsPlugin) : null;
+      _this.settings = settings.SettingsPlugin ? psv.getPlugin(settings.SettingsPlugin) : null;
 
       if (!_this.settings) {
         throw new photoSphereViewer.PSVError('Resolution plugin requires the Settings plugin');
@@ -162,7 +172,7 @@
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
-      this.settings.removeSetting(SettingsPlugin.id);
+      this.settings.removeSetting(settings.SettingsPlugin.id);
 
       _AbstractPlugin.prototype.destroy.call(this);
     }
@@ -260,7 +270,6 @@
 
     return ResolutionPlugin;
   }(photoSphereViewer.AbstractPlugin);
-
   ResolutionPlugin.id = 'resolution';
   ResolutionPlugin.EVENTS = {
     /**
@@ -272,7 +281,9 @@
     RESOLUTION_CHANGED: 'resolution-changed'
   };
 
-  return ResolutionPlugin;
+  exports.ResolutionPlugin = ResolutionPlugin;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=resolution.js.map

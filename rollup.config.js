@@ -1,17 +1,20 @@
-import alias from '@rollup/plugin-alias';
 import babel from '@rollup/plugin-babel';
-import inject from '@rollup/plugin-inject';
 import replace from '@rollup/plugin-replace';
 import fs from 'fs';
 import path from 'path';
 import localResolve from 'rollup-plugin-local-resolve';
 import postcss from 'rollup-plugin-postcss'
+import dts from 'rollup-plugin-dts';
 import { string } from 'rollup-plugin-string';
 
 import pkg from './package.json';
 
 const plugins = fs.readdirSync(path.join(__dirname, 'src/plugins'))
-  .filter(p => p !== 'AbstractPlugin.js');
+  .filter(p => fs.lstatSync(`src/plugins/${p}`).isDirectory());
+
+const adapters = fs.readdirSync(path.join(__dirname, 'src/adapters'))
+  .filter(p => fs.lstatSync(`src/adapters/${p}`).isDirectory())
+  .filter(p => p !== 'equirectangular');
 
 const banner = `/*!
 * Photo Sphere Viewer ${pkg.version}
@@ -46,8 +49,6 @@ const baseConfig = {
     'three',
     'uevent',
   ],
-  // wrapped in a function to ensure unique plugin instances for each entry-point
-  // https://github.com/egoist/rollup-plugin-postcss/issues/158
   plugins : () => [
     localResolve(),
     babel({
@@ -92,28 +93,46 @@ const secondaryConfig = {
     'photo-sphere-viewer',
     ...plugins.map(p => `photo-sphere-viewer/dist/plugins/${p}`),
   ],
-
   plugins: () => [
-    ...baseConfig.plugins(),
-    alias({
-      'photo-sphere-viewer': './src',
-      ...plugins.reduce((alias, p) => {
-        alias[`photo-sphere-viewer/dist/plugins/${p}`] = `./src/plugins/${p}`;
-        return alias;
+    replace({
+      delimiters                  : ['', ''],
+      preventAssignment           : true,
+      [`from 'three/examples/jsm`]: `from '../../../three-examples`,
+      [`from '../..'`]            : `from 'photo-sphere-viewer'`,
+      ...plugins.reduce((replace, p) => {
+        replace[`from '../${p}'`] = `from 'photo-sphere-viewer/dist/plugins/${p}'`;
+        return replace;
       }, {}),
     }),
-    inject({
-      include: 'three-examples/**',
-      modules: {
-        THREE: 'three',
-      },
-    }),
+    ...baseConfig.plugins(),
+  ],
+};
+
+const baseConfigDTS = {
+  output : {
+    format: 'es',
+  },
+  plugins: () => [
+    dts(),
+  ],
+};
+
+const secondaryConfigDTS = {
+  ...baseConfigDTS,
+  external: [
+    ...secondaryConfig.external,
+  ],
+  plugins : () => [
     replace({
-      // configuration to embed the examples files in PSV source
-      delimiters                               : ['', ''],
-      [`from 'three/examples/jsm`]             : `from '../../../three-examples`,
-      [`from '../../../build/three.module.js'`]: `from "three"`,
+      delimiters       : ['', ''],
+      preventAssignment: true,
+      [`from '../..'`] : `from 'photo-sphere-viewer'`,
+      ...plugins.reduce((replace, p) => {
+        replace[`from '../${p}'`] = `from 'photo-sphere-viewer/dist/plugins/${p}'`;
+        return replace;
+      }, {}),
     }),
+    ...baseConfigDTS.plugins(),
   ],
 };
 
@@ -138,8 +157,16 @@ export default [
     },
     plugins: secondaryConfig.plugins(),
   },
-].concat(
-  plugins.map(p => ({
+  {
+    ...baseConfigDTS,
+    input  : 'types/index.d.ts',
+    output : {
+      ...baseConfigDTS.output,
+      file: 'dist/photo-sphere-viewer.d.ts',
+    },
+    plugins: baseConfigDTS.plugins(),
+  },
+  ...plugins.map(p => ({
     ...secondaryConfig,
     input  : `src/plugins/${p}/index.js`,
     output : {
@@ -148,5 +175,33 @@ export default [
       name: `PhotoSphereViewer.${camelize(p)}Plugin`,
     },
     plugins: secondaryConfig.plugins(),
+  })),
+  ...adapters.map(p => ({
+    ...secondaryConfig,
+    input  : `src/adapters/${p}/index.js`,
+    output : {
+      ...secondaryConfig.output,
+      file: `dist/adapters/${p}.js`,
+      name: `PhotoSphereViewer.${camelize(p)}Adapter`,
+    },
+    plugins: secondaryConfig.plugins(),
+  })),
+  ...plugins.map(p => ({
+    ...secondaryConfigDTS,
+    input  : `types/plugins/${p}/index.d.ts`,
+    output : {
+      ...secondaryConfigDTS.output,
+      file: `dist/plugins/${p}.d.ts`,
+    },
+    plugins: secondaryConfigDTS.plugins(),
+  })),
+  ...adapters.map(p => ({
+    ...secondaryConfigDTS,
+    input  : `types/adapters/${p}/index.d.ts`,
+    output : {
+      ...secondaryConfigDTS.output,
+      file: `dist/adapters/${p}.d.ts`,
+    },
+    plugins: secondaryConfigDTS.plugins(),
   }))
-);
+];

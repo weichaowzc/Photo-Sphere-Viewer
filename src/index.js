@@ -7,6 +7,7 @@ import './data/constants'; // for jsdoc
 import { SYSTEM } from './data/system';
 import { AbstractPlugin } from './plugins/AbstractPlugin';
 import { PSVError } from './PSVError';
+import { AbstractAdapter } from './adapters/AbstractAdapter';
 import './styles/index.scss';
 import * as utils from './utils';
 import { Viewer } from './Viewer';
@@ -14,6 +15,7 @@ import { Viewer } from './Viewer';
 export {
   AbstractButton,
   AbstractPlugin,
+  AbstractAdapter,
   Animation,
   CONSTANTS,
   DEFAULTS,
@@ -82,17 +84,6 @@ export {
  */
 
 /**
- * @typedef {Object} PSV.Cubemap
- * @summary Object defining a cubemap
- * @property {string} top
- * @property {string} right
- * @property {string} bottom
- * @property {string} left
- * @property {string} front
- * @property {string} back
- */
-
-/**
  * @typedef {Object} PSV.PanoData
  * @summary Crop information of the panorama
  * @property {number} fullWidth
@@ -115,18 +106,19 @@ export {
  */
 
 /**
- * @typedef {PSV.AnimateOptions} PSV.PanoramaOptions
+ * @typedef {PSV.ExtendedPosition} PSV.PanoramaOptions
  * @summary Object defining panorama and animation options
  * @property {boolean|number} [transition=1500] - duration of the transition between all and new panorama
  * @property {boolean} [showLoader=true] - show the loader
+ * @property {number} [zoom] - new zoom level between 0 and 100
  * @property {PSV.SphereCorrection} [sphereCorrection] - new sphere correction to apply to the panorama
  * @property {PSV.PanoData | PSV.PanoDataProvider} [panoData] - new panorama data used for this panorama
  */
 
 /**
  * @typedef {Object} PSV.TextureData
- * @summary Result of the {@link PSV.TextureLoader#loadTexture} method
- * @property {external:THREE.Texture|external:THREE.Texture[]} texture
+ * @summary Result of the {@link PSV.adapters.AbstractAdapter#loadTexture} method
+ * @property {external:THREE.Texture|external:THREE.Texture[]|Record<string, external:THREE.Texture[]>} texture
  * @property {PSV.PanoData} [panoData]
  */
 

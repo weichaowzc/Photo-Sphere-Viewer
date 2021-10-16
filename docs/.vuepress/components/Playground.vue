@@ -178,20 +178,14 @@
         <div class="md-layout md-gutter">
           <div class="md-layout-item md-size-33">
             <md-field>
-              <label>Mouse move speed</label>
+              <label>Move speed</label>
               <md-input type="number" min="0" step="0.1" v-model="options.moveSpeed" :disabled="!imageData"/>
             </md-field>
           </div>
           <div class="md-layout-item md-size-33">
             <md-field>
-              <label>Mousewheel speed</label>
-              <md-input type="number" min="0" step="0.1" v-model="options.mousewheelSpeed" :disabled="!imageData"/>
-            </md-field>
-          </div>
-          <div class="md-layout-item md-size-33">
-            <md-field>
-              <label>Zoom buttons step</label>
-              <md-input type="number" min="0" v-model="options.zoomButtonIncrement" :disabled="!imageData"/>
+              <label>Zoom speed</label>
+              <md-input type="number" min="0" step="0.1" v-model="options.zoomSpeed" :disabled="!imageData"/>
             </md-field>
           </div>
         </div>
@@ -250,6 +244,7 @@
       navbar          : [
         { code: 'autorotate', label: DEFAULTS.lang.autorotate, enabled: true },
         { code: 'zoom', label: DEFAULTS.lang.zoom, enabled: true },
+        { code: 'move', label: DEFAULTS.lang.move, enabled: true },
         { code: 'download', label: DEFAULTS.lang.download, enabled: true },
         { code: 'caption', label: 'Caption', enabled: true },
         { code: 'fullscreen', label: DEFAULTS.lang.fullscreen, enabled: true },
@@ -291,7 +286,6 @@
       this.psv = new Viewer({
         container : 'viewer',
         loadingImg: 'https://photo-sphere-viewer.js.org/assets/photosphere-logo.gif',
-        sphereCorrectionReorder: true,
       });
 
       this.loadPsv();
