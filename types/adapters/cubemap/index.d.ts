@@ -1,22 +1,26 @@
-import { AbstractAdapter, TextureData } from '../..';
+import { AbstractAdapter } from '../..';
 
 /**
- * @summary Object defining a cubemap
+ * Cubemap defined as an array of images
+ * @description images order is : left, front, right, back, top, bottom
  */
-export type Cubemap = string[6] | {
-  top: string;
-  right: string;
-  bottom: string;
+export type CubemapArray = string[6];
+
+/**
+ * Object defining a cubemap
+ */
+export type Cubemap = {
   left: string;
   front: string;
+  right: string;
   back: string;
+  top: string;
+  bottom: string;
 };
 
 /**
- * @summary Adapter for cubemaps
+ * Adapter for cubemaps
  */
-export class CubemapAdapter extends AbstractAdapter {
-
-  loadTexture(panorama: Cubemap): Promise<TextureData>;
+export class CubemapAdapter extends AbstractAdapter<CubemapArray | Cubemap> {
 
 }

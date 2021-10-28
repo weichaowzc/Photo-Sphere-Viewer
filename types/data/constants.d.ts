@@ -1,10 +1,15 @@
 /**
- * @summary Property name added to viewer element
+ * Radius of the THREE.SphereGeometry, Half-length of the THREE.BoxGeometry
+ */
+export const SPHERE_RADIUS = 10;
+
+/**
+ * Property name added to viewer element
  */
 export const VIEWER_DATA: 'photoSphereViewer';
 
 /**
- * @summary Available actions
+ * Available actions
  */
 export const ACTIONS: {
   ROTATE_LAT_UP: 'rotateLatitudeUp',
@@ -17,7 +22,7 @@ export const ACTIONS: {
 };
 
 /**
- * @summary Available events names
+ * Available events names
  */
 export const EVENTS: {
   AUTOROTATE: 'autorotate',
@@ -45,7 +50,7 @@ export const EVENTS: {
 };
 
 /**
- * @summary Available change events names
+ * Available change events names
  */
 export const CHANGE_EVENTS: {
   GET_ANIMATE_POSITION: 'get-animate-position',
@@ -53,7 +58,7 @@ export const CHANGE_EVENTS: {
 };
 
 /**
- * @summary Collection of easing functions
+ * Collection of easing functions
  * @see {@link https://gist.github.com/frederickk/6165768}
  */
 export const EASINGS: {
@@ -89,7 +94,7 @@ export const EASINGS: {
 };
 
 /**
- * @summary Subset of key codes
+ * Subset of key codes
  */
 export const KEY_CODES: {
   Enter     : 'Enter',

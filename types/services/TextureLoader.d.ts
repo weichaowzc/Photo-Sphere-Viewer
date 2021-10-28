@@ -1,10 +1,29 @@
+import { AbstractService } from './AbstractService';
+
 /**
- * @summary Texture loader
+ * Texture loader
  */
-export class TextureLoader {
+export class TextureLoader extends AbstractService {
+
+  private constructor();
 
   /**
-   * @summary Preload a panorama file without displaying it
+   * Cancels current HTTP requests
+   */
+  abortLoading();
+
+  /**
+   * Loads a Blob with FileLoader
+   */
+  loadFile(url: string, onProgress?: (number) => void): Promise<Blob>;
+
+  /**
+   * Loads an Image using FileLoader to have progress events
+   */
+  loadImage(url: string, onProgress?: (number) => void): Promise<HTMLImageElement>;
+
+  /**
+   * Preload a panorama file without displaying it
    */
   preloadPanorama(panorama: any): Promise<void>;
 

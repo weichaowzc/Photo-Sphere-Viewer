@@ -1,0 +1,17 @@
+{
+  "typedocOptions": {
+    "name": "Photo Sphere Viewer",
+    "includeVersion": false,
+    "githubPages": false,
+    "cleanOutputDir": false,
+    "entryPointStrategy": "expand",
+    "intentionallyNotExported": [
+      "AbstractComponent"
+    ],
+    "entryPoints": [
+      "index.d.ts",
+      "adapters/",
+      "plugins/"
+    ]
+  }
+}

@@ -1,13 +1,15 @@
 import { AbstractComponent } from './AbstractComponent';
 
 /**
- * @summary Loader class
+ * Loader component
  */
 export class Loader extends AbstractComponent {
 
+  private constructor();
+
   /**
-   * @summary Sets the loader progression
-   * @param value
+   * Sets the loader progression
+   * @param value - from 0 to 100
    */
   setProgress(value: number);
 

@@ -2,7 +2,7 @@ import { AbstractPlugin, Viewer, ViewerOptions } from '../..';
 import { Marker, MarkerProperties } from '../markers';
 
 /**
- * @summary Definition of a single node in the tour
+ * Definition of a single node in the tour
  */
 export type VirtualTourNode = {
   id: string;
@@ -17,7 +17,7 @@ export type VirtualTourNode = {
 };
 
 /**
- * @summary Definition of a link between two nodes
+ * Definition of a link between two nodes
  */
 export type VirtualTourNodeLink = {
   nodeId: string;
@@ -28,7 +28,7 @@ export type VirtualTourNodeLink = {
 };
 
 /**
- * @summary Style of the arrow in 3D mode
+ * Style of the arrow in 3D mode
  */
 export type VirtualTourArrowStyle = {
   color?: string;
@@ -38,18 +38,24 @@ export type VirtualTourArrowStyle = {
 };
 
 export type VirtualTourPluginPluginOptions = {
+  /** @default 'client' */
   dataMode?: 'client' | 'server';
+  /** @default 'manual' */
   positionMode?: 'manual' | 'gps';
+  /** @default '3d' */
   renderMode?: '3d' | 'markers';
   nodes?: VirtualTourNode[];
   getNode?: (nodeId: string) => VirtualTourNode | Promise<VirtualTourNode>;
   getLinks?: (nodeId: string) => VirtualTourNodeLink[] | Promise<VirtualTourNodeLink[]>;
   startNodeId?: string;
+  /** @default false */
   preload?: boolean | ((node: VirtualTourNode, link:VirtualTourNodeLink) => boolean);
   markerStyle?: MarkerProperties;
   arrowStyle?: VirtualTourArrowStyle;
+  /** @default 0.1 */
   markerLatOffset?: number;
-  arrowPosition?: 'top'|'bottom';
+  /** @default 'bottom' */
+  arrowPosition?: 'top' | 'bottom';
 }
 
 export const EVENTS: {
@@ -57,19 +63,19 @@ export const EVENTS: {
 };
 
 /**
- * @summary Replaces the standard autorotate animation by a smooth transition between multiple points
+ * Replaces the standard autorotate animation by a smooth transition between multiple points
  */
 export class VirtualTourPlugin extends AbstractPlugin {
 
   constructor(psv: Viewer, options: VirtualTourPluginPluginOptions);
 
   /**
-   * @summary Sets the nodes (client mode only)
+   * Sets the nodes (client mode only)
    */
   setNodes(nodes: VirtualTourNode[], startNodeId?: string);
 
   /**
-   * @summary Changes the current node
+   * Changes the current node
    */
   setCurrentNode(nodeId: string);
 

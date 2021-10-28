@@ -1,29 +1,37 @@
 import { Viewer } from '../Viewer';
 
 /**
- * @summary Base component class
+ * Base component class
  */
 export abstract class AbstractComponent {
 
+  protected readonly psv: Viewer;
+
+  protected readonly parent: Viewer | AbstractComponent;
+
+  /**
+   * @param parent
+   * @param [className] - CSS class added to the component's container
+   */
   constructor(parent: Viewer | AbstractComponent, className?: string);
 
   /**
-   * @summary Displays the component
+   * Displays the component
    */
   show(options?: any);
 
   /**
-   * @summary Hides the component
+   * Hides the component
    */
   hide(options?: any);
 
   /**
-   * @summary Displays or hides the component
+   * Displays or hides the component
    */
   toggle();
 
   /**
-   * @summary Check if the component is visible
+   * Checks if the component is visible
    */
   isVisible(options?: any): boolean;
 

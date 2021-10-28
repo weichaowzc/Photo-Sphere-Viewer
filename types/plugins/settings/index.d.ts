@@ -1,7 +1,7 @@
 import { AbstractPlugin, Viewer } from '../..';
 
 /**
- * @summary Description of a setting
+ * Description of a setting
  */
 export type BaseSetting = {
   id: string;
@@ -9,7 +9,7 @@ export type BaseSetting = {
 };
 
 /**
- * @summary Description of a 'options' setting
+ * Description of a 'options' setting
  */
 export type OptionsSetting = BaseSetting & {
   type: 'options';
@@ -19,7 +19,7 @@ export type OptionsSetting = BaseSetting & {
 };
 
 /**
- * @summary Description of a 'toggle' setting
+ * Description of a 'toggle' setting
  */
 export type ToggleSetting = BaseSetting & {
   type: 'toggle';
@@ -28,7 +28,7 @@ export type ToggleSetting = BaseSetting & {
 };
 
 /**
- * @summary Option of an 'option' setting
+ * Option of an 'option' setting
  */
 export type SettingOption = {
   id: string;
@@ -38,35 +38,35 @@ export type SettingOption = {
 export type Setting = OptionsSetting | ToggleSetting;
 
 /**
- * @summary Adds a button to access various settings.
+ * Adds a button to access various settings.
  */
 export class SettingsPlugin extends AbstractPlugin {
 
   constructor(psv: Viewer);
 
   /**
-   * @summary Registers a new setting
+   * Registers a new setting
    */
   addSetting(setting: Setting);
 
   /**
-   * @summary Removes a setting
+   * Removes a setting
    * @param {string} id
    */
   removeSetting(id: string);
 
   /**
-   * @summary Toggles the settings panel
+   * Toggles the settings panel
    */
   toggleSettings();
 
   /**
-   * @summary Hides the settings panel
+   * Hides the settings panel
    */
   hideSettings();
 
   /**
-   * @summary Shows the settings panel
+   * Shows the settings panel
    */
   showSettings();
 

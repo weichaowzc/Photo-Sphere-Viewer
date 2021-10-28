@@ -1,14 +1,16 @@
 import { Tooltip, TooltipOptions } from '../components/Tooltip';
-import { AbstractComponent } from '../components/AbstractComponent';
+import { AbstractService } from './AbstractService';
 
 /**
- * @summary Tooltip renderer
+ * Tooltip renderer
  */
-export class TooltipRenderer extends AbstractComponent {
+export class TooltipRenderer extends AbstractService {
+
+  private constructor();
 
   /**
-   * @summary Displays a tooltip on the viewer
-   * @throws {PSVError} when the configuration is incorrect
+   * Displays a tooltip on the viewer
+   * @throws {@link PSVError} when the configuration is incorrect
    */
   create(config: TooltipOptions): Tooltip;
 

@@ -1,6 +1,6 @@
-import { ViewerOptions } from '../Viewer';
+import { ViewerOptions } from '../models';
 
 /**
- * @summary Default options
+ * Default options
  */
 export const DEFAULTS: ViewerOptions;

@@ -1,13 +1,12 @@
-import * as CONSTANTS from './/data/constants';
+import * as CONSTANTS from './data/constants';
 import * as utils from './utils';
 
 export * from './models';
-export * from './data/constants';
 export * from './data/config';
 export * from './data/system';
-export * from './adapters/AbstractAdapter';
+export * from './AbstractAdapter';
 export * from './buttons/AbstractButton';
-export * from './plugins/AbstractPlugin';
+export * from './AbstractPlugin';
 export * from './Animation';
 export * from './PSVError';
 export * from './components/Navbar';

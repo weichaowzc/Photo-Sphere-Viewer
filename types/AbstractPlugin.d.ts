@@ -1,20 +1,20 @@
 import { EventEmitter } from 'uevent';
-import { Viewer } from '../Viewer';
+import { Viewer } from './Viewer';
 
 /**
- * @summary Base plugins class
+ * Base plugins class
  */
 export abstract class AbstractPlugin extends EventEmitter {
 
   /**
-   * @summary Unique identifier of the plugin
+   * Unique identifier of the plugin
    */
   static id: string;
 
   constructor(psv: Viewer);
 
   /**
-   * @summary Destroys the plugin
+   * Destroys the plugin
    */
   destroy();
 

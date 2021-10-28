@@ -1,5 +1,5 @@
 /**
- * @summary General information about the system
+ * General information about the system
  */
 export const SYSTEM: {
   loaded: boolean;

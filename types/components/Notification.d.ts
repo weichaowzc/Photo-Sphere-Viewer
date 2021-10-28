@@ -1,14 +1,19 @@
 import { AbstractComponent } from './AbstractComponent';
 
+/**
+ * Configuration of the notification
+ */
 export type NotificationOptions = {
   content: string;
   timeout?: number;
 };
 
 /**
- * @summary Notification class
+ * Notification component
  */
 export class Notification extends AbstractComponent {
+
+  private constructor();
 
   show(config: string | NotificationOptions);
 

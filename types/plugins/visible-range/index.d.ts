@@ -3,28 +3,29 @@ import { AbstractPlugin, Viewer } from '../..';
 export type VisibleRangePluginOptions = {
   latitudeRange?: number[] | string[];
   longitudeRange?: number[] | string[];
-  usePanoData: boolean;
+  /** @default false */
+  usePanoData?: boolean;
 };
 
 /**
- * @summary Locks visible longitude and/or latitude
+ * Locks visible longitude and/or latitude
  */
 export class VisibleRangePlugin extends AbstractPlugin {
 
   constructor(psv: Viewer, options: VisibleRangePluginOptions);
 
   /**
-   * @summary Changes the latitude range
+   * Changes the latitude range
    */
   setLatitudeRange(range: number[] | string[]);
 
   /**
-   * @summary Changes the longitude range
+   * Changes the longitude range
    */
   setLongitudeRange(range: number[] | string[]);
 
   /**
-   * @summary Changes the latitude and longitude ranges according the current panorama cropping data
+   * Changes the latitude and longitude ranges according the current panorama cropping data
    */
   setRangesFromPanoData()
 

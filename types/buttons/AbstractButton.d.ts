@@ -2,55 +2,66 @@ import { AbstractComponent } from '../components/AbstractComponent';
 import { Navbar } from '../components/Navbar';
 
 /**
- * @summary Base navbar button class
+ * Base navbar button class
  */
 export abstract class AbstractButton extends AbstractComponent {
 
   /**
-   * @summary Unique identifier of the button
+   * Unique identifier of the button
    */
   static id: string;
 
   /**
-   * @summary SVG icon name injected in the button
+   * SVG icon name injected in the button
    */
   static icon?: string;
 
   /**
-   * @summary SVG icon name injected in the button when it is active
+   * SVG icon name injected in the button when it is active
    */
   static iconActive?: string;
 
-  constructor(navbar: Navbar, className?: string, collapsable?: boolean);
+  /**
+   * @param navbar
+   * @param [className] - Additional CSS classes
+   * @param [collapsable=false] - `true` if the button can be moved to menu when the navbar is too small
+   * @param [tabbable=true] - `true` if the button is accessible with the keyboard
+   */
+  constructor(navbar: Navbar, className?: string, collapsable?: boolean, tabbable?: boolean);
 
   /**
-   * @summary Checks if the button can be displayed
+   * Checks if the button can be displayed
    */
   isSupported(): boolean | { initial: boolean, promise: Promise<boolean> };
 
   /**
-   * @summary Changes the active state of the button
+   * Changes the active state of the button
    */
   toggleActive(active?: boolean);
 
   /**
-   * @summary Disables the button
+   * Disables the button
    */
   disable();
 
   /**
-   * @summary Enables the button
+   * Enables the button
    */
   enable();
 
   /**
-   * @summary Collapses the button in the navbar menu
+   * Collapses the button in the navbar menu
    */
   collapse();
 
   /**
-   * @summary Uncollapses the button from the navbar menu
+   * Uncollapses the button from the navbar menu
    */
   uncollapse();
+
+  /**
+   * Action when the button is clicked
+   */
+  abstract onClick();
 
 }
