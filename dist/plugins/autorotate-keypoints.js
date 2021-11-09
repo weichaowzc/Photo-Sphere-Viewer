@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -67,18 +67,11 @@
    * @property {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
    */
 
-  /**
-   * @summary Number of steps between each points
-   * @type {number}
-   * @constant
-   * @private
-   */
-
   var NUM_STEPS = 16;
 
-  var serializePt = function serializePt(position) {
+  function serializePt(position) {
     return [position.longitude, position.latitude];
-  };
+  }
   /**
    * @summary Replaces the standard autorotate animation by a smooth transition between multiple points
    * @extends PSV.plugins.AbstractPlugin
@@ -123,6 +116,11 @@
         keypoints: null
       });
       /**
+       * @type {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
+       */
+
+      _this.keypoints = null;
+      /**
        * @type {PSV.plugins.MarkersPlugin}
        * @private
        */
@@ -139,17 +137,26 @@
 
       return _this;
     }
+    /**
+     * @package
+     */
+
 
     var _proto = AutorotateKeypointsPlugin.prototype;
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
+      delete this.markers;
       delete this.keypoints;
       delete this.state;
 
       _AbstractPlugin.prototype.destroy.call(this);
-    };
+    }
+    /**
+     * @private
+     */
+    ;
 
     _proto.handleEvent = function handleEvent(e) {
       if (e.type === photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE) {

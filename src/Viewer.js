@@ -66,17 +66,19 @@ export class Viewer extends EventEmitter {
      * @member {Object}
      * @protected
      * @property {boolean} ready - when all components are loaded
+     * @property {boolean} uiRefresh - if the UI needs to be renderer
      * @property {boolean} needsUpdate - if the view needs to be renderer
+     * @property {boolean} fullscreen - if the viewer is currently fullscreen
      * @property {external:THREE.Vector3} direction - direction of the camera
      * @property {number} vFov - vertical FOV
      * @property {number} hFov - horizontal FOV
      * @property {number} aspect - viewer aspect ratio
      * @property {boolean} autorotateEnabled - automatic rotation is enabled
-     * @property {PSV.Animation} animationPromise - promise of the current animation (either go to position or image transition)
+     * @property {PSV.Animation} animationPromise - promise of the current animation
      * @property {Promise} loadingPromise - promise of the setPanorama method
      * @property startTimeout - timeout id of the automatic rotation delay
      * @property {PSV.Size} size - size of the container
-     * @property {PSV.PanoData} panoData - panorama metadata
+     * @property {PSV.PanoData} panoData - panorama metadata, if supported
      */
     this.prop = {
       ready            : false,
@@ -154,28 +156,24 @@ export class Viewer extends EventEmitter {
     this.plugins = {};
 
     /**
-     * @summary Main render controller
      * @type {PSV.services.Renderer}
      * @readonly
      */
     this.renderer = new Renderer(this);
 
     /**
-     * @summary Textures loader
      * @type {PSV.services.TextureLoader}
      * @readonly
      */
     this.textureLoader = new TextureLoader(this);
 
     /**
-     * @summary Main event handler
      * @type {PSV.services.EventsHandler}
      * @readonly
      */
     this.eventsHandler = new EventsHandler(this);
 
     /**
-     * @summary Utilities to help converting data
      * @type {PSV.services.DataHelper}
      * @readonly
      */
@@ -225,17 +223,14 @@ export class Viewer extends EventEmitter {
       zoom: new Dynamic((value) => {
         this.prop.vFov = this.dataHelper.zoomLevelToFov(value);
         this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
-
-        this.needsUpdate();
         this.trigger(EVENTS.ZOOM_UPDATED, value);
-      }, 0, 100),
+      }, this.config.defaultZoomLvl, 0, 100),
 
       position: new MultiDynamic({
-        longitude: new Dynamic(null),
-        latitude : new Dynamic(null, -Math.PI / 2, Math.PI / 2),
+        longitude: new Dynamic(null, this.config.defaultLong),
+        latitude : new Dynamic(null, this.config.defaultLat, -Math.PI / 2, Math.PI / 2),
       }, (position) => {
         this.dataHelper.sphericalCoordsToVector3(position, this.prop.direction);
-        this.needsUpdate();
         this.trigger(EVENTS.POSITION_UPDATED, position);
       }),
     };
@@ -391,10 +386,7 @@ export class Viewer extends EventEmitter {
    * @returns {PSV.Size}
    */
   getSize() {
-    return {
-      width : this.prop.size.width,
-      height: this.prop.size.height,
-    };
+    return { ...this.prop.size };
   }
 
   /**
@@ -423,10 +415,6 @@ export class Viewer extends EventEmitter {
    */
   needsUpdate() {
     this.prop.needsUpdate = true;
-
-    if (!this.renderer.mainReqid && this.renderer.renderer) {
-      this.renderer.__renderLoop(+new Date());
-    }
   }
 
   /**
@@ -440,9 +428,6 @@ export class Viewer extends EventEmitter {
       this.prop.aspect = this.prop.size.width / this.prop.size.height;
       this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
 
-      this.renderer.updateCameraMatrix();
-
-      this.needsUpdate();
       this.trigger(EVENTS.SIZE_UPDATED, this.getSize());
       this.__resizeRefresh();
     }
@@ -464,15 +449,6 @@ export class Viewer extends EventEmitter {
 
     // apply default parameters on first load
     if (!this.prop.ready) {
-      if (!('longitude' in options)) {
-        options.longitude = this.config.defaultLong;
-      }
-      if (!('latitude' in options)) {
-        options.latitude = this.config.defaultLat;
-      }
-      if (!('zoom' in options)) {
-        options.zoom = this.config.defaultZoomLvl;
-      }
       if (!('sphereCorrection' in options)) {
         options.sphereCorrection = this.config.sphereCorrection;
       }
@@ -562,6 +538,7 @@ export class Viewer extends EventEmitter {
    * @summary Update options
    * @param {PSV.Options} options
    * @fires PSV.config-changed
+   * @throws {PSV.PSVError} when the configuration is incorrect
    */
   setOptions(options) {
     each(options, (value, key) => {
@@ -634,6 +611,7 @@ export class Viewer extends EventEmitter {
    * @param {string} option
    * @param {any} value
    * @fires PSV.config-changed
+   * @throws {PSV.PSVError} when the configuration is incorrect
    */
   setOption(option, value) {
     this.setOptions({ [option]: value });
@@ -692,7 +670,7 @@ export class Viewer extends EventEmitter {
   }
 
   /**
-   * @summary Displays an error message
+   * @summary Displays an error message over the viewer
    * @param {string} message
    */
   showError(message) {

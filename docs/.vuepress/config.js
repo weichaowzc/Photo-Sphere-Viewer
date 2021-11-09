@@ -81,11 +81,13 @@ module.exports = {
           collapsable : false,
           children    : [
             'plugin-autorotate-keypoints',
+            ['plugin-compass', 'CompassPlugin (NEW)'],
             'plugin-gyroscope',
             'plugin-markers',
             'plugin-resolution',
             'plugin-settings',
             'plugin-stereo',
+            ['plugin-virtual-tour', ' VirtualTourPlugin (NEW)'],
             'plugin-visible-range',
           ],
         },

@@ -1,14 +1,14 @@
 import { AbstractPlugin, Viewer } from 'photo-sphere-viewer';
 import { Event } from 'uevent';
 
+declare const EVENTS: {
+  STEREO_UPDATED: 'stereo-updated',
+};
+
 /**
  * @summary Adds stereo view on mobile devices
  */
 declare class StereoPlugin extends AbstractPlugin {
-
-  static EVENTS: {
-    STEREO_UPDATED: 'stereo-updated',
-  };
 
   constructor(psv: Viewer);
 
@@ -40,4 +40,4 @@ declare class StereoPlugin extends AbstractPlugin {
 
 }
 
-export { StereoPlugin };
+export { EVENTS, StereoPlugin };

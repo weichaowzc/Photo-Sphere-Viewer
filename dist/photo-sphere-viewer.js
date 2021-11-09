@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -540,6 +540,30 @@
     return null;
   }
   /**
+   * @summary Gets the position of an element in the viewer without reflow
+   * @description Will gives the same result as getBoundingClientRect() as soon as there are no CSS transforms
+   * @memberOf PSV.utils
+   * @param {HTMLElement} el
+   * @return {{left: number, top: number}}
+   */
+
+  function getPosition(el) {
+    var left = 0;
+    var top = 0;
+    var test = el;
+
+    while (test) {
+      left += test.offsetLeft - test.scrollLeft + test.clientLeft;
+      top += test.offsetTop - test.scrollTop + test.clientTop;
+      test = test.offsetParent;
+    }
+
+    return {
+      left: left,
+      top: top
+    };
+  }
+  /**
    * @summary Map between keyboard events `keyCode|which` and `key`
    * @memberOf PSV.utils
    * @type {Object<int, string>}
@@ -798,6 +822,7 @@
   }
   /**
    * @summary Returns the distance between two points on a sphere of radius one
+   * {@link http://www.movable-type.co.uk/scripts/latlong.html}
    * @memberOf PSV.utils
    * @param {number[]} p1
    * @param {number[]} p2
@@ -1197,6 +1222,60 @@
     }
   }
   /**
+   * @readonly
+   * @private
+   */
+
+  var LEFT_MAP = {
+    0: 'left',
+    0.5: 'center',
+    1: 'right'
+  };
+  /**
+   * @readonly
+   * @private
+   */
+
+  var TOP_MAP = {
+    0: 'top',
+    0.5: 'center',
+    1: 'bottom'
+  };
+  /**
+   * @summary Parse a CSS-like position into an array of position keywords among top, bottom, left, right and center
+   * @memberOf PSV.utils
+   * @param {string | string[]} value
+   * @param {string} defaultValue
+   * @param {boolean} [allowCenter=true]
+   * @return {string[]}
+   */
+
+  function cleanPosition(value, defaultValue, allowCenter) {
+    if (allowCenter === void 0) {
+      allowCenter = true;
+    }
+
+    if (!value) {
+      return defaultValue.split(' ');
+    }
+
+    if (typeof value === 'string') {
+      var tempPos = parsePosition(value);
+
+      if (!(tempPos.x in LEFT_MAP) || !(tempPos.y in TOP_MAP)) {
+        throw new PSVError("Unable to parse position \"" + value + "\"");
+      }
+
+      value = [TOP_MAP[tempPos.y], LEFT_MAP[tempPos.x]];
+    }
+
+    if (!allowCenter && value[0] === 'center' && value[1] === 'center') {
+      throw new PSVError('Unable to parse position "center center"');
+    }
+
+    return value;
+  }
+  /**
    * @summary Parses an speed
    * @memberOf PSV.utils
    * @param {string|number} speed - The speed, in radians/degrees/revolutions per second/minute
@@ -1342,6 +1421,7 @@
     removeClasses: removeClasses,
     hasParent: hasParent,
     getClosest: getClosest,
+    getPosition: getPosition,
     getEventKey: getEventKey,
     isFullscreenEnabled: isFullscreenEnabled,
     requestFullscreen: requestFullscreen,
@@ -1370,6 +1450,7 @@
     isExtendedPosition: isExtendedPosition,
     getXMPValue: getXMPValue,
     parsePosition: parsePosition,
+    cleanPosition: cleanPosition,
     parseSpeed: parseSpeed,
     parseAngle: parseAngle,
     createTexture: createTexture
@@ -1769,7 +1850,7 @@
       this.prop.visible = true;
     }
     /**
-     * @summary Check if the component is visible
+     * @summary Checks if the component is visible
      * @returns {boolean}
      */
     ;
@@ -1820,7 +1901,7 @@
      * @param {PSV.components.Navbar} navbar
      * @param {string} [className] - Additional CSS classes
      * @param {boolean} [collapsable=false] - `true` if the button can be moved to menu when the navbar is too small
-     * @param {boolean} [tabbable=true] - `true` if the button is accessible with Tab key
+     * @param {boolean} [tabbable=true] - `true` if the button is accessible with the keyboard
      */
     function AbstractButton(navbar, className, collapsable, tabbable) {
       var _this;
@@ -2153,7 +2234,7 @@
     function CustomButton(navbar, config) {
       var _this;
 
-      _this = _AbstractButton.call(this, navbar, 'psv-custom-button', config.collapsable !== false) || this;
+      _this = _AbstractButton.call(this, navbar, 'psv-custom-button', config.collapsable !== false, config.tabbable !== false) || this;
       /**
        * @member {Object}
        * @readonly
@@ -2489,7 +2570,7 @@
    * @summary General information about the system
    * @constant
    * @memberOf PSV
-   * @property {boolean} loaded - Indicates if the system has been loaded yet
+   * @property {boolean} loaded - Indicates if the system data has been loaded
    * @property {Function} load - Loads the system if not already loaded
    * @property {number} pixelRatio
    * @property {boolean} isWebGLSupported
@@ -3878,6 +3959,7 @@
     panorama: null,
     container: null,
     adapter: null,
+    plugins: [],
     caption: null,
     loadingImg: null,
     loadingTxt: 'Loading...',
@@ -3919,8 +4001,7 @@
       ctrlZoom: 'Use ctrl + scroll to zoom the image',
       loadError: 'The panorama can\'t be loaded'
     },
-    keyboard: (_keyboard = {}, _keyboard[KEY_CODES.ArrowUp] = ACTIONS.ROTATE_LAT_UP, _keyboard[KEY_CODES.ArrowDown] = ACTIONS.ROTATE_LAT_DOWN, _keyboard[KEY_CODES.ArrowRight] = ACTIONS.ROTATE_LONG_RIGHT, _keyboard[KEY_CODES.ArrowLeft] = ACTIONS.ROTATE_LONG_LEFT, _keyboard[KEY_CODES.PageUp] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.PageDown] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Plus] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.Minus] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Space] = ACTIONS.TOGGLE_AUTOROTATE, _keyboard),
-    plugins: []
+    keyboard: (_keyboard = {}, _keyboard[KEY_CODES.ArrowUp] = ACTIONS.ROTATE_LAT_UP, _keyboard[KEY_CODES.ArrowDown] = ACTIONS.ROTATE_LAT_DOWN, _keyboard[KEY_CODES.ArrowRight] = ACTIONS.ROTATE_LONG_RIGHT, _keyboard[KEY_CODES.ArrowLeft] = ACTIONS.ROTATE_LONG_LEFT, _keyboard[KEY_CODES.PageUp] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.PageDown] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Plus] = ACTIONS.ZOOM_IN, _keyboard[KEY_CODES.Minus] = ACTIONS.ZOOM_OUT, _keyboard[KEY_CODES.Space] = ACTIONS.TOGGLE_AUTOROTATE, _keyboard)
   };
   /**
    * @summary List of unmodifiable options and their error messages
@@ -3959,12 +4040,18 @@
     },
     adapter: function adapter(_adapter) {
       if (!_adapter) {
-        return [EquirectangularAdapter];
+        _adapter = [EquirectangularAdapter];
       } else if (Array.isArray(_adapter)) {
-        return [pluginInterop(_adapter[0], AbstractAdapter), _adapter[1]];
+        _adapter = [pluginInterop(_adapter[0], AbstractAdapter), _adapter[1]];
       } else {
-        return [pluginInterop(_adapter, AbstractAdapter)];
+        _adapter = [pluginInterop(_adapter, AbstractAdapter)];
       }
+
+      if (!_adapter[0]) {
+        throw new PSVError('Un undefined value with given for adapter.');
+      }
+
+      return _adapter;
     },
     defaultLong: function defaultLong(_defaultLong) {
       // defaultLat is between 0 and PI
@@ -4034,12 +4121,16 @@
     plugins: function plugins(_plugins) {
       return _plugins.map(function (plugin) {
         if (Array.isArray(plugin)) {
-          return [pluginInterop(plugin[0], AbstractPlugin), plugin[1]];
+          plugin = [pluginInterop(plugin[0], AbstractPlugin), plugin[1]];
         } else {
-          return [pluginInterop(plugin, AbstractPlugin)];
+          plugin = [pluginInterop(plugin, AbstractPlugin)];
         }
-      }).filter(function (plugin) {
-        return !!plugin[0];
+
+        if (!plugin[0]) {
+          throw new PSVError('Un undefined value was given for plugins.');
+        }
+
+        return plugin;
       });
     }
   };
@@ -4286,7 +4377,7 @@
   }
   [AutorotateButton, ZoomInButton, ZoomRangeButton, ZoomOutButton, DownloadButton, FullscreenButton, MoveRightButton, MoveLeftButton, MoveUpButton, MoveDownButton].forEach(registerButton);
   /**
-   * @summary Navigation bar class
+   * @summary Navigation bar component
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -4320,6 +4411,7 @@
     /**
      * @summary Change the buttons visible on the navbar
      * @param {string|Array<string|PSV.NavbarCustomButton>} buttons
+     * @throws {PSV.PSVError} when a button is unknown
      */
 
 
@@ -4367,6 +4459,7 @@
     /**
      * @summary Sets the bar caption
      * @param {string} html
+     * @throws {PSV.PSVError} when the caption element is not present
      */
     ;
 
@@ -4497,7 +4590,7 @@
   }(AbstractComponent);
 
   /**
-   * @summary Loader class
+   * @summary Loader component
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -4621,7 +4714,7 @@
   }(AbstractComponent);
 
   /**
-   * @summary Notification class
+   * @summary Notification component
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -4732,7 +4825,7 @@
   }(AbstractComponent);
 
   /**
-   * @summary Overlay class
+   * @summary Overlay component
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -4850,6 +4943,8 @@
     }
     /**
      * @override
+     * @summary This method is not supported
+     * @throws {PSV.PSVError} always
      */
     ;
 
@@ -4915,7 +5010,7 @@
 
   var PANEL_MIN_WIDTH = 200;
   /**
-   * @summary Panel class
+   * @summary Panel component
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -5073,6 +5168,8 @@
     }
     /**
      * @override
+     * @summary This method is not supported
+     * @throws {PSV.PSVError} always
      */
     ;
 
@@ -5085,7 +5182,7 @@
      * @param {string} [config.id] - unique identifier to use with "hide" and to store the user desired width
      * @param {string} config.content - HTML content of the panel
      * @param {boolean} [config.noMargin=false] - remove the default margins
-     * @param {string} [config.width] - initial width, if not specified the default width will be used
+     * @param {string} [config.width] - initial width
      * @param {Function} [config.clickHandler] - called when the user clicks inside the panel or presses the Enter key while an element focused
      * @fires PSV.open-panel
      */
@@ -5393,6 +5490,7 @@
      * @summary Converts pixel texture coordinates to spherical radians coordinates
      * @param {PSV.Point} point
      * @returns {PSV.Position}
+     * @throws {PSV.PSVError} when the current adapter does not support texture coordinates
      */
     ;
 
@@ -5404,7 +5502,8 @@
       }
 
       var relativeX = (point.x + panoData.croppedX) / panoData.fullWidth * Math.PI * 2;
-      var relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI;
+      var relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI; // TODO apply the inverse transformation from sphereCorrection/panoData[pose]
+
       return {
         longitude: relativeX >= Math.PI ? relativeX - Math.PI : relativeX + Math.PI,
         latitude: Math.PI / 2 - relativeY
@@ -5414,6 +5513,7 @@
      * @summary Converts spherical radians coordinates to pixel texture coordinates
      * @param {PSV.Position} position
      * @returns {PSV.Point}
+     * @throws {PSV.PSVError} when the current adapter does not support texture coordinates
      */
     ;
 
@@ -5472,13 +5572,10 @@
     ;
 
     _proto.viewerCoordsToVector3 = function viewerCoordsToVector3(viewerPoint) {
-      vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
-      vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
-      this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
-      var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
+      var sphereIntersect = this.getIntersection(viewerPoint, 'psvSphere');
 
-      if (intersects.length === 1) {
-        return intersects[0].point;
+      if (sphereIntersect) {
+        return sphereIntersect.point;
       } else {
         return null;
       }
@@ -5509,6 +5606,25 @@
       return this.vector3ToViewerCoords(this.sphericalCoordsToVector3(position, vector3));
     }
     /**
+     * @summary Returns the first intersection with the cursor and having specific data
+     * @param {PSV.Point} viewerPoint
+     * @param {string} objectDataName
+     * @return {external:THREE.Intersection}
+     */
+    ;
+
+    _proto.getIntersection = function getIntersection(viewerPoint, objectDataName) {
+      vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
+      vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
+      this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
+      var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
+      return intersects.find(function (i) {
+        var _i$object$userData;
+
+        return (_i$object$userData = i.object.userData) == null ? void 0 : _i$object$userData[objectDataName];
+      });
+    }
+    /**
      * @summary Converts x/y to latitude/longitude if present and ensure boundaries
      * @param {PSV.ExtendedPosition} position
      * @returns {PSV.Position}
@@ -5516,7 +5632,7 @@
     ;
 
     _proto.cleanPosition = function cleanPosition(position) {
-      if ('x' in position && 'y' in position) {
+      if (position.x !== undefined && position.y !== undefined) {
         return this.textureCoordsToSphericalCoords(position);
       } else {
         return {
@@ -5566,6 +5682,7 @@
       /**
        * @summary Internal properties
        * @member {Object}
+       * @property {number} moveThreshold - computed threshold based on device pixel ratio
        * @property {boolean} moving - is the user moving
        * @property {boolean} zooming - is the user zooming
        * @property {number} startMouseX - start x position of the click/touch
@@ -5584,6 +5701,7 @@
        */
 
       _this.state = {
+        moveThreshold: MOVE_THRESHOLD * SYSTEM.pixelRatio,
         keyboardEnabled: false,
         moving: false,
         zooming: false,
@@ -6187,7 +6305,7 @@
 
       if (this.state.moving) {
         // move threshold to trigger a click
-        if (Math.abs(evt.clientX - this.state.startMouseX) < MOVE_THRESHOLD && Math.abs(evt.clientY - this.state.startMouseY) < MOVE_THRESHOLD) {
+        if (Math.abs(evt.clientX - this.state.startMouseX) < this.state.moveThreshold && Math.abs(evt.clientY - this.state.startMouseY) < this.state.moveThreshold) {
           this.__click(evt);
 
           this.state.moving = false;
@@ -6306,7 +6424,7 @@
             _this8.state.dblclickData = null;
           }, DBLCLICK_DELAY);
         } else {
-          if (Math.abs(this.state.dblclickData.clientX - data.clientX) < MOVE_THRESHOLD && Math.abs(this.state.dblclickData.clientY - data.clientY) < MOVE_THRESHOLD) {
+          if (Math.abs(this.state.dblclickData.clientX - data.clientX) < this.state.moveThreshold && Math.abs(this.state.dblclickData.clientY - data.clientY) < this.state.moveThreshold) {
             this.psv.trigger(EVENTS.DOUBLE_CLICK, this.state.dblclickData);
           }
 
@@ -6438,59 +6556,73 @@
 
       _this = _AbstractService.call(this, psv) || this;
       /**
-       * @member {number}
-       * @private
-       */
-
-      _this.mainReqid = undefined;
-      /**
        * @member {external:THREE.WebGLRenderer}
        * @readonly
        * @protected
        */
 
-      _this.renderer = null;
+      _this.renderer = new THREE.WebGLRenderer({
+        alpha: true
+      });
+
+      _this.renderer.setPixelRatio(SYSTEM.pixelRatio);
+
+      _this.renderer.domElement.className = 'psv-canvas';
       /**
        * @member {external:THREE.Scene}
        * @readonly
        * @protected
        */
 
-      _this.scene = null;
+      _this.scene = new THREE.Scene();
       /**
        * @member {external:THREE.PerspectiveCamera}
        * @readonly
        * @protected
        */
 
-      _this.camera = null;
+      _this.camera = new THREE.PerspectiveCamera(50, 16 / 9, 1, 2 * SPHERE_RADIUS);
       /**
        * @member {external:THREE.Mesh}
        * @readonly
        * @protected
        */
 
-      _this.mesh = null;
+      _this.mesh = _this.psv.adapter.createMesh();
+      _this.mesh.userData = {
+        psvSphere: true
+      };
       /**
        * @member {external:THREE.Group}
        * @readonly
        * @private
        */
 
-      _this.meshContainer = null;
+      _this.meshContainer = new THREE.Group();
+
+      _this.meshContainer.add(_this.mesh);
+
+      _this.scene.add(_this.meshContainer);
       /**
        * @member {external:THREE.Raycaster}
        * @readonly
        * @protected
        */
 
-      _this.raycaster = null;
+
+      _this.raycaster = new THREE.Raycaster();
       /**
        * @member {number}
        * @private
        */
 
       _this.timestamp = null;
+      /**
+       * @member {boolean}
+       * @private
+       */
+
+      _this.ready = false;
       /**
        * @member {HTMLElement}
        * @readonly
@@ -6502,13 +6634,13 @@
       _this.canvasContainer.style.background = _this.psv.config.canvasBackground;
       _this.canvasContainer.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
 
+      _this.canvasContainer.appendChild(_this.renderer.domElement);
+
       _this.psv.container.appendChild(_this.canvasContainer);
 
-      psv.on(EVENTS.SIZE_UPDATED, function (e, size) {
-        if (_this.renderer) {
-          _this.renderer.setSize(size.width, size.height);
-        }
-      });
+      psv.on(EVENTS.SIZE_UPDATED, _assertThisInitialized(_this));
+      psv.on(EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
+      psv.on(EVENTS.POSITION_UPDATED, _assertThisInitialized(_this));
       psv.on(EVENTS.CONFIG_CHANGED, function () {
         _this.canvasContainer.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
       });
@@ -6526,14 +6658,9 @@
 
     _proto.destroy = function destroy() {
       // cancel render loop
-      if (this.mainReqid) {
-        window.cancelAnimationFrame(this.mainReqid);
-      } // destroy ThreeJS view
+      this.renderer.setAnimationLoop(null); // destroy ThreeJS view
 
-
-      if (this.scene) {
-        this.__cleanTHREEScene(this.scene);
-      } // remove container
+      this.__cleanTHREEScene(this.scene); // remove container
 
 
       this.psv.container.removeChild(this.canvasContainer);
@@ -6546,6 +6673,36 @@
       delete this.raycaster;
 
       _AbstractService.prototype.destroy.call(this);
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} evt
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(evt) {
+      /* eslint-disable */
+      switch (evt.type) {
+        // @formatter:off
+        case EVENTS.SIZE_UPDATED:
+          this.__onSizeUpdated();
+
+          break;
+
+        case EVENTS.ZOOM_UPDATED:
+          this.__onZoomUpdated();
+
+          break;
+
+        case EVENTS.POSITION_UPDATED:
+          this.__onPositionUpdated();
+
+          break;
+        // @formatter:on
+      }
+      /* eslint-enable */
+
     }
     /**
      * @summary Hides the viewer
@@ -6564,16 +6721,53 @@
       this.canvasContainer.style.opacity = 1;
     }
     /**
+     * @summary Updates the size of the renderer and the aspect of the camera
+     * @private
+     */
+    ;
+
+    _proto.__onSizeUpdated = function __onSizeUpdated() {
+      this.renderer.setSize(this.prop.size.width, this.prop.size.height);
+      this.camera.aspect = this.prop.aspect;
+      this.camera.updateProjectionMatrix();
+      this.prop.needsUpdate = true;
+    }
+    /**
+     * @summary Updates the fov of the camera
+     * @private
+     */
+    ;
+
+    _proto.__onZoomUpdated = function __onZoomUpdated() {
+      this.camera.fov = this.prop.vFov;
+      this.camera.updateProjectionMatrix();
+      this.prop.needsUpdate = true;
+    }
+    /**
+     * @summary Updates the position of the camera
+     * @private
+     */
+    ;
+
+    _proto.__onPositionUpdated = function __onPositionUpdated() {
+      this.camera.position.set(0, 0, 0);
+      this.camera.lookAt(this.prop.direction);
+
+      if (this.config.fisheye) {
+        this.camera.position.copy(this.prop.direction).multiplyScalar(this.config.fisheye / 2).negate();
+      }
+
+      this.prop.needsUpdate = true;
+    }
+    /**
      * @summary Main event loop, calls {@link render} if `prop.needsUpdate` is true
      * @param {number} timestamp
      * @fires PSV.before-render
-     * @package
+     * @private
      */
     ;
 
     _proto.__renderLoop = function __renderLoop(timestamp) {
-      var _this2 = this;
-
       var elapsed = this.timestamp !== null ? timestamp - this.timestamp : 0;
       this.timestamp = timestamp;
       this.psv.trigger(EVENTS.BEFORE_RENDER, timestamp, elapsed);
@@ -6585,10 +6779,6 @@
         this.render();
         this.prop.needsUpdate = false;
       }
-
-      this.mainReqid = window.requestAnimationFrame(function (t) {
-        return _this2.__renderLoop(t);
-      });
     }
     /**
      * @summary Performs a render
@@ -6599,29 +6789,8 @@
     ;
 
     _proto.render = function render() {
-      this.camera.position.set(0, 0, 0);
-      this.camera.lookAt(this.prop.direction);
-
-      if (this.config.fisheye) {
-        this.camera.position.copy(this.prop.direction).multiplyScalar(this.config.fisheye / 2).negate();
-      }
-
-      this.updateCameraMatrix();
       this.renderer.render(this.scene, this.camera);
       this.psv.trigger(EVENTS.RENDER);
-    }
-    /**
-     * @summary Updates the camera matrix
-     * @package
-     */
-    ;
-
-    _proto.updateCameraMatrix = function updateCameraMatrix() {
-      if (this.camera) {
-        this.camera.aspect = this.prop.aspect;
-        this.camera.fov = this.prop.vFov;
-        this.camera.updateProjectionMatrix();
-      }
     }
     /**
      * @summary Applies the texture to the scene, creates the scene if needed
@@ -6632,12 +6801,18 @@
     ;
 
     _proto.setTexture = function setTexture(textureData) {
-      if (!this.scene) {
-        this.__createScene();
-      }
+      var _this2 = this;
 
       this.prop.panoData = textureData.panoData;
       this.psv.adapter.setTexture(this.mesh, textureData);
+
+      if (!this.ready) {
+        this.renderer.setAnimationLoop(function (t) {
+          return _this2.__renderLoop(t);
+        });
+        this.ready = true;
+      }
+
       this.psv.needsUpdate();
       this.psv.trigger(EVENTS.PANORAMA_LOADED);
     }
@@ -6681,31 +6856,6 @@
       } else {
         mesh.rotation.set(0, 0, 0);
       }
-    }
-    /**
-     * @summary Creates the 3D scene and GUI components
-     * @private
-     */
-    ;
-
-    _proto.__createScene = function __createScene() {
-      this.raycaster = new THREE.Raycaster();
-      this.renderer = new THREE.WebGLRenderer({
-        alpha: true
-      });
-      this.renderer.setSize(this.prop.size.width, this.prop.size.height);
-      this.renderer.setPixelRatio(SYSTEM.pixelRatio);
-      this.camera = new THREE.PerspectiveCamera(this.prop.vFov, this.prop.size.width / this.prop.size.height, 1, 2 * SPHERE_RADIUS);
-      this.camera.position.set(0, 0, 0);
-      this.scene = new THREE.Scene();
-      this.scene.add(this.camera);
-      this.mesh = this.psv.adapter.createMesh();
-      this.meshContainer = new THREE.Group();
-      this.meshContainer.add(this.mesh);
-      this.scene.add(this.meshContainer); // create canvas container
-
-      this.renderer.domElement.className = 'psv-canvas';
-      this.canvasContainer.appendChild(this.renderer.domElement);
     }
     /**
      * @summary Performs transition between the current and a new texture
@@ -6890,6 +7040,7 @@
      * @returns {Promise.<PSV.TextureData>}
      * @throws {PSV.PSVError} when the image cannot be loaded
      * @package
+     * @deprecated
      */
     ;
 
@@ -6992,16 +7143,6 @@
     return TextureLoader;
   }(AbstractService);
 
-  var LEFT_MAP = {
-    0: 'left',
-    0.5: 'center',
-    1: 'right'
-  };
-  var TOP_MAP = {
-    0: 'top',
-    0.5: 'center',
-    1: 'bottom'
-  };
   var STATE = {
     NONE: 0,
     SHOWING: 1,
@@ -7029,7 +7170,8 @@
    */
 
   /**
-   * @summary Tooltip class
+   * @summary Tooltip component
+   * @description Never instanciate tooltips directly use {@link PSV.services.TooltipRenderer} instead
    * @extends PSV.components.AbstractComponent
    * @memberof PSV.components
    */
@@ -7128,6 +7270,8 @@
     }
     /**
      * @override
+     * @summary This method is not supported
+     * @throws {PSV.PSVError} always
      */
     ;
 
@@ -7179,30 +7323,10 @@
       }
 
       var t = this.container;
-      var a = this.arrow;
-
-      if (!config.position) {
-        config.position = ['top', 'center'];
-      } // parse position
-
-
-      if (typeof config.position === 'string') {
-        var tempPos = parsePosition(config.position);
-
-        if (!(tempPos.x in LEFT_MAP) || !(tempPos.y in TOP_MAP)) {
-          throw new PSVError("Unable to parse tooltip position \"" + config.position + "\"");
-        }
-
-        config.position = [TOP_MAP[tempPos.y], LEFT_MAP[tempPos.x]];
-      }
-
-      if (config.position[0] === 'center' && config.position[1] === 'center') {
-        throw new PSVError('Unable to parse tooltip position "center center"');
-      } // compute size
-
+      var a = this.arrow; // compute size
 
       var style = {
-        posClass: config.position.slice(),
+        posClass: cleanPosition(config.position, 'top center', false),
         width: this.prop.width,
         height: this.prop.height,
         top: 0,
@@ -7429,11 +7553,16 @@
 
   var Dynamic = /*#__PURE__*/function () {
     /**
-     * @param {Function} fn Callback function
+     * @param {Function} [fn] Callback function
+     * @param {number} [defaultValue] Default position
      * @param {number} [min] Minimum position
      * @param {number} [max] Maximum position
      */
-    function Dynamic(fn, min, max) {
+    function Dynamic(fn, defaultValue, min, max) {
+      if (defaultValue === void 0) {
+        defaultValue = 0;
+      }
+
       if (min === void 0) {
         min = -Infinity;
       }
@@ -7483,7 +7612,7 @@
        * @readonly
        */
 
-      this.current = 0;
+      this.current = defaultValue;
       /**
        * @type {number}
        * @private
@@ -7496,6 +7625,10 @@
        */
 
       this.max = max;
+
+      if (this.fn) {
+        this.fn(defaultValue);
+      }
     }
     /**
      * Changes base speed
@@ -7663,7 +7796,7 @@
   var MultiDynamic = /*#__PURE__*/function () {
     /**
      * @param {Record<string, PSV.Dynamic>} dynamics
-     * @param {Function} fn Callback function
+     * @param {Function} [fn] Callback function
      */
     function MultiDynamic(dynamics, fn) {
       /**
@@ -7679,6 +7812,10 @@
        */
 
       this.dynamics = dynamics;
+
+      if (this.fn) {
+        this.fn(this.current);
+      }
     }
     /**
      * Changes base speed
@@ -7847,17 +7984,19 @@
        * @member {Object}
        * @protected
        * @property {boolean} ready - when all components are loaded
+       * @property {boolean} uiRefresh - if the UI needs to be renderer
        * @property {boolean} needsUpdate - if the view needs to be renderer
+       * @property {boolean} fullscreen - if the viewer is currently fullscreen
        * @property {external:THREE.Vector3} direction - direction of the camera
        * @property {number} vFov - vertical FOV
        * @property {number} hFov - horizontal FOV
        * @property {number} aspect - viewer aspect ratio
        * @property {boolean} autorotateEnabled - automatic rotation is enabled
-       * @property {PSV.Animation} animationPromise - promise of the current animation (either go to position or image transition)
+       * @property {PSV.Animation} animationPromise - promise of the current animation
        * @property {Promise} loadingPromise - promise of the setPanorama method
        * @property startTimeout - timeout id of the automatic rotation delay
        * @property {PSV.Size} size - size of the container
-       * @property {PSV.PanoData} panoData - panorama metadata
+       * @property {PSV.PanoData} panoData - panorama metadata, if supported
        */
 
 
@@ -7940,28 +8079,24 @@
 
       _this.plugins = {};
       /**
-       * @summary Main render controller
        * @type {PSV.services.Renderer}
        * @readonly
        */
 
       _this.renderer = new Renderer(_assertThisInitialized(_this));
       /**
-       * @summary Textures loader
        * @type {PSV.services.TextureLoader}
        * @readonly
        */
 
       _this.textureLoader = new TextureLoader(_assertThisInitialized(_this));
       /**
-       * @summary Main event handler
        * @type {PSV.services.EventsHandler}
        * @readonly
        */
 
       _this.eventsHandler = new EventsHandler(_assertThisInitialized(_this));
       /**
-       * @summary Utilities to help converting data
        * @type {PSV.services.DataHelper}
        * @readonly
        */
@@ -8013,17 +8148,13 @@
           _this.prop.vFov = _this.dataHelper.zoomLevelToFov(value);
           _this.prop.hFov = _this.dataHelper.vFovToHFov(_this.prop.vFov);
 
-          _this.needsUpdate();
-
           _this.trigger(EVENTS.ZOOM_UPDATED, value);
-        }, 0, 100),
+        }, _this.config.defaultZoomLvl, 0, 100),
         position: new MultiDynamic({
-          longitude: new Dynamic(null),
-          latitude: new Dynamic(null, -Math.PI / 2, Math.PI / 2)
+          longitude: new Dynamic(null, _this.config.defaultLong),
+          latitude: new Dynamic(null, _this.config.defaultLat, -Math.PI / 2, Math.PI / 2)
         }, function (position) {
           _this.dataHelper.sphericalCoordsToVector3(position, _this.prop.direction);
-
-          _this.needsUpdate();
 
           _this.trigger(EVENTS.POSITION_UPDATED, position);
         })
@@ -8191,10 +8322,7 @@
     ;
 
     _proto.getSize = function getSize() {
-      return {
-        width: this.prop.size.width,
-        height: this.prop.size.height
-      };
+      return _extends({}, this.prop.size);
     }
     /**
      * @summary Checks if the automatic rotation is enabled
@@ -8225,10 +8353,6 @@
 
     _proto.needsUpdate = function needsUpdate() {
       this.prop.needsUpdate = true;
-
-      if (!this.renderer.mainReqid && this.renderer.renderer) {
-        this.renderer.__renderLoop(+new Date());
-      }
     }
     /**
      * @summary Resizes the canvas when the window is resized
@@ -8242,8 +8366,6 @@
         this.prop.size.height = Math.round(this.container.clientHeight);
         this.prop.aspect = this.prop.size.width / this.prop.size.height;
         this.prop.hFov = this.dataHelper.vFovToHFov(this.prop.vFov);
-        this.renderer.updateCameraMatrix();
-        this.needsUpdate();
         this.trigger(EVENTS.SIZE_UPDATED, this.getSize());
 
         this.__resizeRefresh();
@@ -8273,18 +8395,6 @@
 
 
       if (!this.prop.ready) {
-        if (!('longitude' in options)) {
-          options.longitude = this.config.defaultLong;
-        }
-
-        if (!('latitude' in options)) {
-          options.latitude = this.config.defaultLat;
-        }
-
-        if (!('zoom' in options)) {
-          options.zoom = this.config.defaultZoomLvl;
-        }
-
         if (!('sphereCorrection' in options)) {
           options.sphereCorrection = this.config.sphereCorrection;
         }
@@ -8372,6 +8482,7 @@
      * @summary Update options
      * @param {PSV.Options} options
      * @fires PSV.config-changed
+     * @throws {PSV.PSVError} when the configuration is incorrect
      */
     ;
 
@@ -8448,6 +8559,7 @@
      * @param {string} option
      * @param {any} value
      * @fires PSV.config-changed
+     * @throws {PSV.PSVError} when the configuration is incorrect
      */
     ;
 
@@ -8506,7 +8618,7 @@
       }
     }
     /**
-     * @summary Displays an error message
+     * @summary Displays an error message over the viewer
      * @param {string} message
      */
     ;

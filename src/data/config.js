@@ -15,6 +15,7 @@ export const DEFAULTS = {
   panorama           : null,
   container          : null,
   adapter            : null,
+  plugins            : [],
   caption            : null,
   loadingImg         : null,
   loadingTxt         : 'Loading...',
@@ -74,7 +75,6 @@ export const DEFAULTS = {
     [KEY_CODES.Minus]     : ACTIONS.ZOOM_OUT,
     [KEY_CODES.Space]     : ACTIONS.TOGGLE_AUTOROTATE,
   },
-  plugins            : [],
 };
 
 /**
@@ -112,14 +112,18 @@ export const CONFIG_PARSERS = {
   },
   adapter        : (adapter) => {
     if (!adapter) {
-      return [EquirectangularAdapter];
+      adapter = [EquirectangularAdapter];
     }
     else if (Array.isArray(adapter)) {
-      return [pluginInterop(adapter[0], AbstractAdapter), adapter[1]];
+      adapter = [pluginInterop(adapter[0], AbstractAdapter), adapter[1]];
     }
     else {
-      return [pluginInterop(adapter, AbstractAdapter)];
+      adapter = [pluginInterop(adapter, AbstractAdapter)];
     }
+    if (!adapter[0]) {
+      throw new PSVError('Un undefined value with given for adapter.');
+    }
+    return adapter;
   },
   defaultLong    : (defaultLong) => {
     // defaultLat is between 0 and PI
@@ -190,13 +194,16 @@ export const CONFIG_PARSERS = {
     return plugins
       .map((plugin) => {
         if (Array.isArray(plugin)) {
-          return [pluginInterop(plugin[0], AbstractPlugin), plugin[1]];
+          plugin = [pluginInterop(plugin[0], AbstractPlugin), plugin[1]];
         }
         else {
-          return [pluginInterop(plugin, AbstractPlugin)];
+          plugin = [pluginInterop(plugin, AbstractPlugin)];
         }
-      })
-      .filter(plugin => !!plugin[0]);
+        if (!plugin[0]) {
+          throw new PSVError('Un undefined value was given for plugins.');
+        }
+        return plugin;
+      });
   },
 };
 

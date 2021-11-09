@@ -1,4 +1,4 @@
-import { AbstractAdapter, Viewer, TextureData } from 'photo-sphere-viewer';
+import { AbstractAdapter, Viewer } from 'photo-sphere-viewer';
 
 /**
  * @summary Configuration of a tiled panorama
@@ -19,11 +19,9 @@ type EquirectangularTilesAdapterOptions = {
 /**
  * @summary Adapter for tiled panoramas
  */
-declare class EquirectangularTilesAdapter extends AbstractAdapter {
+declare class EquirectangularTilesAdapter extends AbstractAdapter<EquirectangularTilesPanorama> {
 
   constructor(psv: Viewer, options: EquirectangularTilesAdapterOptions);
-
-  loadTexture(panorama: EquirectangularTilesPanorama): Promise<TextureData>;
 
 }
 

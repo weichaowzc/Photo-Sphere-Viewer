@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Vector3, Intersection } from 'three';
 import { ExtendedPosition, Point, Position, SphereCorrection } from '../models';
 
 /**
@@ -39,7 +39,7 @@ export class DataHelper {
   /**
    * @summary Converts spherical radians coordinates to a THREE.Vector3
    */
-  sphericalCoordsToVector3(position: Position): Vector3;
+  sphericalCoordsToVector3(position: Position, vector: Vector3): Vector3;
 
   /**
    * @summary Converts a THREE.Vector3 to spherical radians coordinates
@@ -60,6 +60,11 @@ export class DataHelper {
    * @summary Converts spherical radians coordinates to position on the viewer
    */
   sphericalCoordsToViewerCoords(position: Position): Point;
+
+  /**
+   * @summary Returns the first intersection with the cursor and having specific data
+   */
+  getIntersection(viewerPoint: Point, objectDataName: string): Intersection;
 
   /**
    * @summary Converts x/y to latitude/longitude if present and ensure boundaries

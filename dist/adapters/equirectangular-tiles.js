@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -483,6 +483,11 @@
 
       var viewerSize = this.psv.prop.size;
       var panorama = this.psv.config.panorama;
+
+      if (!panorama) {
+        return;
+      }
+
       var tilesToLoad = [];
       var tilePosition = new THREE.Vector3();
 
@@ -616,7 +621,7 @@
       }
 
       return new Promise(function (resolve, reject) {
-        return _this6.loader.load(url, resolve, undefined, reject);
+        _this6.loader.load(url, resolve, undefined, reject);
       }).then(function (image) {
         if (!task.isCancelled()) {
           var material = new THREE.MeshBasicMaterial({

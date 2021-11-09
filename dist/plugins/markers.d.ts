@@ -108,22 +108,23 @@ declare class Marker {
 
 }
 
+declare const EVENTS: {
+  GOTO_MARKER_DONE: 'goto-marker-done',
+  LEAVE_MARKER: 'leave-marker',
+  OVER_MARKER: 'over-marker',
+  RENDER_MARKERS_LIST: 'render-markers-list',
+  SELECT_MARKER: 'select-marker',
+  SELECT_MARKER_LIST: 'select-marker-list',
+  UNSELECT_MARKER: 'unselect-marker',
+  HIDE_MARKERS: 'hide-markers',
+  SET_MARKERS: 'set-markers',
+  SHOW_MARKERS: 'show-markers',
+};
+
 /**
  * @summary Displays various markers on the viewer
  */
 declare class MarkersPlugin extends AbstractPlugin {
-
-  static EVENTS: {
-    GOTO_MARKER_DONE   : 'goto-marker-done',
-    LEAVE_MARKER       : 'leave-marker',
-    OVER_MARKER        : 'over-marker',
-    RENDER_MARKERS_LIST: 'render-markers-list',
-    SELECT_MARKER      : 'select-marker',
-    SELECT_MARKER_LIST : 'select-marker-list',
-    UNSELECT_MARKER    : 'unselect-marker',
-    HIDE_MARKERS       : 'hide-markers',
-    SHOW_MARKERS       : 'show-markers',
-  };
 
   constructor(psv: Viewer, options: MarkersPluginOptions);
 
@@ -143,14 +144,18 @@ declare class MarkersPlugin extends AbstractPlugin {
   hideAllTooltips();
 
   /**
-   * @summary Return the total number of markers
+   * @summary Returns the total number of markers
    * @returns {number}
    */
   getNbMarkers(): number;
 
   /**
+   * @summary Returns all the markers
+   */
+  getMarkers(): Marker[];
+
+  /**
    * @summary Adds a new marker to viewer
-   * @returns {PSV.plugins.MarkersPlugin.Marker}
    * @throws {PSVError} when the marker's id is missing or already exists
    */
   addMarker(properties: MarkerProperties, render?: boolean): Marker;
@@ -280,4 +285,4 @@ declare class MarkersPlugin extends AbstractPlugin {
 
 }
 
-export { Marker, MarkerProperties, MarkerType, MarkersPlugin, MarkersPluginOptions, SelectMarkerData };
+export { EVENTS, Marker, MarkerProperties, MarkerType, MarkersPlugin, MarkersPluginOptions, SelectMarkerData };

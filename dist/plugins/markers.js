@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -51,6 +51,145 @@
 
     return self;
   }
+
+  var pinList = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"9 9 81 81\"><path fill=\"currentColor\" d=\"M37.5 90S9.9 51.9 9.9 36.6 22.2 9 37.5 9s27.6 12.4 27.6 27.6S37.5 90 37.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11zM86.7 55H70c-1.8 0-3.3-1.5-3.3-3.3s1.5-3.3 3.3-3.3h16.7c1.8 0 3.3 1.5 3.3 3.3S88.5 55 86.7 55zm0-25h-15a3.3 3.3 0 0 1-3.3-3.3c0-1.8 1.5-3.3 3.3-3.3h15c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3zM56.5 73h30c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3h-30a3.3 3.3 0 0 1-3.3-3.3 3.2 3.2 0 0 1 3.3-3.3z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
+
+  /**
+   * @summary Available events
+   * @enum {string}
+   * @memberof PSV.plugins.MarkersPlugin
+   * @constant
+   */
+
+  var EVENTS = {
+    /**
+     * @event goto-marker-done
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the animation to a marker is done
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     */
+    GOTO_MARKER_DONE: 'goto-marker-done',
+
+    /**
+     * @event leave-marker
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the user puts the cursor away from a marker
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     */
+    LEAVE_MARKER: 'leave-marker',
+
+    /**
+     * @event over-marker
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the user puts the cursor hover a marker
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     */
+    OVER_MARKER: 'over-marker',
+
+    /**
+     * @event filter:render-markers-list
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Used to alter the list of markers displayed on the side-panel
+     * @param {PSV.plugins.MarkersPlugin.Marker[]} markers
+     * @returns {PSV.plugins.MarkersPlugin.Marker[]}
+     */
+    RENDER_MARKERS_LIST: 'render-markers-list',
+
+    /**
+     * @event select-marker
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the user clicks on a marker. The marker can be retrieved from outside the event handler
+     * with {@link PSV.plugins.MarkersPlugin.getCurrentMarker}
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     * @param {PSV.plugins.MarkersPlugin.SelectMarkerData} data
+     */
+    SELECT_MARKER: 'select-marker',
+
+    /**
+     * @event select-marker-list
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when a marker is selected from the side panel
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     */
+    SELECT_MARKER_LIST: 'select-marker-list',
+
+    /**
+     * @event unselect-marker
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when a marker was selected and the user clicks elsewhere
+     * @param {PSV.plugins.MarkersPlugin.Marker} marker
+     */
+    UNSELECT_MARKER: 'unselect-marker',
+
+    /**
+     * @event hide-markers
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the markers are hidden
+     */
+    HIDE_MARKERS: 'hide-markers',
+
+    /**
+     * @event set-marker
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the list of markers changes
+     * @param {PSV.plugins.MarkersPlugin.Marker[]} markers
+     */
+    SET_MARKERS: 'set-markers',
+
+    /**
+     * @event show-markers
+     * @memberof PSV.plugins.MarkersPlugin
+     * @summary Triggered when the markers are shown
+     */
+    SHOW_MARKERS: 'show-markers'
+  };
+  /**
+   * @summary Namespace for SVG creation
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  /**
+   * @summary Property name added to marker elements
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var MARKER_DATA = 'psvMarker';
+  /**
+   * @summary Panel identifier for marker content
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var ID_PANEL_MARKER = 'marker';
+  /**
+   * @summary Panel identifier for markers list
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var ID_PANEL_MARKERS_LIST = 'markersList';
+  /**
+   * @summary Markers list template
+   * @param {PSV.Marker[]} markers
+   * @param {string} title
+   * @param {string} dataKey
+   * @returns {string}
+   * @constant
+   * @private
+   */
+
+  var MARKERS_LIST_TEMPLATE = function MARKERS_LIST_TEMPLATE(markers, title, dataKey) {
+    return "\n<div class=\"psv-panel-menu psv-panel-menu--stripped\">\n  <h1 class=\"psv-panel-menu-title\">" + pinList + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + markers.map(function (marker) {
+      return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-panel-menu-item\" tabindex=\"0\">\n      " + (marker.type === 'image' ? "<span class=\"psv-panel-menu-item-icon\"><img src=\"" + marker.config.image + "\"/></span>" : '') + "\n      <span class=\"psv-panel-menu-item-label\">" + marker.getListContent() + "</span>\n    </li>\n    ";
+    }).join('') + "\n  </ul>\n</div>\n";
+  };
 
   /**
    * Returns intermediary point between two points on the sphere
@@ -165,7 +304,7 @@
   };
   /**
    * @typedef {Object} PSV.plugins.MarkersPlugin.Properties
-   * @summary Marker properties, see {@link http://photo-sphere-viewer.js.org/plugins/plugin-markers.html#markers-options}
+   * @summary Marker properties, see {@link https://photo-sphere-viewer.js.org/plugins/plugin-markers.html#markers-options}
    */
 
   /**
@@ -264,15 +403,15 @@
       if (this.isNormal()) {
         this.$el = document.createElement('div');
       } else if (this.isPolygon()) {
-        this.$el = document.createElementNS(MarkersPlugin.SVG_NS, 'polygon');
+        this.$el = document.createElementNS(SVG_NS, 'polygon');
       } else if (this.isPolyline()) {
-        this.$el = document.createElementNS(MarkersPlugin.SVG_NS, 'polyline');
+        this.$el = document.createElementNS(SVG_NS, 'polyline');
       } else {
-        this.$el = document.createElementNS(MarkersPlugin.SVG_NS, this.type);
+        this.$el = document.createElementNS(SVG_NS, this.type);
       }
 
       this.$el.id = "psv-marker-" + this.id;
-      this.$el[MarkersPlugin.MARKER_DATA] = this;
+      this.$el[MARKER_DATA] = this;
       this.update(properties);
     }
     /**
@@ -283,7 +422,7 @@
     var _proto = Marker.prototype;
 
     _proto.destroy = function destroy() {
-      delete this.$el[MarkersPlugin.MARKER_DATA];
+      delete this.$el[MARKER_DATA];
       delete this.$el;
       delete this.config;
       delete this.props;
@@ -762,12 +901,12 @@
        * @type {PSV.plugins.MarkersPlugin}
        */
 
-      _this.plugin = _this.psv.getPlugin(MarkersPlugin.id);
+      _this.plugin = _this.psv.getPlugin('markers');
 
       if (_this.plugin) {
-        _this.plugin.on(MarkersPlugin.EVENTS.SHOW_MARKERS, _assertThisInitialized(_this));
+        _this.plugin.on(EVENTS.SHOW_MARKERS, _assertThisInitialized(_this));
 
-        _this.plugin.on(MarkersPlugin.EVENTS.HIDE_MARKERS, _assertThisInitialized(_this));
+        _this.plugin.on(EVENTS.HIDE_MARKERS, _assertThisInitialized(_this));
 
         _this.toggleActive(true);
       }
@@ -783,8 +922,8 @@
 
     _proto.destroy = function destroy() {
       if (this.plugin) {
-        this.plugin.off(MarkersPlugin.EVENTS.SHOW_MARKERS, this);
-        this.plugin.off(MarkersPlugin.EVENTS.HIDE_MARKERS, this);
+        this.plugin.off(EVENTS.SHOW_MARKERS, this);
+        this.plugin.off(EVENTS.HIDE_MARKERS, this);
       }
 
       _AbstractButton.prototype.destroy.call(this);
@@ -808,11 +947,11 @@
       /* eslint-disable */
       switch (e.type) {
         // @formatter:off
-        case MarkersPlugin.EVENTS.SHOW_MARKERS:
+        case EVENTS.SHOW_MARKERS:
           this.toggleActive(true);
           break;
 
-        case MarkersPlugin.EVENTS.HIDE_MARKERS:
+        case EVENTS.HIDE_MARKERS:
           this.toggleActive(false);
           break;
         // @formatter:on
@@ -839,8 +978,6 @@
   MarkersButton.id = 'markers';
   MarkersButton.icon = pin;
 
-  var icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"9 9 81 81\"><path fill=\"currentColor\" d=\"M37.5 90S9.9 51.9 9.9 36.6 22.2 9 37.5 9s27.6 12.4 27.6 27.6S37.5 90 37.5 90zm0-66.3c-6.1 0-11 4.9-11 11s4.9 11 11 11 11-4.9 11-11-4.9-11-11-11zM86.7 55H70c-1.8 0-3.3-1.5-3.3-3.3s1.5-3.3 3.3-3.3h16.7c1.8 0 3.3 1.5 3.3 3.3S88.5 55 86.7 55zm0-25h-15a3.3 3.3 0 0 1-3.3-3.3c0-1.8 1.5-3.3 3.3-3.3h15c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3zM56.5 73h30c1.8 0 3.3 1.5 3.3 3.3 0 1.8-1.5 3.3-3.3 3.3h-30a3.3 3.3 0 0 1-3.3-3.3 3.2 3.2 0 0 1 3.3-3.3z\"/><!--Created by Rohith M S from the Noun Project--></svg>\n";
-
   /**
    * @summary Navigation bar markers list button class
    * @extends PSV.buttons.AbstractButton
@@ -861,7 +998,7 @@
        * @type {PSV.plugins.MarkersPlugin}
        */
 
-      _this.plugin = _this.psv.getPlugin(MarkersPlugin.id);
+      _this.plugin = _this.psv.getPlugin('markers');
 
       if (_this.plugin) {
         _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL, _assertThisInitialized(_this));
@@ -906,7 +1043,7 @@
       switch (e.type) {
         // @formatter:off
         case photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL:
-          this.toggleActive(e.args[0] === MarkersPlugin.ID_PANEL_MARKERS_LIST);
+          this.toggleActive(e.args[0] === ID_PANEL_MARKERS_LIST);
           break;
 
         case photoSphereViewer.CONSTANTS.EVENTS.CLOSE_PANEL:
@@ -930,7 +1067,7 @@
     return MarkersListButton;
   }(photoSphereViewer.AbstractButton);
   MarkersListButton.id = 'markersList';
-  MarkersListButton.icon = icon;
+  MarkersListButton.icon = pinList;
 
   /**
    * @typedef {Object} PSV.plugins.MarkersPlugin.Options
@@ -961,41 +1098,7 @@
     _inheritsLoose(MarkersPlugin, _AbstractPlugin);
 
     /**
-     * @summary Available events
-     * @enum {string}
-     * @constant
-     */
-
-    /**
-     * @summary Namespace for SVG creation
-     * @type {string}
-     * @constant
-     */
-
-    /**
-     * @summary Property name added to marker elements
-     * @type {string}
-     * @constant
-     */
-
-    /**
-     * @summary Panel identifier for marker content
-     * @type {string}
-     * @constant
-     */
-
-    /**
-     * @summary Panel identifier for markers list
-     * @type {string}
-     * @constant
-     */
-
-    /**
-     * @summary Markers list template
-     * @param {PSV.Marker[]} markers
-     * @param {string} title
-     * @param {string} dataKey
-     * @returns {string}
+     * @deprecated use the EVENTS constants of the module
      */
 
     /**
@@ -1048,7 +1151,7 @@
        * @readonly
        */
 
-      _this.svgContainer = document.createElementNS(MarkersPlugin.SVG_NS, 'svg');
+      _this.svgContainer = document.createElementNS(SVG_NS, 'svg');
 
       _this.svgContainer.setAttribute('class', 'psv-markers-svg-container');
 
@@ -1167,7 +1270,7 @@
     _proto.show = function show() {
       this.prop.visible = true;
       this.renderMarkers();
-      this.trigger(MarkersPlugin.EVENTS.SHOW_MARKERS);
+      this.trigger(EVENTS.SHOW_MARKERS);
     }
     /**
      * @override
@@ -1178,7 +1281,7 @@
     _proto.hide = function hide() {
       this.prop.visible = false;
       this.renderMarkers();
-      this.trigger(MarkersPlugin.EVENTS.HIDE_MARKERS);
+      this.trigger(EVENTS.HIDE_MARKERS);
     }
     /**
      * @summary Toggles the visibility of all tooltips
@@ -1208,13 +1311,22 @@
       this.renderMarkers();
     }
     /**
-     * @summary Return the total number of markers
+     * @summary Returns the total number of markers
      * @returns {number}
      */
     ;
 
     _proto.getNbMarkers = function getNbMarkers() {
       return Object.keys(this.markers).length;
+    }
+    /**
+     * @summary Returns all the markers
+     * @return {PSV.plugins.MarkersPlugin.Marker[]}
+     */
+    ;
+
+    _proto.getMarkers = function getMarkers() {
+      return Object.values(this.markers);
     }
     /**
      * @summary Adds a new marker to viewer
@@ -1248,6 +1360,8 @@
         this.renderMarkers();
 
         this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
       }
 
       return marker;
@@ -1299,6 +1413,8 @@
         this.renderMarkers();
 
         this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
       }
 
       return marker;
@@ -1337,6 +1453,8 @@
 
       if (render) {
         this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
       }
     }
     /**
@@ -1362,6 +1480,8 @@
         this.renderMarkers();
 
         this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
       }
     }
     /**
@@ -1385,6 +1505,8 @@
         this.renderMarkers();
 
         this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
       }
     }
     /**
@@ -1403,7 +1525,7 @@
       return this.psv.animate(_extends({}, marker.props.position, {
         speed: speed
       })).then(function () {
-        _this4.trigger(MarkersPlugin.EVENTS.GOTO_MARKER_DONE, marker);
+        _this4.trigger(EVENTS.GOTO_MARKER_DONE, marker);
       });
     }
     /**
@@ -1449,11 +1571,11 @@
 
       if (marker != null && (_marker$config = marker.config) != null && _marker$config.content) {
         this.psv.panel.show({
-          id: MarkersPlugin.ID_PANEL_MARKER,
+          id: ID_PANEL_MARKER,
           content: marker.config.content
         });
       } else {
-        this.psv.panel.hide(MarkersPlugin.ID_PANEL_MARKER);
+        this.psv.panel.hide(ID_PANEL_MARKER);
       }
     }
     /**
@@ -1462,7 +1584,7 @@
     ;
 
     _proto.toggleMarkersList = function toggleMarkersList() {
-      if (this.psv.panel.prop.contentId === MarkersPlugin.ID_PANEL_MARKERS_LIST) {
+      if (this.psv.panel.prop.contentId === ID_PANEL_MARKERS_LIST) {
         this.hideMarkersList();
       } else {
         this.showMarkersList();
@@ -1483,19 +1605,19 @@
           markers.push(marker);
         }
       });
-      markers = this.change(MarkersPlugin.EVENTS.RENDER_MARKERS_LIST, markers);
+      markers = this.change(EVENTS.RENDER_MARKERS_LIST, markers);
       this.psv.panel.show({
-        id: MarkersPlugin.ID_PANEL_MARKERS_LIST,
-        content: MarkersPlugin.MARKERS_LIST_TEMPLATE(markers, this.psv.config.lang.markers, photoSphereViewer.utils.dasherize(MarkersPlugin.MARKER_DATA)),
+        id: ID_PANEL_MARKERS_LIST,
+        content: MARKERS_LIST_TEMPLATE(markers, this.psv.config.lang.markers, photoSphereViewer.utils.dasherize(MARKER_DATA)),
         noMargin: true,
         clickHandler: function clickHandler(e) {
           var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
-          var markerId = li ? li.dataset[MarkersPlugin.MARKER_DATA] : undefined;
+          var markerId = li ? li.dataset[MARKER_DATA] : undefined;
 
           if (markerId) {
             var marker = _this5.getMarker(markerId);
 
-            _this5.trigger(MarkersPlugin.EVENTS.SELECT_MARKER_LIST, marker);
+            _this5.trigger(EVENTS.SELECT_MARKER_LIST, marker);
 
             _this5.gotoMarker(marker, 1000);
 
@@ -1510,7 +1632,7 @@
     ;
 
     _proto.hideMarkersList = function hideMarkersList() {
-      this.psv.panel.hide(MarkersPlugin.ID_PANEL_MARKERS_LIST);
+      this.psv.panel.hide(ID_PANEL_MARKERS_LIST);
     }
     /**
      * @summary Updates the visibility and the position of all markers
@@ -1545,29 +1667,20 @@
 
           var scale = marker.getScale(_this6.psv.getZoomLevel());
 
-          var _position = _this6.__getMarkerPosition(marker, scale);
+          var _position = _this6.__getMarkerPosition(marker);
 
           isVisible = _this6.__isMarkerVisible(marker, _position);
 
           if (isVisible) {
             marker.props.position2D = _position;
+            var transform;
 
             if (marker.isSvg()) {
-              var transform = "translate(" + _position.x + ", " + _position.y + ")";
-
-              if (scale !== 1) {
-                transform += " scale(" + scale + ", " + scale + ")";
-              }
-
+              transform = "translate(" + _position.x + ", " + _position.y + ") scale(" + scale + ", " + scale + ")";
               marker.$el.setAttributeNS(null, 'transform', transform);
             } else {
-              var _transform = "translate3D(" + _position.x + "px, " + _position.y + "px, 0px)";
-
-              if (scale !== 1) {
-                _transform += " scale(" + scale + ", " + scale + ")";
-              }
-
-              marker.$el.style.transform = _transform;
+              transform = "translate3D(" + _position.x + "px, " + _position.y + "px, 0px) scale(" + scale + ", " + scale + ")";
+              marker.$el.style.transform = transform;
             }
           }
         }
@@ -1635,23 +1748,18 @@
     /**
      * @summary Computes viewer coordinates of a marker
      * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     * @param {number} [scale=1]
      * @returns {PSV.Point}
      * @private
      */
     ;
 
-    _proto.__getMarkerPosition = function __getMarkerPosition(marker, scale) {
-      if (scale === void 0) {
-        scale = 1;
-      }
-
+    _proto.__getMarkerPosition = function __getMarkerPosition(marker) {
       if (marker.isPoly()) {
         return this.psv.dataHelper.sphericalCoordsToViewerCoords(marker.props.position);
       } else {
         var position = this.psv.dataHelper.vector3ToViewerCoords(marker.props.positions3D[0]);
-        position.x -= marker.props.width * marker.props.anchor.x * scale;
-        position.y -= marker.props.height * marker.props.anchor.y * scale;
+        position.x -= marker.props.width * marker.props.anchor.x;
+        position.y -= marker.props.height * marker.props.anchor.y;
         return position;
       }
     }
@@ -1743,7 +1851,7 @@
       }
 
       var target2 = closest ? photoSphereViewer.utils.getClosest(target, '.psv-marker') : target;
-      return target2 ? target2[MarkersPlugin.MARKER_DATA] : undefined;
+      return target2 ? target2[MARKER_DATA] : undefined;
     }
     /**
      * @summary Checks if an event target is in the tooltip
@@ -1770,7 +1878,7 @@
 
       if (marker && !marker.isPoly()) {
         this.prop.hoveringMarker = marker;
-        this.trigger(MarkersPlugin.EVENTS.OVER_MARKER, marker);
+        this.trigger(EVENTS.OVER_MARKER, marker);
 
         if (!this.prop.showAllTooltips) {
           marker.showTooltip(e);
@@ -1790,7 +1898,7 @@
 
 
       if (marker && !(marker.isPoly() && this.__targetOnTooltip(e.relatedTarget, marker.tooltip))) {
-        this.trigger(MarkersPlugin.EVENTS.LEAVE_MARKER, marker);
+        this.trigger(EVENTS.LEAVE_MARKER, marker);
         this.prop.hoveringMarker = null;
 
         if (!this.prop.showAllTooltips) {
@@ -1823,7 +1931,7 @@
 
       if (marker) {
         if (!this.prop.hoveringMarker) {
-          this.trigger(MarkersPlugin.EVENTS.OVER_MARKER, marker);
+          this.trigger(EVENTS.OVER_MARKER, marker);
           this.prop.hoveringMarker = marker;
         }
 
@@ -1831,7 +1939,7 @@
           marker.showTooltip(e);
         }
       } else if ((_this$prop$hoveringMa = this.prop.hoveringMarker) != null && _this$prop$hoveringMa.isPoly()) {
-        this.trigger(MarkersPlugin.EVENTS.LEAVE_MARKER, this.prop.hoveringMarker);
+        this.trigger(EVENTS.LEAVE_MARKER, this.prop.hoveringMarker);
 
         if (!this.prop.showAllTooltips) {
           this.prop.hoveringMarker.hideTooltip();
@@ -1871,7 +1979,7 @@
 
       if (marker) {
         this.prop.currentMarker = marker;
-        this.trigger(MarkersPlugin.EVENTS.SELECT_MARKER, marker, {
+        this.trigger(EVENTS.SELECT_MARKER, marker, {
           dblclick: dblclick,
           rightclick: data.rightclick
         });
@@ -1888,8 +1996,8 @@
           this.showMarkerPanel(marker.id);
         }
       } else if (this.prop.currentMarker) {
-        this.trigger(MarkersPlugin.EVENTS.UNSELECT_MARKER, this.prop.currentMarker);
-        this.psv.panel.hide(MarkersPlugin.ID_PANEL_MARKER);
+        this.trigger(EVENTS.UNSELECT_MARKER, this.prop.currentMarker);
+        this.psv.panel.hide(ID_PANEL_MARKER);
         this.prop.currentMarker = null;
       }
     }
@@ -1910,18 +2018,18 @@
         markersButton == null ? void 0 : markersButton.hide();
         markersListButton == null ? void 0 : markersListButton.hide();
 
-        if (this.psv.panel.isVisible(MarkersPlugin.ID_PANEL_MARKERS_LIST)) {
+        if (this.psv.panel.isVisible(ID_PANEL_MARKERS_LIST)) {
           this.psv.panel.hide();
-        } else if (this.psv.panel.isVisible(MarkersPlugin.ID_PANEL_MARKER)) {
+        } else if (this.psv.panel.isVisible(ID_PANEL_MARKER)) {
           this.psv.panel.hide();
         }
       } else {
         markersButton == null ? void 0 : markersButton.show();
         markersListButton == null ? void 0 : markersListButton.show();
 
-        if (this.psv.panel.isVisible(MarkersPlugin.ID_PANEL_MARKERS_LIST)) {
+        if (this.psv.panel.isVisible(ID_PANEL_MARKERS_LIST)) {
           this.showMarkersList();
-        } else if (this.psv.panel.isVisible(MarkersPlugin.ID_PANEL_MARKER)) {
+        } else if (this.psv.panel.isVisible(ID_PANEL_MARKER)) {
           this.prop.currentMarker ? this.showMarkerPanel(this.prop.currentMarker) : this.psv.panel.hide();
         }
       }
@@ -1930,91 +2038,9 @@
     return MarkersPlugin;
   }(photoSphereViewer.AbstractPlugin);
   MarkersPlugin.id = 'markers';
-  MarkersPlugin.EVENTS = {
-    /**
-     * @event goto-marker-done
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the animation to a marker is done
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     */
-    GOTO_MARKER_DONE: 'goto-marker-done',
+  MarkersPlugin.EVENTS = EVENTS;
 
-    /**
-     * @event leave-marker
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the user puts the cursor away from a marker
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     */
-    LEAVE_MARKER: 'leave-marker',
-
-    /**
-     * @event over-marker
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the user puts the cursor hover a marker
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     */
-    OVER_MARKER: 'over-marker',
-
-    /**
-     * @event filter:render-markers-list
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Used to alter the list of markers displayed on the side-panel
-     * @param {PSV.plugins.MarkersPlugin.Marker[]} markers
-     * @returns {PSV.plugins.MarkersPlugin.Marker[]}
-     */
-    RENDER_MARKERS_LIST: 'render-markers-list',
-
-    /**
-     * @event select-marker
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the user clicks on a marker. The marker can be retrieved from outside the event handler
-     * with {@link PSV.plugins.MarkersPlugin.getCurrentMarker}
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     * @param {PSV.plugins.MarkersPlugin.SelectMarkerData} data
-     */
-    SELECT_MARKER: 'select-marker',
-
-    /**
-     * @event select-marker-list
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when a marker is selected from the side panel
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     */
-    SELECT_MARKER_LIST: 'select-marker-list',
-
-    /**
-     * @event unselect-marker
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when a marker was selected and the user clicks elsewhere
-     * @param {PSV.plugins.MarkersPlugin.Marker} marker
-     */
-    UNSELECT_MARKER: 'unselect-marker',
-
-    /**
-     * @event hide-markers
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the markers are hidden
-     */
-    HIDE_MARKERS: 'hide-markers',
-
-    /**
-     * @event show-markers
-     * @memberof PSV.plugins.MarkersPlugin
-     * @summary Triggered when the markers are shown
-     */
-    SHOW_MARKERS: 'show-markers'
-  };
-  MarkersPlugin.SVG_NS = 'http://www.w3.org/2000/svg';
-  MarkersPlugin.MARKER_DATA = 'psvMarker';
-  MarkersPlugin.ID_PANEL_MARKER = 'marker';
-  MarkersPlugin.ID_PANEL_MARKERS_LIST = 'markersList';
-
-  MarkersPlugin.MARKERS_LIST_TEMPLATE = function (markers, title, dataKey) {
-    return "\n<div class=\"psv-panel-menu psv-panel-menu--stripped\">\n  <h1 class=\"psv-panel-menu-title\">" + icon + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + markers.map(function (marker) {
-      return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-panel-menu-item\" tabindex=\"0\">\n      " + (marker.type === 'image' ? "<span class=\"psv-panel-menu-item-icon\" ><img src=\"" + marker.config.image + "\"/></span>" : '') + "\n      <span class=\"psv-panel-menu-item-label\">" + marker.getListContent() + "</span>\n    </li>\n    ";
-    }).join('') + "\n  </ul>\n</div>\n";
-  };
-
+  exports.EVENTS = EVENTS;
   exports.MarkersPlugin = MarkersPlugin;
 
   Object.defineProperty(exports, '__esModule', { value: true });

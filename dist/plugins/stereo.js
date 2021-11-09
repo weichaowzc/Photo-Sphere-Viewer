@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/gyroscope')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/gyroscope'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.THREE, global.PhotoSphereViewer, global.PhotoSphereViewer.GyroscopePlugin));
-}(this, (function (exports, three, photoSphereViewer, gyroscope) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.THREE, global.PhotoSphereViewer));
+}(this, (function (exports, three, photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -70,6 +70,29 @@
 
   }
 
+  /**
+   * @summary Available events
+   * @enum {string}
+   * @memberof PSV.plugins.StereoPlugin
+   * @constant
+   */
+  var EVENTS = {
+    /**
+     * @event stereo-updated
+     * @memberof PSV.plugins.StereoPlugin
+     * @summary Triggered when the stereo view is enabled/disabled
+     * @param {boolean} enabled
+     */
+    STEREO_UPDATED: 'stereo-updated'
+  };
+  /**
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var ID_OVERLAY_PLEASE_ROTATE = 'pleaseRotate';
+
   var mobileRotateIcon = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M66.7 19a14 14 0 0 1 13.8 12.1l-3.9-2.7c-.5-.3-1.1-.2-1.4.3-.3.5-.2 1.1.3 1.4l5.7 3.9.6.2c.3 0 .6-.2.8-.4l3.9-5.7c.3-.5.2-1.1-.3-1.4-.5-.3-1.1-.2-1.4.3l-2.4 3.5A16 16 0 0 0 66.7 17c-.6 0-1 .4-1 1s.4 1 1 1zM25 15h10c.6 0 1-.4 1-1s-.4-1-1-1H25c-.6 0-1 .4-1 1s.4 1 1 1zm-6.9 30H16l-2 .2a1 1 0 0 0-.8 1.2c.1.5.5.8 1 .8h.2l1.7-.2h2.1c.6 0 1-.4 1-1s-.5-1-1.1-1zm10 0h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1zM84 45H55V16A11 11 0 0 0 44 5H16A11 11 0 0 0 5 16v68a11 11 0 0 0 11 11h68a11 11 0 0 0 11-11V56a11 11 0 0 0-11-11zM16 93c-5 0-9-4-9-9V53.2c.3-.1.6-.3.7-.6a9.8 9.8 0 0 1 2-3c.4-.4.4-1 0-1.4a1 1 0 0 0-1.4 0l-1.2 1.5V16c0-5 4-9 9-9h28c5 0 9 4 9 9v68c0 5-4 9-9 9H16zm77-9c0 5-4 9-9 9H50.3c2.8-2 4.7-5.3 4.7-9V47h29c5 0 9 4 9 9v28zM38.1 45h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.5-1-1-1zm9.9 0h-4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1zm38 19c-.6 0-1 .4-1 1v10c0 .6.4 1 1 1s1-.4 1-1V65c0-.6-.4-1-1-1z\"/><!--Created by Anthony Bresset from the Noun Project--></svg>\n";
 
   var stereo = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 -2 16 16\"><path fill=\"currentColor\" d=\"M13.104 0H2.896C2.332 0 1 .392 1 .875h14C15 .392 13.668 0 13.104 0zM15 1H1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3.534a2 2 0 0 0 1.821-1.172l1.19-2.618a.5.5 0 0 1 .91 0l1.19 2.618A2 2 0 0 0 11.466 11H15a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM4 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm8 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z\"/><!--Created by Idevã Batista from the Noun Project--></svg>\n";
@@ -96,10 +119,10 @@
        * @readonly
        */
 
-      _this.plugin = _this.psv.getPlugin(StereoPlugin.id);
+      _this.plugin = _this.psv.getPlugin('stereo');
 
       if (_this.plugin) {
-        _this.plugin.on(StereoPlugin.EVENTS.STEREO_UPDATED, _assertThisInitialized(_this));
+        _this.plugin.on(EVENTS.STEREO_UPDATED, _assertThisInitialized(_this));
       }
 
       return _this;
@@ -113,7 +136,7 @@
 
     _proto.destroy = function destroy() {
       if (this.plugin) {
-        this.plugin.off(StereoPlugin.EVENTS.STEREO_UPDATED, this);
+        this.plugin.off(EVENTS.STEREO_UPDATED, this);
       }
 
       delete this.plugin;
@@ -139,7 +162,7 @@
     ;
 
     _proto.handleEvent = function handleEvent(e) {
-      if (e.type === StereoPlugin.EVENTS.STEREO_UPDATED) {
+      if (e.type === EVENTS.STEREO_UPDATED) {
         this.toggleActive(e.args[0]);
       }
     }
@@ -180,16 +203,7 @@
     _inheritsLoose(StereoPlugin, _AbstractPlugin);
 
     /**
-     * @summary Identifier of the overlay "please rotate your screen"
-     * @type {string}
-     * @constant
-     */
-
-    /**
-     * @summary Available events
-     * @enum {string}
-     * @memberof PSV.plugins.StereoPlugin
-     * @constant
+     * @deprecated use the EVENTS constants of the module
      */
 
     /**
@@ -205,7 +219,7 @@
        * @private
        */
 
-      _this.gyroscope = gyroscope.GyroscopePlugin ? psv.getPlugin(gyroscope.GyroscopePlugin) : null;
+      _this.gyroscope = psv.getPlugin('gyroscope');
 
       if (!_this.gyroscope) {
         throw new photoSphereViewer.PSVError('Stereo plugin requires the Gyroscope plugin');
@@ -318,7 +332,7 @@
 
         _this2.psv.panel.hide();
 
-        _this2.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, true);
+        _this2.trigger(EVENTS.STEREO_UPDATED, true);
 
         _this2.psv.notification.show({
           content: _this2.psv.config.lang.stereoNotification,
@@ -356,7 +370,7 @@
 
         this.psv.exitFullscreen();
         this.gyroscope.stop();
-        this.trigger(StereoPlugin.EVENTS.STEREO_UPDATED, false);
+        this.trigger(EVENTS.STEREO_UPDATED, false);
       }
     }
     /**
@@ -425,7 +439,7 @@
       var displayRotateMessage = function displayRotateMessage() {
         if (_this4.isEnabled() && window.innerHeight > window.innerWidth) {
           _this4.psv.overlay.show({
-            id: StereoPlugin.ID_OVERLAY_PLEASE_ROTATE,
+            id: ID_OVERLAY_PLEASE_ROTATE,
             image: mobileRotateIcon,
             text: _this4.psv.config.lang.pleaseRotate[0],
             subtext: _this4.psv.config.lang.pleaseRotate[1]
@@ -461,24 +475,16 @@
       if ((_window$screen2 = window.screen) != null && _window$screen2.orientation) {
         window.screen.orientation.unlock();
       } else {
-        this.psv.overlay.hide(StereoPlugin.ID_OVERLAY_PLEASE_ROTATE);
+        this.psv.overlay.hide(ID_OVERLAY_PLEASE_ROTATE);
       }
     };
 
     return StereoPlugin;
   }(photoSphereViewer.AbstractPlugin);
   StereoPlugin.id = 'stereo';
-  StereoPlugin.ID_OVERLAY_PLEASE_ROTATE = 'pleaseRotate';
-  StereoPlugin.EVENTS = {
-    /**
-     * @event stereo-updated
-     * @memberof PSV.plugins.StereoPlugin
-     * @summary Triggered when the stereo view is enabled/disabled
-     * @param {boolean} enabled
-     */
-    STEREO_UPDATED: 'stereo-updated'
-  };
+  StereoPlugin.EVENTS = EVENTS;
 
+  exports.EVENTS = EVENTS;
   exports.StereoPlugin = StereoPlugin;
 
   Object.defineProperty(exports, '__esModule', { value: true });

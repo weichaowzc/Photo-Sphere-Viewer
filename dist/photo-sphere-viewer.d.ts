@@ -1,5 +1,10 @@
-import { Texture, Mesh, Vector3 } from 'three';
+import { Texture, Mesh, Vector3, Intersection } from 'three';
 import { EventEmitter, Event } from 'uevent';
+
+/**
+ * @summary Radius of the THREE.SphereGeometry, Half-length of the THREE.BoxGeometry
+ */
+declare const SPHERE_RADIUS = 10;
 
 /**
  * @summary Property name added to viewer element
@@ -110,6 +115,7 @@ declare const KEY_CODES: {
   Minus     : '-',
 };
 
+declare const constants_d_SPHERE_RADIUS: typeof SPHERE_RADIUS;
 declare const constants_d_VIEWER_DATA: typeof VIEWER_DATA;
 declare const constants_d_ACTIONS: typeof ACTIONS;
 declare const constants_d_EVENTS: typeof EVENTS;
@@ -118,6 +124,7 @@ declare const constants_d_EASINGS: typeof EASINGS;
 declare const constants_d_KEY_CODES: typeof KEY_CODES;
 declare namespace constants_d {
   export {
+    constants_d_SPHERE_RADIUS as SPHERE_RADIUS,
     constants_d_VIEWER_DATA as VIEWER_DATA,
     constants_d_ACTIONS as ACTIONS,
     constants_d_EVENTS as EVENTS,
@@ -422,6 +429,14 @@ declare function getXMPValue(data: string, attr: string): number | null;
 declare function parsePosition(value: string | Point): Point;
 
 /**
+ * @summary Parse a CSS-like position into an array of position keywords among top, bottom, left, right and center
+ * @param {string | string[]} value
+ * @param {string} defaultValue
+ * @param {boolean} [allowCenter=true]
+ */
+declare function cleanPosition(value: string | string[], defaultValue: string, allowCenter?): string[];
+
+/**
  * @summary Parses an speed
  * @param speed - The speed, in radians/degrees/revolutions per second/minute
  * @returns radians per second
@@ -475,6 +490,7 @@ declare const index_d_logWarn: typeof logWarn;
 declare const index_d_isExtendedPosition: typeof isExtendedPosition;
 declare const index_d_getXMPValue: typeof getXMPValue;
 declare const index_d_parsePosition: typeof parsePosition;
+declare const index_d_cleanPosition: typeof cleanPosition;
 declare const index_d_parseSpeed: typeof parseSpeed;
 declare const index_d_parseAngle: typeof parseAngle;
 declare const index_d_createTexture: typeof createTexture;
@@ -512,6 +528,7 @@ declare namespace index_d {
     index_d_isExtendedPosition as isExtendedPosition,
     index_d_getXMPValue as getXMPValue,
     index_d_parsePosition as parsePosition,
+    index_d_cleanPosition as cleanPosition,
     index_d_parseSpeed as parseSpeed,
     index_d_parseAngle as parseAngle,
     index_d_createTexture as createTexture,
@@ -520,8 +537,9 @@ declare namespace index_d {
 
 /**
  * @summary Base adapters class
+ * @template T type of the panorama configuration object
  */
-declare abstract class AbstractAdapter {
+declare abstract class AbstractAdapter<T> {
 
   /**
    * @summary Unique identifier of the adapter
@@ -543,7 +561,7 @@ declare abstract class AbstractAdapter {
   /**
    * @summary Loads the panorama texture(s)
    */
-  loadTexture(panorama: any, newPanoData?: PanoData | PanoDataProvider): Promise<TextureData>;
+  loadTexture(panorama: T, newPanoData?: PanoData | PanoDataProvider): Promise<TextureData>;
 
   /**
    * @summary Creates the cube mesh
@@ -563,7 +581,7 @@ declare abstract class AbstractAdapter {
 
 }
 
-type AdapterConstructor<T extends AbstractAdapter> = new (psv: Viewer, options?: any) => T;
+type AdapterConstructor<T extends AbstractAdapter<any>> = new (psv: Viewer, options?: any) => T;
 
 type AnimationOptions = {
   properties: { [K: string]: { start: number, end: number } };
@@ -663,7 +681,7 @@ declare abstract class AbstractButton extends AbstractComponent {
    */
   static iconActive?: string;
 
-  constructor(navbar: Navbar, className?: string, collapsable?: boolean);
+  constructor(navbar: Navbar, className?: string, collapsable?: boolean, tabbable?: boolean);
 
   /**
    * @summary Checks if the button can be displayed
@@ -695,12 +713,17 @@ declare abstract class AbstractButton extends AbstractComponent {
    */
   uncollapse();
 
+  /**
+   * Action when the button is clicked
+   */
+  abstract onClick();
+
 }
 
 /**
  * @summary Register a new button available for all viewers
  */
-declare function registerButton(button: typeof AbstractButton);
+declare function registerButton(button: typeof AbstractButton): void;
 
 /**
  * @summary Navigation bar class
@@ -873,7 +896,7 @@ declare class DataHelper {
   /**
    * @summary Converts spherical radians coordinates to a THREE.Vector3
    */
-  sphericalCoordsToVector3(position: Position): Vector3;
+  sphericalCoordsToVector3(position: Position, vector: Vector3): Vector3;
 
   /**
    * @summary Converts a THREE.Vector3 to spherical radians coordinates
@@ -896,6 +919,11 @@ declare class DataHelper {
   sphericalCoordsToViewerCoords(position: Position): Point;
 
   /**
+   * @summary Returns the first intersection with the cursor and having specific data
+   */
+  getIntersection(viewerPoint: Point, objectDataName: string): Intersection;
+
+  /**
    * @summary Converts x/y to latitude/longitude if present and ensure boundaries
    */
   cleanPosition(position: ExtendedPosition): Position;
@@ -911,6 +939,21 @@ declare class DataHelper {
  * @summary Texture loader
  */
 declare class TextureLoader {
+
+  /**
+   * @summary Cancels current HTTP requests
+   */
+  abortLoading();
+
+  /**
+   * @summary Loads a Blob with FileLoader
+   */
+  loadFile(url: string, onProgress?: (number) => void): Promise<Blob>;
+
+  /**
+   * @summary Loads an Image using FileLoader to have progress events
+   */
+  loadImage(url: string, onProgress?: (number) => void): Promise<HTMLImageElement>;
 
   /**
    * @summary Preload a panorama file without displaying it
@@ -937,7 +980,7 @@ declare class TooltipRenderer extends AbstractComponent {
  */
 type ViewerOptions = {
   container: HTMLElement | string;
-  panorama?: string;
+  panorama?: any;
   adapter?: AdapterConstructor<any> | [AdapterConstructor<any>, any];
   caption?: string;
   loadingImg?: string;
@@ -949,10 +992,10 @@ type ViewerOptions = {
   defaultZoomLvl?: number;
   defaultLong?: number;
   defaultLat?: number;
-  sphereCorrection?: { pan?: number, tilt?: number, roll?: number },
+  sphereCorrection?: { pan?: number, tilt?: number, roll?: number };
   moveSpeed?: number;
   zoomSpeed?: number;
-  autorotateDelay?: null,
+  autorotateDelay?: number,
   autorotateSpeed?: string | number;
   autorotateLat?: number;
   moveInertia?: boolean;
@@ -966,10 +1009,10 @@ type ViewerOptions = {
   requestHeaders?: Record<string, string> | ((url: string) => Record<string, string>);
   canvasBackground?: string;
   withCredentials?: boolean;
-  navbar?: string | Array<string | NavbarCustomButton>,
-  lang?: Record<string, string>,
-  keyboard?: Record<string, string>,
-  plugins?: Array<PluginConstructor<any> | [PluginConstructor<any>, any]>,
+  navbar?: string | Array<string | NavbarCustomButton>;
+  lang?: Record<string, string>;
+  keyboard?: Record<string, string>;
+  plugins?: Array<PluginConstructor<any> | [PluginConstructor<any>, any]>;
 };
 
 /**
@@ -1005,7 +1048,7 @@ declare class Viewer extends EventEmitter {
   /**
    * Internal properties
    */
-  prop: ViewerProps;
+  protected readonly prop: ViewerProps;
 
   /**
    * Top most parent
@@ -1053,7 +1096,7 @@ declare class Viewer extends EventEmitter {
   /**
    * @summary Returns the instance of a plugin if it exists
    */
-  getPlugin<T extends AbstractPlugin>(pluginId: string | PluginConstructor<T>): T;
+  getPlugin<T extends AbstractPlugin>(pluginId: string | PluginConstructor<T>): T | undefined;
 
   /**
    * @summary Returns the current position of the camera
@@ -1197,6 +1240,11 @@ declare class Viewer extends EventEmitter {
   stopKeyboardControl();
 
   /**
+   * @summary Triggered when the panorama image has been loaded and the viewer is ready to perform the first render
+   */
+  once(e: 'ready', cb: (e: Event) => void): this;
+
+  /**
    * @summary Triggered when the automatic rotation is enabled/disabled
    */
   on(e: 'autorotate', cb: (e: Event, enabled: true) => void): this;
@@ -1260,12 +1308,6 @@ declare class Viewer extends EventEmitter {
    * @summary Triggered when the view longitude and/or latitude changes
    */
   on(e: 'position-updated', cb: (e: Event, position: Position) => void): this;
-
-  /**
-   * @summary Triggered when the panorama image has been loaded and the viewer is ready to perform the first render
-   */
-  once(e: 'ready', cb: (e: Event) => void): this;
-
   /**
    * @summary Triggered on each viewer render, **this event is triggered very often**
    */
@@ -1323,4 +1365,4 @@ declare class PSVError extends Error {
   name: 'PSVError';
 }
 
-export { ACTIONS, AbstractAdapter, AbstractButton, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, CHANGE_EVENTS, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, EASINGS, EVENTS, ExtendedPosition, KEY_CODES, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, VIEWER_DATA, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };
+export { AbstractAdapter, AbstractButton, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, ExtendedPosition, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };

@@ -12,11 +12,12 @@ export class Dynamic {
   static POSITION = 2;
 
   /**
-   * @param {Function} fn Callback function
+   * @param {Function} [fn] Callback function
+   * @param {number} [defaultValue] Default position
    * @param {number} [min] Minimum position
    * @param {number} [max] Maximum position
    */
-  constructor(fn, min = -Infinity, max = Infinity) {
+  constructor(fn, defaultValue = 0, min = -Infinity, max = Infinity) {
     /**
      * @type {Function}
      * @private
@@ -58,7 +59,7 @@ export class Dynamic {
      * @type {number}
      * @readonly
      */
-    this.current = 0;
+    this.current = defaultValue;
 
     /**
      * @type {number}
@@ -71,6 +72,10 @@ export class Dynamic {
      * @private
      */
     this.max = max;
+
+    if (this.fn) {
+      this.fn(defaultValue);
+    }
   }
 
   /**

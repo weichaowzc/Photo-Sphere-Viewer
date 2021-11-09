@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -29,12 +29,12 @@
   /**
    * @typedef {Object} PSV.adapters.CubemapAdapter.Cubemap
    * @summary Object defining a cubemap
-   * @property {string} top
-   * @property {string} right
-   * @property {string} bottom
    * @property {string} left
    * @property {string} front
+   * @property {string} right
    * @property {string} back
+   * @property {string} top
+   * @property {string} bottom
    */
 
   var CUBE_VERTICES = 8;

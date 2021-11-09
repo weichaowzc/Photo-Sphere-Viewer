@@ -71,6 +71,7 @@ export class DataHelper extends AbstractService {
    * @summary Converts pixel texture coordinates to spherical radians coordinates
    * @param {PSV.Point} point
    * @returns {PSV.Position}
+   * @throws {PSV.PSVError} when the current adapter does not support texture coordinates
    */
   textureCoordsToSphericalCoords(point) {
     const panoData = this.prop.panoData;
@@ -80,6 +81,8 @@ export class DataHelper extends AbstractService {
 
     const relativeX = (point.x + panoData.croppedX) / panoData.fullWidth * Math.PI * 2;
     const relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI;
+
+    // TODO apply the inverse transformation from sphereCorrection/panoData[pose]
 
     return {
       longitude: relativeX >= Math.PI ? relativeX - Math.PI : relativeX + Math.PI,
@@ -91,6 +94,7 @@ export class DataHelper extends AbstractService {
    * @summary Converts spherical radians coordinates to pixel texture coordinates
    * @param {PSV.Position} position
    * @returns {PSV.Point}
+   * @throws {PSV.PSVError} when the current adapter does not support texture coordinates
    */
   sphericalCoordsToTextureCoords(position) {
     const panoData = this.prop.panoData;
@@ -144,15 +148,10 @@ export class DataHelper extends AbstractService {
    * @returns {external:THREE.Vector3}
    */
   viewerCoordsToVector3(viewerPoint) {
-    vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
-    vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
+    const sphereIntersect = this.getIntersection(viewerPoint, 'psvSphere');
 
-    this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
-
-    const intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
-
-    if (intersects.length === 1) {
-      return intersects[0].point;
+    if (sphereIntersect) {
+      return sphereIntersect.point;
     }
     else {
       return null;
@@ -184,12 +183,28 @@ export class DataHelper extends AbstractService {
   }
 
   /**
+   * @summary Returns the first intersection with the cursor and having specific data
+   * @param {PSV.Point} viewerPoint
+   * @param {string} objectDataName
+   * @return {external:THREE.Intersection}
+   */
+  getIntersection(viewerPoint, objectDataName) {
+    vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
+    vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
+
+    this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
+
+    const intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
+    return intersects.find(i => i.object.userData?.[objectDataName]);
+  }
+
+  /**
    * @summary Converts x/y to latitude/longitude if present and ensure boundaries
    * @param {PSV.ExtendedPosition} position
    * @returns {PSV.Position}
    */
   cleanPosition(position) {
-    if ('x' in position && 'y' in position) {
+    if (position.x !== undefined && position.y !== undefined) {
       return this.textureCoordsToSphericalCoords(position);
     }
     else {

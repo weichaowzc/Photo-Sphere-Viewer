@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -38,7 +38,7 @@
    * @typedef {Object} PSV.plugins.VisibleRangePlugin.Options
    * @property {double[]|string[]} [latitudeRange] - latitude range as two angles
    * @property {double[]|string[]} [longitudeRange] - longitude range as two angles
-   * @property {boolean} [usePanoData] - use panoData as visible range, you can also manually call `setRangesFromPanoData`
+   * @property {boolean} [usePanoData=false] - use panoData as visible range, you can also manually call `setRangesFromPanoData`
    */
 
   /**

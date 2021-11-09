@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.3.0
+* Photo Sphere Viewer 4.4.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer'), require('photo-sphere-viewer/dist/plugins/settings')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer', 'photo-sphere-viewer/dist/plugins/settings'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = {}), global.PhotoSphereViewer, global.PhotoSphereViewer.SettingsPlugin));
-}(this, (function (exports, photoSphereViewer, settings) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = {}), global.PhotoSphereViewer));
+}(this, (function (exports, photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -33,6 +33,22 @@
 
     return self;
   }
+
+  /**
+   * @summary Available events
+   * @enum {string}
+   * @memberof PSV.plugins.ResolutionPlugin
+   * @constant
+   */
+  var EVENTS = {
+    /**
+     * @event resolution-changed
+     * @memberof PSV.plugins.ResolutionPlugin
+     * @summary Triggered when the resolution is changed
+     * @param {string} resolutionId
+     */
+    RESOLUTION_CHANGED: 'resolution-changed'
+  };
 
   /**
    * @summary Returns deep equality between objects
@@ -68,7 +84,6 @@
     return typeof obj === 'object' && obj != null;
   }
 
-  photoSphereViewer.DEFAULTS.lang.resolution = 'Quality';
   /**
    * @typedef {Object} PSV.plugins.ResolutionPlugin.Resolution
    * @property {string} id
@@ -81,6 +96,7 @@
    * @property {PSV.plugins.ResolutionPlugin.Resolution[]} resolutions - list of available resolutions
    */
 
+  photoSphereViewer.DEFAULTS.lang.resolution = 'Quality';
   /**
    * @summary Adds a setting to choose between multiple resolutions of the panorama.
    * @extends PSV.plugins.AbstractPlugin
@@ -91,10 +107,7 @@
     _inheritsLoose(ResolutionPlugin, _AbstractPlugin);
 
     /**
-     * @summary Available events
-     * @enum {string}
-     * @memberof PSV.plugins.ResolutionPlugin
-     * @constant
+     * @deprecated use the EVENTS constants of the module
      */
 
     /**
@@ -111,7 +124,7 @@
        * @private
        */
 
-      _this.settings = settings.SettingsPlugin ? psv.getPlugin(settings.SettingsPlugin) : null;
+      _this.settings = psv.getPlugin('settings');
 
       if (!_this.settings) {
         throw new photoSphereViewer.PSVError('Resolution plugin requires the Settings plugin');
@@ -172,7 +185,7 @@
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
-      this.settings.removeSetting(settings.SettingsPlugin.id);
+      this.settings.removeSetting(ResolutionPlugin.id);
 
       _AbstractPlugin.prototype.destroy.call(this);
     }
@@ -249,7 +262,7 @@
 
       if (this.prop.resolution !== (resolution == null ? void 0 : resolution.id)) {
         this.prop.resolution = resolution == null ? void 0 : resolution.id;
-        this.trigger(ResolutionPlugin.EVENTS.RESOLUTION_CHANGED, this.prop.resolution);
+        this.trigger(EVENTS.RESOLUTION_CHANGED, this.prop.resolution);
       }
     }
     /**
@@ -271,16 +284,9 @@
     return ResolutionPlugin;
   }(photoSphereViewer.AbstractPlugin);
   ResolutionPlugin.id = 'resolution';
-  ResolutionPlugin.EVENTS = {
-    /**
-     * @event resolution-changed
-     * @memberof PSV.plugins.ResolutionPlugin
-     * @summary Triggered when the resolution is changed
-     * @param {string} resolutionId
-     */
-    RESOLUTION_CHANGED: 'resolution-changed'
-  };
+  ResolutionPlugin.EVENTS = EVENTS;
 
+  exports.EVENTS = EVENTS;
   exports.ResolutionPlugin = ResolutionPlugin;
 
   Object.defineProperty(exports, '__esModule', { value: true });

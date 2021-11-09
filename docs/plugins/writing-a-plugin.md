@@ -7,12 +7,12 @@
 The recommended way to create your own plugin is as an ES6 class extending `AbstractPlugin` provided by `photo-sphere-viewer` core package.
 
 **Requirements:**
-- The plugin class **must** take a `PSV.Viewer` object as first parameter and pass it to the `super` constructor. 
+- The plugin class **must** take a `PSV.Viewer` object as first parameter and pass it to the `super` constructor.
 - It **must** have a `static id` property.
-- It **must** implement the `destroy` method which is used to cleanup the plugin when the viewer is unloaded. 
+- It **must** implement the `destroy` method which is used to cleanup the plugin when the viewer is unloaded.
 - The constructor **can** take an `options` object as second parameter.
 
-In you plugin you have access to `this.psv` which is the instance of the viewer, check the <ApiLink page="PSV.Viewer.html"/> for more information.
+In the plugin you have access to `this.psv` which is the instance of the viewer, check the <ApiLink page="PSV.Viewer.html"/> for more information.
 
 Your plugin is also an [`EventEmitter`](https://github.com/mistic100/uEvent) with `on`, `off` and `trigger` methods.
 
@@ -20,21 +20,21 @@ Your plugin is also an [`EventEmitter`](https://github.com/mistic100/uEvent) wit
 import { AbstractPlugin } from 'photo-sphere-viewer';
 
 export class PhotoSphereViewerCustomPlugin extends AbstractPlugin {
-  
+
   static id = 'custom-plugin';
-  
+
   constructor(psv, options) {
     super(psv);
-    
+
     // do your initialisation logic here
   }
-  
+
   destroy() {
     // do your cleanup logic here
-    
+
     super.destroy();
   }
-  
+
 }
 ```
 
@@ -109,45 +109,47 @@ Your plugin may need to add a new button in the navbar. This section will descri
 Photo Sphere Viewer buttons **must** extend `AbstractButton`, check the <ApiLink page="PSV.buttons.AbstractButton.html"/> for more information.
 
 **Requirements:**
-- The button class **must** take a `PSV.components.Navbar` object as first parameter and pass it to the `super` constructor. 
+- The button class **must** take a `PSV.components.Navbar` object as first parameter and pass it to the `super` constructor.
 - It **must** have a `static id` property.
-- It **must** implement the `destroy` method which is used to cleanup the button when the viewer is unloaded. 
+- It **must** implement the `destroy` method which is used to cleanup the button when the viewer is unloaded.
 - It **must** implement the `onClick` method to perform an action.
 - It **should** have a `static icon` property containing a SVG.
 - It **can** implement the `isSupported` method to inform the viewer if the action is possible depending on the environement.
-- It **can** provide a CSS class name as second parameter of `super`.
-- It **can** provide a boolean as third parameter of `super`, this boolean indicated the button can be collapsed in the menu on small screens.
+- It **can** provide additional parameters to `super` :
+  - 2nd: a CSS class name applied to the button
+  - 3rd: a boolean indicating the button can be collapsed in the menu on small screens
+  - 4th: a boolean indicating the button can be activated with the keyboard
 
 ```js
 import { AbstractButton } from 'photo-sphere-viewer';
 
 export class CustomButton extends AbstractButton {
-  
+
   static id = 'custom-button';
   static icon = customIcon;
-  
+
   constructor(navbar) {
     super(navbar, 'custom-button-class', true);
-    
+
     // do your initialisation logic here
     // you will probably need the instance of your plugin
     this.plugin = this.psv.getPlugin('custom-plugin');
   }
-  
+
   destroy() {
     // do your cleanup logic here
-    
+
     super.destroy();
   }
-  
+
   isSupported() {
     return !!this.plugin;
   }
-  
+
   onClick() {
     this.plugin.doSomething();
   }
-  
+
 }
 ```
 
@@ -193,18 +195,18 @@ A plugin can expose one or more settings to the viewer by using the [Settings pl
 This is done by requiring the settings plugin and calling the `addSetting` method. Consult the [Settings plugin](./plugin-settings.md) page for more information.
 
 ```js
-import { SettingsPlugin } from 'photo-sphere-viewer/dist/plugins/settings';
-
 export default class PhotoSphereViewerCustomPlugin extends AbstractPlugin {
-  
+
   constructor(psv) {
     super(psv);
-    
+
     /**
      * @type {PSV.plugins.SettingsPlugin}
      */
-    this.settings = SettingsPlugin ? psv.getPlugin(SettingsPlugin) : null;
+    this.settings = psv.getPlugin('settings');
 
+    // the user may choose to not import the Settings plugin
+    // you may choose to make it a requirement by throwing an error...
     if (this.settings) {
       this.settings.addSetting({
         id    : 'custom-setting',
@@ -215,34 +217,17 @@ export default class PhotoSphereViewerCustomPlugin extends AbstractPlugin {
       });
     }
   }
-  
+
   destroy() {
     if (this.settings) {
       this.settings.removeSetting('custom-setting');
       delete this.settings;
     }
-    
+
     super.destroy();
   }
-  
+
 }
-```
-
-For this two work you will need two modifications in your rollup configuration:
-
-```js
-// rollup.config.js
-
-export default {
-  output  : {
-    globals  : {
-      'photo-sphere-viewer/dist/plugins/settings': 'PhotoSphereViewer.SettingsPlugin',
-    },
-  },
-  external: [
-    'photo-sphere-viewer/dist/plugins/settings',
-  ],
-};
 ```
 
 

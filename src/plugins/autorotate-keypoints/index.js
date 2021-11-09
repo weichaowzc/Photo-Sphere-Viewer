@@ -1,5 +1,6 @@
 import { AbstractPlugin, CONSTANTS, PSVError, utils } from '../..';
 
+
 /**
  * @typedef {PSV.ExtendedPosition|string|Object} PSV.plugins.AutorotateKeypointsPlugin.Keypoints
  * @summary Definition of keypoints for automatic rotation, can be a position object, a marker id or an object with the following properties
@@ -15,15 +16,12 @@ import { AbstractPlugin, CONSTANTS, PSVError, utils } from '../..';
  * @property {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
  */
 
-/**
- * @summary Number of steps between each points
- * @type {number}
- * @constant
- * @private
- */
+
 const NUM_STEPS = 16;
 
-const serializePt = position => [position.longitude, position.latitude];
+function serializePt(position) {
+  return [position.longitude, position.latitude];
+}
 
 
 /**
@@ -68,6 +66,11 @@ export class AutorotateKeypointsPlugin extends AbstractPlugin {
     };
 
     /**
+     * @type {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
+     */
+    this.keypoints = null;
+
+    /**
      * @type {PSV.plugins.MarkersPlugin}
      * @private
      */
@@ -81,16 +84,23 @@ export class AutorotateKeypointsPlugin extends AbstractPlugin {
     this.psv.on(CONSTANTS.EVENTS.BEFORE_RENDER, this);
   }
 
+  /**
+   * @package
+   */
   destroy() {
     this.psv.off(CONSTANTS.EVENTS.AUTOROTATE, this);
     this.psv.off(CONSTANTS.EVENTS.BEFORE_RENDER, this);
 
+    delete this.markers;
     delete this.keypoints;
     delete this.state;
 
     super.destroy();
   }
 
+  /**
+   * @private
+   */
   handleEvent(e) {
     if (e.type === CONSTANTS.EVENTS.AUTOROTATE) {
       this.__configure();

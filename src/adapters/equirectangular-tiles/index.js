@@ -3,6 +3,7 @@ import { AbstractAdapter, CONSTANTS, PSVError, SYSTEM, utils } from '../..';
 import { Queue } from './Queue';
 import { Task } from './Task';
 
+
 /**
  * @callback TileUrl
  * @summary Function called to build a tile url
@@ -35,6 +36,7 @@ import { Task } from './Task';
  * @property {int} row
  * @property {int} angle
  */
+
 
 const SPHERE_SEGMENTS = 64;
 const NB_VERTICES = 3 * (SPHERE_SEGMENTS * 2 + (SPHERE_SEGMENTS / 2 - 2) * SPHERE_SEGMENTS * 2);
@@ -290,6 +292,10 @@ export class EquirectangularTilesAdapter extends AbstractAdapter {
     const viewerSize = this.psv.prop.size;
     const panorama = this.psv.config.panorama;
 
+    if (!panorama) {
+      return;
+    }
+
     const tilesToLoad = [];
     const tilePosition = new THREE.Vector3();
 
@@ -403,7 +409,9 @@ export class EquirectangularTilesAdapter extends AbstractAdapter {
       this.loader.setRequestHeader(this.psv.config.requestHeaders(url));
     }
 
-    return new Promise((resolve, reject) => this.loader.load(url, resolve, undefined, reject))
+    return new Promise((resolve, reject) => {
+      this.loader.load(url, resolve, undefined, reject);
+    })
       .then((image) => {
         if (!task.isCancelled()) {
           const material = new THREE.MeshBasicMaterial({
