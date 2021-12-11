@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.0
+* Photo Sphere Viewer 4.4.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ViewerCompat = factory()));
-}(this, (function () { 'use strict';
+})(this, (function () { 'use strict';
 
   var ViewerCompat = function ViewerCompat() {
     throw new Error('PhotoSphereViewer#ViewerCompat has been removed, please migrate to v4 Viewer.');
@@ -16,5 +16,5 @@
 
   return ViewerCompat;
 
-})));
+}));
 //# sourceMappingURL=viewer-compat.js.map

@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.0
+* Photo Sphere Viewer 4.4.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.THREE, global.PhotoSphereViewer));
-}(this, (function (exports, three, photoSphereViewer) { 'use strict';
+})(this, (function (exports, three, photoSphereViewer) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -489,5 +489,5 @@
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
-})));
+}));
 //# sourceMappingURL=stereo.js.map

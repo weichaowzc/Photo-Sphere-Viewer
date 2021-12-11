@@ -39,6 +39,7 @@ declare const EVENTS: {
   HIDE_NOTIFICATION: 'hide-notification',
   HIDE_OVERLAY: 'hide-overlay',
   HIDE_TOOLTIP: 'hide-tooltip',
+  LOAD_PROGRESS: 'load-progress',
   OPEN_PANEL: 'open-panel',
   PANORAMA_LOADED: 'panorama-loaded',
   POSITION_UPDATED: 'position-updated',
@@ -1293,9 +1294,13 @@ declare class Viewer extends EventEmitter {
    */
   on(e: 'hide-overlay', cb: (e: Event, id: string | undefined) => void): this;
   /**
-   * @summary Trigered when the tooltip is hidden
+   * @summary Triggered when the tooltip is hidden
    */
   on(e: 'hide-tooltip', cb: (e: Event, data: any) => void): this;
+  /**
+   * @summary Triggered when the loader value changes
+   */
+  on(e: 'load-progress', cb: (e: Event, value: number) => void): this;
   /**
    * @summary Triggered when the panel is opened
    */

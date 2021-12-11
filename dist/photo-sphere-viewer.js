@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.0
+* Photo Sphere Viewer 4.4.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('uevent')) :
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'uevent'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.PhotoSphereViewer = {}, global.THREE, global.uEvent));
-}(this, (function (exports, THREE, uevent) { 'use strict';
+})(this, (function (exports, THREE, uevent) { 'use strict';
 
   /**
    * @namespace PSV.constants
@@ -188,6 +188,14 @@
      * @param {*} Data associated to this tooltip
      */
     HIDE_TOOLTIP: 'hide-tooltip',
+
+    /**
+     * @event load-progress
+     * @memberof PSV
+     * @summary Triggered when the loader value changes
+     * @param {number} value from 0 to 100
+     */
+    LOAD_PROGRESS: 'load-progress',
 
     /**
      * @event open-panel
@@ -4708,6 +4716,7 @@
       context.beginPath();
       context.arc(this.canvas.width / 2, this.canvas.height / 2, this.canvas.width / 2 - this.prop.tickness / 2, -Math.PI / 2, bound(value, 0, 100) / 100 * 2 * Math.PI - Math.PI / 2);
       context.stroke();
+      this.psv.trigger(EVENTS.LOAD_PROGRESS, Math.round(value));
     };
 
     return Loader;
@@ -6090,6 +6099,8 @@
       } else if (evt.touches.length === 2) {
         this.__cancelLongTouch();
 
+        this.__cancelTwoFingersOverlay();
+
         this.__startMoveZoom(evt);
 
         evt.preventDefault();
@@ -6109,16 +6120,12 @@
 
       this.__cancelLongTouch();
 
+      this.__cancelTwoFingersOverlay();
+
       if (evt.touches.length === 1) {
         this.__stopMoveZoom();
       } else if (evt.touches.length === 0) {
         this.__stopMove(evt.changedTouches[0]);
-      }
-
-      if (this.config.touchmoveTwoFingers) {
-        this.__cancelTwoFingersOverlay();
-
-        this.psv.overlay.hide(IDS.TWO_FINGERS);
       }
     }
     /**
@@ -6134,6 +6141,8 @@
       if (!this.config.mousemove) {
         return;
       }
+
+      this.__cancelLongTouch();
 
       if (evt.touches.length === 1) {
         if (this.config.touchmoveTwoFingers) {
@@ -6156,9 +6165,7 @@
 
         this.__moveZoom(evt);
 
-        if (this.config.touchmoveTwoFingers) {
-          this.__cancelTwoFingersOverlay();
-        }
+        this.__cancelTwoFingersOverlay();
       }
     }
     /**
@@ -6184,6 +6191,8 @@
         clearTimeout(this.prop.twofingersTimeout);
         this.prop.twofingersTimeout = null;
       }
+
+      this.psv.overlay.hide(IDS.TWO_FINGERS);
     }
     /**
      * @summary Handles mouse wheel events
@@ -8913,5 +8922,5 @@
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
-})));
+}));
 //# sourceMappingURL=photo-sphere-viewer.js.map

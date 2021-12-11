@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.0
+* Photo Sphere Viewer 4.4.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2021 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer'), require('three')) :
   typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer', 'three'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VirtualTourPlugin = {}), global.PhotoSphereViewer, global.THREE));
-}(this, (function (exports, photoSphereViewer, THREE) { 'use strict';
+})(this, (function (exports, photoSphereViewer, THREE) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -705,6 +705,17 @@
         case photoSphereViewer.CONSTANTS.EVENTS.CLICK:
           nodeId = (_this$prop$currentArr = this.prop.currentArrow) == null ? void 0 : (_this$prop$currentArr2 = _this$prop$currentArr.userData) == null ? void 0 : (_this$prop$currentArr3 = _this$prop$currentArr2[LINK_DATA]) == null ? void 0 : _this$prop$currentArr3.nodeId;
 
+          if (!nodeId) {
+            var _this$psv$dataHelper$, _arrow$userData, _arrow$userData$LINK_;
+
+            // on touch screens "currentArrow" may be null (no hover state)
+            var arrow = (_this$psv$dataHelper$ = this.psv.dataHelper.getIntersection({
+              x: e.args[0].viewerX,
+              y: e.args[0].viewerY
+            }, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$.object;
+            nodeId = arrow == null ? void 0 : (_arrow$userData = arrow.userData) == null ? void 0 : (_arrow$userData$LINK_ = _arrow$userData[LINK_DATA]) == null ? void 0 : _arrow$userData$LINK_.nodeId;
+          }
+
           if (nodeId) {
             this.setCurrentNode(nodeId);
           }
@@ -760,9 +771,9 @@
       this.datasource.setNodes(nodes);
 
       if (!startNodeId) {
-        startNodeId = this.datasource.nodes[0].id;
+        startNodeId = nodes[0].id;
       } else if (!this.datasource.nodes[startNodeId]) {
-        startNodeId = this.datasource.nodes[0].id;
+        startNodeId = nodes[0].id;
         photoSphereViewer.utils.logWarn("startNodeId not found is provided nodes, resetted to " + startNodeId);
       }
 
@@ -956,14 +967,14 @@
     ;
 
     _proto.__onMouseMove = function __onMouseMove(evt) {
-      var _this$psv$dataHelper$;
+      var _this$psv$dataHelper$2;
 
       var viewerPos = photoSphereViewer.utils.getPosition(this.psv.container);
       var viewerPoint = {
         x: evt.clientX - viewerPos.left,
         y: evt.clientY - viewerPos.top
       };
-      var mesh = (_this$psv$dataHelper$ = this.psv.dataHelper.getIntersection(viewerPoint, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$.object;
+      var mesh = (_this$psv$dataHelper$2 = this.psv.dataHelper.getIntersection(viewerPoint, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$2.object;
 
       if (mesh === this.prop.currentArrow) {
         if (this.prop.currentTooltip) {
@@ -1086,5 +1097,5 @@
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
-})));
+}));
 //# sourceMappingURL=virtual-tour.js.map

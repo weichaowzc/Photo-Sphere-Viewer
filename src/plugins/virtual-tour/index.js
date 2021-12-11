@@ -267,6 +267,11 @@ export class VirtualTourPlugin extends AbstractPlugin {
 
       case CONSTANTS.EVENTS.CLICK:
         nodeId = this.prop.currentArrow?.userData?.[LINK_DATA]?.nodeId;
+        if (!nodeId) {
+          // on touch screens "currentArrow" may be null (no hover state)
+          const arrow = this.psv.dataHelper.getIntersection({ x: e.args[0].viewerX, y: e.args[0].viewerY }, LINK_DATA)?.object;
+          nodeId = arrow?.userData?.[LINK_DATA]?.nodeId;
+        }
         if (nodeId) {
           this.setCurrentNode(nodeId);
         }
@@ -318,10 +323,10 @@ export class VirtualTourPlugin extends AbstractPlugin {
     this.datasource.setNodes(nodes);
 
     if (!startNodeId) {
-      startNodeId = this.datasource.nodes[0].id;
+      startNodeId = nodes[0].id;
     }
     else if (!this.datasource.nodes[startNodeId]) {
-      startNodeId = this.datasource.nodes[0].id;
+      startNodeId = nodes[0].id;
       utils.logWarn(`startNodeId not found is provided nodes, resetted to ${startNodeId}`);
     }
 
