@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -1112,6 +1112,25 @@
     return null;
   }
   /**
+   * @summary Builds an Error with name 'AbortError'
+   * @return {Error}
+   */
+
+  function getAbortError() {
+    var error = new Error('Loading was aborted.');
+    error.name = 'AbortError';
+    return error;
+  }
+  /**
+   * @summary Tests if an Error has name 'AbortError'
+   * @param {Error} err
+   * @return {boolean}
+   */
+
+  function isAbortError(err) {
+    return (err == null ? void 0 : err.name) === 'AbortError';
+  }
+  /**
    * @summary Displays a warning in the console
    * @memberOf PSV.utils
    * @param {string} message
@@ -1454,6 +1473,8 @@
     isNil: isNil,
     firstNonNull: firstNonNull,
     pluginInterop: pluginInterop,
+    getAbortError: getAbortError,
+    isAbortError: isAbortError,
     logWarn: logWarn,
     isExtendedPosition: isExtendedPosition,
     getXMPValue: getXMPValue,
@@ -3755,6 +3776,7 @@
         var texture = _this.__createEquirectangularTexture(img, panoData);
 
         return {
+          panorama: panorama,
           texture: texture,
           panoData: panoData
         };
@@ -4373,15 +4395,36 @@
   /**
    * @summary Register a new button available for all viewers
    * @param {Class<PSV.buttons.AbstractButton>} button
+   * @param {'start' | 'end' | '[id]:left' | '[id]:right'} [defaultPosition]
+   *    If provided the default configuration of the navbar will be modified.
    * @memberOf PSV
    */
 
-  function registerButton(button) {
+  function registerButton(button, defaultPosition) {
     if (!button.id) {
       throw new PSVError('Button ID is required');
     }
 
     AVAILABLE_BUTTONS[button.id] = button;
+
+    if (typeof defaultPosition === 'string') {
+      switch (defaultPosition) {
+        case 'start':
+          DEFAULTS.navbar.unshift(button.id);
+          break;
+
+        case 'end':
+          DEFAULTS.navbar.push(button.id);
+          break;
+
+        default:
+          var _defaultPosition$spli = defaultPosition.split(':'),
+              id = _defaultPosition$spli[0],
+              pos = _defaultPosition$spli[1];
+
+          DEFAULTS.navbar.splice(DEFAULTS.navbar.indexOf(id) + (pos === 'right' ? 1 : 0), 0, button.id);
+      }
+    }
   }
   [AutorotateButton, ZoomInButton, ZoomRangeButton, ZoomOutButton, DownloadButton, FullscreenButton, MoveRightButton, MoveLeftButton, MoveUpButton, MoveDownButton].forEach(registerButton);
   /**
@@ -5200,6 +5243,8 @@
     _proto.show = function show(config) {
       var _this2 = this;
 
+      var wasVisible = this.isVisible(config.id);
+
       if (typeof config === 'string') {
         config = {
           content: config
@@ -5241,11 +5286,13 @@
         this.content.addEventListener('click', this.prop.clickHandler);
         this.content.addEventListener('keydown', this.prop.keyHandler); // focus the first element if possible, after animation ends
 
-        setTimeout(function () {
-          var _this2$content$queryS;
+        if (!wasVisible) {
+          setTimeout(function () {
+            var _this2$content$queryS;
 
-          (_this2$content$queryS = _this2.content.querySelector('a,button,[tabindex]')) == null ? void 0 : _this2$content$queryS.focus();
-        }, 300);
+            (_this2$content$queryS = _this2.content.querySelector('a,button,[tabindex]')) == null ? void 0 : _this2$content$queryS.focus();
+          }, 300);
+        }
       }
 
       this.psv.trigger(EVENTS.OPEN_PANEL, config.id);
@@ -7004,13 +7051,6 @@
 
       _this = _AbstractService.call(this, psv) || this;
       /**
-       * @summary Current HTTP requests
-       * @type {XMLHttpRequest[]}
-       * @private
-       */
-
-      _this.requests = [];
-      /**
        * @summary THREE file loader
        * @type {external:THREE:FileLoader}
        * @private
@@ -7062,10 +7102,7 @@
      */
     ;
 
-    _proto.abortLoading = function abortLoading() {
-      [].concat(this.requests).forEach(function (r) {
-        return r.abort();
-      });
+    _proto.abortLoading = function abortLoading() {// noop implementation waiting for https://github.com/mrdoob/three.js/pull/23070
     }
     /**
      * @summary Loads a Blob with FileLoader
@@ -7086,10 +7123,7 @@
         var progress = 0;
         onProgress && onProgress(progress);
 
-        var request = _this2.loader.load(url, function (result) {
-          var rIdx = _this2.requests.indexOf(request);
-
-          if (rIdx !== -1) _this2.requests.splice(rIdx, 1);
+        _this2.loader.load(url, function (result) {
           progress = 100;
           onProgress && onProgress(progress);
           resolve(result);
@@ -7103,16 +7137,8 @@
             }
           }
         }, function (err) {
-          var rIdx = _this2.requests.indexOf(request);
-
-          if (rIdx !== -1) _this2.requests.splice(rIdx, 1);
           reject(err);
-        }); // when we hit the cache, the result is the cache value
-
-
-        if (request instanceof XMLHttpRequest) {
-          _this2.requests.push(request);
-        }
+        });
       });
     }
     /**
@@ -8387,7 +8413,7 @@
      * If another loading is already in progress it will be aborted.
      * @param {*} path - URL of the new panorama file
      * @param {PSV.PanoramaOptions} [options]
-     * @returns {Promise}
+     * @returns {Promise<boolean>} resolves false if the loading was aborted by another call
      */
     ;
 
@@ -8432,33 +8458,40 @@
       this.config.panorama = path;
 
       var done = function done(err) {
-        if (err && err.type === 'abort') {
-          console.warn(err);
-        } else if (err) {
-          _this3.showError(_this3.config.lang.loadError);
-
-          console.error(err);
-        }
-
         _this3.loader.hide();
 
         _this3.renderer.show();
 
         _this3.prop.loadingPromise = null;
 
-        if (err) {
+        if (isAbortError(err)) {
+          console.warn(err);
+          return false;
+        } else if (err) {
+          _this3.showError(_this3.config.lang.loadError);
+
+          console.error(err);
           return Promise.reject(err);
         } else {
           return true;
         }
       };
 
-      if (!options.transition || !this.prop.ready || !this.adapter.constructor.supportsTransition) {
-        if (options.showLoader || !this.prop.ready) {
-          this.loader.show();
+      if (options.showLoader || !this.prop.ready) {
+        this.loader.show();
+      }
+
+      var loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
+        // check if another panorama was requested
+        if (textureData.panorama !== _this3.config.panorama) {
+          return Promise.reject(getAbortError());
         }
 
-        this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
+        return textureData;
+      });
+
+      if (!options.transition || !this.prop.ready || !this.adapter.constructor.supportsTransition) {
+        this.prop.loadingPromise = loadingPromise.then(function (textureData) {
           _this3.renderer.setTexture(textureData);
 
           _this3.renderer.setPanoramaPose(textureData.panoData);
@@ -8474,11 +8507,7 @@
           }
         }).then(done, done);
       } else {
-        if (options.showLoader) {
-          this.loader.show();
-        }
-
-        this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
+        this.prop.loadingPromise = loadingPromise.then(function (textureData) {
           _this3.loader.hide();
 
           return _this3.renderer.transition(textureData, options);

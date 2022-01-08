@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -266,9 +266,8 @@
    */
   // add gyroscope button
 
-  photoSphereViewer.DEFAULTS.navbar.splice(-1, 0, GyroscopeButton.id);
   photoSphereViewer.DEFAULTS.lang[GyroscopeButton.id] = 'Gyroscope';
-  photoSphereViewer.registerButton(GyroscopeButton);
+  photoSphereViewer.registerButton(GyroscopeButton, 'caption:right');
   var direction = new THREE.Vector3();
   /**
    * @summary Adds gyroscope controls on mobile devices

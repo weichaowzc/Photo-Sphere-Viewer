@@ -1,4 +1,6 @@
+import * as THREE from 'three';
 import { CONSTANTS, PSVError, utils } from '../..';
+import { getShortestArc, logWarn } from '../../utils';
 import { MARKER_DATA, SVG_NS } from './constants';
 import { getPolygonCenter, getPolylineCenter } from './utils';
 
@@ -220,21 +222,29 @@ export class Marker {
   /**
    * @summary Computes marker scale from zoom level
    * @param {number} zoomLevel
+   * @param {PSV.Position} position
    * @returns {number}
    */
-  getScale(zoomLevel) {
-    if (Array.isArray(this.config.scale)) {
-      return this.config.scale[0] + (this.config.scale[1] - this.config.scale[0]) * CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
-    }
-    else if (typeof this.config.scale === 'function') {
-      return this.config.scale(zoomLevel);
-    }
-    else if (typeof this.config.scale === 'number') {
-      return this.config.scale * CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
-    }
-    else {
+  getScale(zoomLevel, position) {
+    if (!this.config.scale) {
       return 1;
     }
+    if (typeof this.config.scale === 'function') {
+      return this.config.scale(zoomLevel, position);
+    }
+
+    let scale = 1;
+    if (Array.isArray(this.config.scale.zoom)) {
+      const bounds = this.config.scale.zoom;
+      scale *= bounds[0] + (bounds[1] - bounds[0]) * CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
+    }
+    if (Array.isArray(this.config.scale.longitude)) {
+      const bounds = this.config.scale.longitude;
+      const halfFov = THREE.Math.degToRad(this.psv.prop.hFov) / 2;
+      const arc = Math.abs(getShortestArc(this.props.position.longitude, position.longitude));
+      scale *= bounds[1] + (bounds[0] - bounds[1]) * CONSTANTS.EASINGS.outQuad(Math.max(0, (halfFov - arc) / halfFov));
+    }
+    return scale;
   }
 
   /**
@@ -249,7 +259,7 @@ export class Marker {
     if (this.config.listContent) {
       return this.config.listContent;
     }
-    else if (this.config.tooltip) {
+    else if (this.config.tooltip?.content) {
       return this.config.tooltip.content;
     }
     else if (this.config.html) {
@@ -265,7 +275,7 @@ export class Marker {
    * @param {{clientX: number, clientY: number}} [mousePosition]
    */
   showTooltip(mousePosition) {
-    if (this.visible && this.config.tooltip && this.props.position2D) {
+    if (this.visible && this.config.tooltip?.content && this.props.position2D) {
       const config = {
         content : this.config.tooltip.content,
         position: this.config.tooltip.position,
@@ -346,11 +356,11 @@ export class Marker {
     if (this.config.className) {
       utils.addClasses(this.$el, this.config.className);
     }
+    if (typeof this.config.tooltip === 'string') {
+      this.config.tooltip = { content: this.config.tooltip };
+    }
     if (this.config.tooltip) {
       utils.addClasses(this.$el, 'psv-marker--has-tooltip');
-      if (typeof this.config.tooltip === 'string') {
-        this.config.tooltip = { content: this.config.tooltip };
-      }
     }
     if (this.config.content) {
       utils.addClasses(this.$el, 'psv-marler--has-content');
@@ -363,6 +373,17 @@ export class Marker {
 
     // parse anchor
     this.props.anchor = utils.parsePosition(this.config.anchor);
+
+    // clean scale
+    if (this.config.scale) {
+      if (typeof this.config.scale === 'number') {
+        logWarn('Single value marker scale is deprecated, please use an array of two values.');
+        this.config.scale = { zoom: [0, this.config.scale] };
+      }
+      if (Array.isArray(this.config.scale)) {
+        this.config.scale = { zoom: this.config.scale };
+      }
+    }
 
     if (this.isNormal()) {
       this.__updateNormal();
@@ -589,7 +610,7 @@ export class Marker {
     const found = [];
 
     utils.each(MARKER_TYPES, (type) => {
-      if (type in properties) {
+      if (properties[type]) {
         found.push(type);
       }
     });

@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -263,6 +263,8 @@
 
   var arrowIconSvg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 210\" x=\"0px\" y=\"0px\"><path fill=\"currentColor\" transform=\"translate(0 10)\" d=\"M0 181l105 -181 105 181 -105 -61 -105 61zm105 -167l0 99 86 50 -86 -148z\"/><!-- Created by Saifurrijal from the Noun Project --></svg>\n";
 
+  var nodesList = "<svg viewBox=\"0 0 700 700\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"currentColor\" d=\"M113.2 198.6v305l-62 15.5A41.2 41.2 0 0 1 0 479v-256a41.2 41.2 0 0 1 51.2-40zm473.6 305v-305l62-15.5a41.2 41.2 0 0 1 51.2 40v256a41.2 41.2 0 0 1-51.2 40zm-349.3 43h-42c-18 0-33.3-11.6-38.9-27.8l91-97 56 56zm57 0 178.7-186 72.4 78.3v66.6a41.2 41.2 0 0 1-41.2 41.2zm251-168.4-56.8-61.6c-8-8.8-21.8-8.9-30-.3L332 448.2l-70.5-70.5c-8.2-8.2-21.6-8-29.6.5L154.4 461V196.7a41.2 41.2 0 0 1 41.2-41.2h308.8a41.2 41.2 0 0 1 41.2 41.2zm-298.4-58a61.8 61.8 0 1 0 0-123.5 61.8 61.8 0 0 0 0 123.5zm0-41.2a20.6 20.6 0 1 1 0-41.1 20.6 20.6 0 0 1 0 41.1z\"/><!-- Created by Andrejs Kirm from the Noun Project --></svg>\n";
+
   /**
    * @summary In client mode all the nodes are provided in the config or with the `setNodes` method
    * @type {string}
@@ -325,7 +327,16 @@
      * @summary Triggered when the current node changes
      * @param {string} nodeId
      */
-    NODE_CHANGED: 'node-changed'
+    NODE_CHANGED: 'node-changed',
+
+    /**
+     * @event filter:render-nodes-list
+     * @memberof PSV.plugins.VirtualTourPlugin
+     * @summary Used to alter the list of nodes displayed on the side-panel
+     * @param {PSV.plugins.VirtualTourPlugin.Node[]} nodes
+     * @returns {PSV.plugins.VirtualTourPlugin.Node[]}
+     */
+    RENDER_NODES_LIST: 'render-nodes-list'
   };
   /**
    * @summary Property name added to markers
@@ -382,6 +393,120 @@
     geom.rotateX(Math.PI);
     return geom;
   }();
+  /**
+   * @summary Panel identifier for nodes list
+   * @type {string}
+   * @constant
+   * @private
+   */
+
+  var ID_PANEL_NODES_LIST = 'virtualTourNodesList';
+  /**
+   * @summary Nodes list template
+   * @param {PSV.plugins.VirtualTourPlugin.Node[]} nodes
+   * @param {string} title
+   * @param {string} currentNodeId
+   * @returns {string}
+   * @constant
+   * @private
+   */
+
+  var NODES_LIST_TEMPLATE = function NODES_LIST_TEMPLATE(nodes, title, currentNodeId) {
+    return "\n<div class=\"psv-panel-menu psv-panel-menu--stripped psv-virtual-tour__menu\">\n  <h1 class=\"psv-panel-menu-title\">" + nodesList + " " + title + "</h1>\n  <ul class=\"psv-panel-menu-list\">\n    " + nodes.map(function (node) {
+      return "\n    <li data-node-id=\"" + node.id + "\" tabindex=\"0\"\n        class=\"psv-panel-menu-item " + (currentNodeId === node.id ? 'psv-panel-menu-item--active' : '') + "\">\n      " + (node.thumbnail ? "<span class=\"psv-panel-menu-item-icon\"><img src=\"" + node.thumbnail + "\"/></span>" : '') + "\n      <span class=\"psv-panel-menu-item-label\">" + (node.caption || node.name) + "</span>\n    </li>\n    ";
+    }).join('') + "\n  </ul>\n</div>\n";
+  };
+
+  /**
+   * @summary Navigation bar markers list button class
+   * @extends PSV.buttons.AbstractButton
+   * @memberof PSV.buttons
+   */
+
+  var NodesListButton = /*#__PURE__*/function (_AbstractButton) {
+    _inheritsLoose(NodesListButton, _AbstractButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function NodesListButton(navbar) {
+      var _this;
+
+      _this = _AbstractButton.call(this, navbar, 'psv-button--hover-scale psv-nodes-list-button', true) || this;
+      /**
+       * @type {PSV.plugins.VirtualTourPlugin}
+       */
+
+      _this.plugin = _this.psv.getPlugin('virtual-tour');
+
+      if (_this.plugin) {
+        _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL, _assertThisInitialized(_this));
+
+        _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLOSE_PANEL, _assertThisInitialized(_this));
+      }
+
+      return _this;
+    }
+    /**
+     * @override
+     */
+
+
+    var _proto = NodesListButton.prototype;
+
+    _proto.destroy = function destroy() {
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL, this);
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.CLOSE_PANEL, this);
+
+      _AbstractButton.prototype.destroy.call(this);
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.isSupported = function isSupported() {
+      var _this$plugin;
+
+      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.listButton;
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} e
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(e) {
+      /* eslint-disable */
+      switch (e.type) {
+        // @formatter:off
+        case photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL:
+          this.toggleActive(e.args[0] === ID_PANEL_NODES_LIST);
+          break;
+
+        case photoSphereViewer.CONSTANTS.EVENTS.CLOSE_PANEL:
+          this.toggleActive(false);
+          break;
+        // @formatter:on
+      }
+      /* eslint-enable */
+
+    }
+    /**
+     * @override
+     * @description Toggles nodes list
+     */
+    ;
+
+    _proto.onClick = function onClick() {
+      this.plugin.toggleNodesList();
+    };
+
+    return NodesListButton;
+  }(photoSphereViewer.AbstractButton);
+  NodesListButton.id = 'nodesList';
+  NodesListButton.icon = nodesList;
 
   /**
    * @memberOf PSV.plugins.VirtualTourPlugin
@@ -490,6 +615,7 @@
    * @property {PSV.SphereCorrection} [sphereCorrection] - sphere correction to apply to this panorama
    * @property {string} [name] - short name of the node
    * @property {string} [caption] - caption visible in the navbar
+   * @property {string} [thumbnail] - thumbnail for the nodes list in the side panel
    * @property {PSV.plugins.MarkersPlugin.Properties[]} [markers] - additional markers to use on this node
    */
 
@@ -522,14 +648,18 @@
    * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks]
    * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
    * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
+   * @property {boolean} [listButton] - adds a button to show the list of nodes, defaults to `true` only in client data mode
+   * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass, defaults to `true` on in markers render mode
    * @property {PSV.plugins.MarkersPlugin.Properties} [markerStyle] - global marker style
    * @property {PSV.plugins.VirtualTourPlugin.ArrowStyle} [arrowStyle] - global arrow style
    * @property {number} [markerLatOffset=-0.1] - (GPS & Markers mode) latitude offset applied to link markers, to compensate for viewer height
    * @property {'top'|'bottom'} [arrowPosition='bottom'] - (3D mode) arrows vertical position
-   * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass
    */
+  // add markers buttons
 
+  photoSphereViewer.DEFAULTS.lang[NodesListButton.id] = 'Locations';
   photoSphereViewer.DEFAULTS.lang.loading = 'Loading...';
+  photoSphereViewer.registerButton(NodesListButton, 'caption:left');
   /**
    * @summary Create virtual tours by linking multiple panoramas
    * @extends PSV.plugins.AbstractPlugin
@@ -552,13 +682,15 @@
        * @property {PSV.plugins.VirtualTourPlugin.Node} currentNode
        * @property {external:THREE.Mesh} currentArrow
        * @property {PSV.Tooltip} currentTooltip
+       * @property {string} loadingNode
        * @private
        */
 
       _this.prop = {
         currentNode: null,
         currentArrow: null,
-        currentTooltip: null
+        currentTooltip: null,
+        loadingNode: null
       };
       /**
        * @type {Record<string, boolean | Promise>}
@@ -578,7 +710,8 @@
         preload: false,
         markerLatOffset: -0.1,
         arrowPosition: 'bottom',
-        linksOnCompass: (options == null ? void 0 : options.renderMode) === MODE_MARKERS
+        linksOnCompass: (options == null ? void 0 : options.renderMode) === MODE_MARKERS,
+        listButton: (options == null ? void 0 : options.dataMode) !== MODE_SERVER
       }, options, {
         markerStyle: _extends({}, DEFAULT_MARKER, options == null ? void 0 : options.markerStyle),
         arrowStyle: _extends({}, DEFAULT_ARROW, options == null ? void 0 : options.arrowStyle),
@@ -782,20 +915,37 @@
     /**
      * @summary Changes the current node
      * @param {string} nodeId
+     * @returns {Promise<boolean>} resolves false if the loading was aborted by another call
      */
     ;
 
     _proto.setCurrentNode = function setCurrentNode(nodeId) {
-      var _this2 = this;
+      var _this$prop$currentNod,
+          _this2 = this;
+
+      if (nodeId === ((_this$prop$currentNod = this.prop.currentNode) == null ? void 0 : _this$prop$currentNod.id)) {
+        return Promise.resolve(true);
+      }
 
       this.psv.loader.show();
-      this.psv.hideError(); // if this node is already preloading, wait for it
+      this.psv.hideError();
+      this.prop.loadingNode = nodeId; // if this node is already preloading, wait for it
 
       return Promise.resolve(this.preload[nodeId]).then(function () {
+        if (_this2.prop.loadingNode !== nodeId) {
+          return Promise.reject(photoSphereViewer.utils.getAbortError());
+        }
+
         _this2.psv.textureLoader.abortLoading();
 
         return _this2.datasource.loadNode(nodeId);
       }).then(function (node) {
+        var _this2$markers, _this2$compass;
+
+        if (_this2.prop.loadingNode !== nodeId) {
+          return Promise.reject(photoSphereViewer.utils.getAbortError());
+        }
+
         _this2.psv.navbar.setCaption("<em>" + _this2.psv.config.lang.loading + "</em>");
 
         _this2.prop.currentNode = node;
@@ -814,23 +964,22 @@
           }));
 
           _this2.prop.currentArrow = null;
-        } else {
-          _this2.markers.clearMarkers();
         }
 
-        if (_this2.config.linksOnCompass && _this2.compass) {
-          _this2.compass.setHotspots(null);
-        }
-
+        (_this2$markers = _this2.markers) == null ? void 0 : _this2$markers.clearMarkers();
+        (_this2$compass = _this2.compass) == null ? void 0 : _this2$compass.clearHotspots();
         return Promise.all([_this2.psv.setPanorama(node.panorama, {
           panoData: node.panoData,
           sphereCorrection: node.sphereCorrection
-        }) // eslint-disable-next-line prefer-promise-reject-errors
-        .catch(function () {
-          return Promise.reject(null);
-        }), // the error is already displayed by the core
-        _this2.datasource.loadLinkedNodes(nodeId)]);
+        }).catch(function (err) {
+          // the error is already displayed by the core
+          return Promise.reject(photoSphereViewer.utils.isAbortError(err) ? err : null);
+        }), _this2.datasource.loadLinkedNodes(nodeId)]);
       }).then(function () {
+        if (_this2.prop.loadingNode !== nodeId) {
+          return Promise.reject(photoSphereViewer.utils.getAbortError());
+        }
+
         var node = _this2.prop.currentNode;
 
         if (node.markers) {
@@ -855,15 +1004,21 @@
 
 
         _this2.trigger(EVENTS.NODE_CHANGED, nodeId);
+
+        _this2.prop.loadingNode = null;
+        return true;
       }).catch(function (err) {
+        if (photoSphereViewer.utils.isAbortError(err)) {
+          return Promise.resolve(false);
+        } else if (err) {
+          _this2.psv.showError(_this2.psv.config.lang.loadError);
+        }
+
         _this2.psv.loader.hide();
 
         _this2.psv.navbar.setCaption('');
 
-        if (err) {
-          _this2.psv.showError(_this2.psv.config.lang.loadError);
-        }
-
+        _this2.prop.loadingNode = null;
         return Promise.reject(err);
       });
     }
@@ -1080,6 +1235,52 @@
           delete _this4.preload[link.nodeId];
         });
       });
+    }
+    /**
+     * @summary Toggles the visibility of the list of nodes
+     */
+    ;
+
+    _proto.toggleNodesList = function toggleNodesList() {
+      if (this.psv.panel.prop.contentId === ID_PANEL_NODES_LIST) {
+        this.hideNodesList();
+      } else {
+        this.showNodesList();
+      }
+    }
+    /**
+     * @summary Opens side panel with the list of nodes
+     */
+    ;
+
+    _proto.showNodesList = function showNodesList() {
+      var _this$prop$currentNod2,
+          _this5 = this;
+
+      var nodes = this.change(EVENTS.RENDER_NODES_LIST, Object.values(this.datasource.nodes));
+      this.psv.panel.show({
+        id: ID_PANEL_NODES_LIST,
+        content: NODES_LIST_TEMPLATE(nodes, this.psv.config.lang[NodesListButton.id], (_this$prop$currentNod2 = this.prop.currentNode) == null ? void 0 : _this$prop$currentNod2.id),
+        noMargin: true,
+        clickHandler: function clickHandler(e) {
+          var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
+          var nodeId = li ? li.dataset.nodeId : undefined;
+
+          if (nodeId) {
+            _this5.setCurrentNode(nodeId);
+
+            _this5.hideNodesList();
+          }
+        }
+      });
+    }
+    /**
+     * @summary Closes side panel if it contains the list of nodes
+     */
+    ;
+
+    _proto.hideNodesList = function hideNodesList() {
+      this.psv.panel.hide(ID_PANEL_NODES_LIST);
     };
 
     return VirtualTourPlugin;

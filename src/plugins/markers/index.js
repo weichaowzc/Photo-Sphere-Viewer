@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { AbstractPlugin, CONSTANTS, DEFAULTS, PSVError, registerButton, utils } from '../..';
-import { EVENTS, ID_PANEL_MARKER, ID_PANEL_MARKERS_LIST, MARKER_DATA, MARKERS_LIST_TEMPLATE, SVG_NS } from './constants';
+import {
+  EVENTS,
+  ID_PANEL_MARKER,
+  ID_PANEL_MARKERS_LIST,
+  MARKER_DATA,
+  MARKERS_LIST_TEMPLATE,
+  SVG_NS
+} from './constants';
 import { Marker } from './Marker';
 import { MarkersButton } from './MarkersButton';
 import { MarkersListButton } from './MarkersListButton';
@@ -9,6 +16,8 @@ import './style.scss';
 
 /**
  * @typedef {Object} PSV.plugins.MarkersPlugin.Options
+ * @property {boolean} [hideButton=true] - adds a button to show/hide the markers
+ * @property {boolean} [listButton=true] - adds a button to show the list of markers
  * @property {boolean} [clickEventOnMarker=false] If a `click` event is triggered on the viewer additionally to the `select-marker` event.
  * @property {PSV.plugins.MarkersPlugin.Properties[]} [markers]
  */
@@ -22,11 +31,10 @@ import './style.scss';
 
 
 // add markers buttons
-DEFAULTS.navbar.splice(DEFAULTS.navbar.indexOf('caption'), 0, MarkersButton.id, MarkersListButton.id);
 DEFAULTS.lang[MarkersButton.id] = 'Markers';
 DEFAULTS.lang[MarkersListButton.id] = 'Markers list';
-registerButton(MarkersButton);
-registerButton(MarkersListButton);
+registerButton(MarkersButton, 'caption:left');
+registerButton(MarkersListButton, 'caption:left');
 
 
 export { EVENTS } from './constants';
@@ -85,6 +93,8 @@ export class MarkersPlugin extends AbstractPlugin {
      * @type {PSV.plugins.MarkersPlugin.Options}
      */
     this.config = {
+      hideButton        : true,
+      listButton        : true,
       clickEventOnMarker: false,
       ...options,
     };
@@ -345,6 +355,21 @@ export class MarkersPlugin extends AbstractPlugin {
   }
 
   /**
+   * @summary Removes multiple markers
+   * @param {string[]} markerIds
+   * @param {boolean} [render=true] - renders the markers immediately
+   */
+  removeMarkers(markerIds, render = true) {
+    markerIds.forEach(markerId => this.removeMarker(markerId, false));
+
+    if (render) {
+      this.__refreshUi();
+
+      this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
+    }
+  }
+
+  /**
    * @summary Replaces all markers
    * @param {PSV.plugins.MarkersPlugin.Properties[]} markers
    * @param {boolean} [render=true] - renders the marker immediately
@@ -442,7 +467,7 @@ export class MarkersPlugin extends AbstractPlugin {
   }
 
   /**
-   * @summary Toggles the visibility of markers list
+   * @summary Toggles the visibility of the list of markers
    */
   toggleMarkersList() {
     if (this.psv.panel.prop.contentId === ID_PANEL_MARKERS_LIST) {
@@ -454,7 +479,7 @@ export class MarkersPlugin extends AbstractPlugin {
   }
 
   /**
-   * @summary Opens side panel with list of markers
+   * @summary Opens side panel with the list of markers
    * @fires PSV.plugins.MarkersPlugin.filter:render-markers-list
    */
   showMarkersList() {
@@ -471,7 +496,7 @@ export class MarkersPlugin extends AbstractPlugin {
       id          : ID_PANEL_MARKERS_LIST,
       content     : MARKERS_LIST_TEMPLATE(
         markers,
-        this.psv.config.lang.markers,
+        this.psv.config.lang[MarkersButton.id],
         utils.dasherize(MARKER_DATA)
       ),
       noMargin    : true,
@@ -502,6 +527,9 @@ export class MarkersPlugin extends AbstractPlugin {
    * @summary Updates the visibility and the position of all markers
    */
   renderMarkers() {
+    const zoomLevel = this.psv.getZoomLevel();
+    const viewerPosition = this.psv.getPosition();
+
     utils.each(this.markers, (marker) => {
       let isVisible = this.prop.visible && marker.visible;
 
@@ -524,21 +552,21 @@ export class MarkersPlugin extends AbstractPlugin {
           this.__updateMarkerSize(marker);
         }
 
-        const scale = marker.getScale(this.psv.getZoomLevel());
         const position = this.__getMarkerPosition(marker);
         isVisible = this.__isMarkerVisible(marker, position);
 
         if (isVisible) {
           marker.props.position2D = position;
+          const scale = marker.getScale(zoomLevel, viewerPosition);
 
-          let transform;
           if (marker.isSvg()) {
-            transform = `translate(${position.x}, ${position.y}) scale(${scale}, ${scale})`;
-            marker.$el.setAttributeNS(null, 'transform', transform);
+            // simulate transform-origin relative to SVG element
+            const x = position.x + marker.props.width * marker.props.anchor.x * (1 - scale);
+            const y = position.y + marker.props.width * marker.props.anchor.y * (1 - scale);
+            marker.$el.setAttributeNS(null, 'transform', `translate(${x}, ${y}) scale(${scale}, ${scale})`);
           }
           else {
-            transform = `translate3D(${position.x}px, ${position.y}px, 0px) scale(${scale}, ${scale})`;
-            marker.$el.style.transform = transform;
+            marker.$el.style.transform = `translate3D(${position.x}px, ${position.y}px, 0px) scale(${scale}, ${scale})`;
           }
         }
       }
@@ -887,8 +915,12 @@ export class MarkersPlugin extends AbstractPlugin {
       }
     }
     else {
-      markersButton?.show();
-      markersListButton?.show();
+      if (this.config.hideButton) {
+        markersButton?.show();
+      }
+      if (this.config.listButton) {
+        markersListButton?.show();
+      }
 
       if (this.psv.panel.isVisible(ID_PANEL_MARKERS_LIST)) {
         this.showMarkersList();

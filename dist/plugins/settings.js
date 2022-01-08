@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -232,9 +232,8 @@
    */
   // add settings button
 
-  photoSphereViewer.DEFAULTS.navbar.splice(photoSphereViewer.DEFAULTS.navbar.indexOf('fullscreen'), 0, SettingsButton.id);
   photoSphereViewer.DEFAULTS.lang[SettingsButton.id] = 'Settings';
-  photoSphereViewer.registerButton(SettingsButton);
+  photoSphereViewer.registerButton(SettingsButton, 'fullscreen:left');
   /**
    * @summary Adds a button to access various settings.
    * @extends PSV.plugins.AbstractPlugin

@@ -1,3 +1,4 @@
+import { Event } from 'uevent';
 import { ViewerOptions, AbstractPlugin, Viewer } from 'photo-sphere-viewer';
 import { Marker, MarkerProperties } from 'photo-sphere-viewer/dist/plugins/markers';
 
@@ -45,15 +46,16 @@ type VirtualTourPluginPluginOptions = {
   getNode?: (nodeId: string) => VirtualTourNode | Promise<VirtualTourNode>;
   getLinks?: (nodeId: string) => VirtualTourNodeLink[] | Promise<VirtualTourNodeLink[]>;
   startNodeId?: string;
-  preload?: boolean | ((node: VirtualTourNode, link:VirtualTourNodeLink) => boolean);
+  preload?: boolean | ((node: VirtualTourNode, link: VirtualTourNodeLink) => boolean);
   markerStyle?: MarkerProperties;
   arrowStyle?: VirtualTourArrowStyle;
   markerLatOffset?: number;
-  arrowPosition?: 'top'|'bottom';
+  arrowPosition?: 'top' | 'bottom';
 }
 
 declare const EVENTS: {
   NODE_CHANGED: 'node-changed',
+  RENDER_NODES_LIST: 'render-nodes-list,
 };
 
 /**
@@ -70,8 +72,34 @@ declare class VirtualTourPlugin extends AbstractPlugin {
 
   /**
    * @summary Changes the current node
+   * @returns resolves false if the loading was aborted by another call
    */
-  setCurrentNode(nodeId: string);
+  setCurrentNode(nodeId: string): Promise<boolean>;
+
+  /**
+   * @summary Toggles the visibility of the list of nodes
+   */
+  toggleNodesList();
+
+  /**
+   * @summary Opens side panel with the list of nodes
+   */
+  showNodesList();
+
+  /**
+   * @summary Closes side panel if it contains the list of nodes
+   */
+  hideNodesList();
+
+  /**
+   * @summary Triggered when the current node changes
+   */
+  on(e: 'node-changed', cb: (e: Event, node: Node) => void): this;
+
+  /**
+   * @summary Used to alter the list of nodes displayed on the side-panel
+   */
+  on(e: 'render-nodes-list', cb: (e: Event, nodes: Node[]) => Node[]): this;
 
 }
 

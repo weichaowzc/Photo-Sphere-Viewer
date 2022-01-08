@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -177,7 +177,7 @@
   var ID_PANEL_MARKERS_LIST = 'markersList';
   /**
    * @summary Markers list template
-   * @param {PSV.Marker[]} markers
+   * @param {PSV.plugins.MarkersPlugin.Marker[]} markers
    * @param {string} title
    * @param {string} dataKey
    * @returns {string}
@@ -190,6 +190,63 @@
       return "\n    <li data-" + dataKey + "=\"" + marker.config.id + "\" class=\"psv-panel-menu-item\" tabindex=\"0\">\n      " + (marker.type === 'image' ? "<span class=\"psv-panel-menu-item-icon\"><img src=\"" + marker.config.image + "\"/></span>" : '') + "\n      <span class=\"psv-panel-menu-item-label\">" + marker.getListContent() + "</span>\n    </li>\n    ";
     }).join('') + "\n  </ul>\n</div>\n";
   };
+
+  /**
+   * @summary Ensures that a number is in a given interval
+   * @memberOf PSV.utils
+   * @param {number} x
+   * @param {number} min
+   * @param {number} max
+   * @returns {number}
+   */
+  /**
+   * @summary Compute the shortest offset between two longitudes
+   * @memberOf PSV.utils
+   * @param {number} from
+   * @param {number} to
+   * @returns {number}
+   */
+
+  function getShortestArc(from, to) {
+    var tCandidates = [0, // direct
+    Math.PI * 2, // clock-wise cross zero
+    -Math.PI * 2 // counter-clock-wise cross zero
+    ];
+    return tCandidates.reduce(function (value, candidate) {
+      var newCandidate = to - from + candidate;
+      return Math.abs(newCandidate) < Math.abs(value) ? newCandidate : value;
+    }, Infinity);
+  }
+
+  /**
+   * @summary Custom error used in the lib
+   * @param {string} message
+   * @constructor
+   * @memberOf PSV
+   */
+  function PSVError(message) {
+    this.message = message; // Use V8's native method if available, otherwise fallback
+
+    if ('captureStackTrace' in Error) {
+      Error.captureStackTrace(this, PSVError);
+    } else {
+      this.stack = new Error().stack;
+    }
+  }
+
+  PSVError.prototype = Object.create(Error.prototype);
+  PSVError.prototype.name = 'PSVError';
+  PSVError.prototype.constructor = PSVError;
+
+  /**
+   * @summary Displays a warning in the console
+   * @memberOf PSV.utils
+   * @param {string} message
+   */
+
+  function logWarn(message) {
+    console.warn("PhotoSphereViewer: " + message);
+  }
 
   /**
    * Returns intermediary point between two points on the sphere
@@ -494,20 +551,35 @@
     /**
      * @summary Computes marker scale from zoom level
      * @param {number} zoomLevel
+     * @param {PSV.Position} position
      * @returns {number}
      */
     ;
 
-    _proto.getScale = function getScale(zoomLevel) {
-      if (Array.isArray(this.config.scale)) {
-        return this.config.scale[0] + (this.config.scale[1] - this.config.scale[0]) * photoSphereViewer.CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
-      } else if (typeof this.config.scale === 'function') {
-        return this.config.scale(zoomLevel);
-      } else if (typeof this.config.scale === 'number') {
-        return this.config.scale * photoSphereViewer.CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
-      } else {
+    _proto.getScale = function getScale(zoomLevel, position) {
+      if (!this.config.scale) {
         return 1;
       }
+
+      if (typeof this.config.scale === 'function') {
+        return this.config.scale(zoomLevel, position);
+      }
+
+      var scale = 1;
+
+      if (Array.isArray(this.config.scale.zoom)) {
+        var bounds = this.config.scale.zoom;
+        scale *= bounds[0] + (bounds[1] - bounds[0]) * photoSphereViewer.CONSTANTS.EASINGS.inQuad(zoomLevel / 100);
+      }
+
+      if (Array.isArray(this.config.scale.longitude)) {
+        var _bounds = this.config.scale.longitude;
+        var halfFov = THREE.Math.degToRad(this.psv.prop.hFov) / 2;
+        var arc = Math.abs(getShortestArc(this.props.position.longitude, position.longitude));
+        scale *= _bounds[1] + (_bounds[0] - _bounds[1]) * photoSphereViewer.CONSTANTS.EASINGS.outQuad(Math.max(0, (halfFov - arc) / halfFov));
+      }
+
+      return scale;
     }
     /**
      * @summary Returns the markers list content for the marker, it can be either :
@@ -520,9 +592,11 @@
     ;
 
     _proto.getListContent = function getListContent() {
+      var _this$config$tooltip;
+
       if (this.config.listContent) {
         return this.config.listContent;
-      } else if (this.config.tooltip) {
+      } else if ((_this$config$tooltip = this.config.tooltip) != null && _this$config$tooltip.content) {
         return this.config.tooltip.content;
       } else if (this.config.html) {
         return this.config.html;
@@ -537,7 +611,9 @@
     ;
 
     _proto.showTooltip = function showTooltip(mousePosition) {
-      if (this.visible && this.config.tooltip && this.props.position2D) {
+      var _this$config$tooltip2;
+
+      if (this.visible && (_this$config$tooltip2 = this.config.tooltip) != null && _this$config$tooltip2.content && this.props.position2D) {
         var config = {
           content: this.config.tooltip.content,
           position: this.config.tooltip.position,
@@ -615,14 +691,14 @@
         photoSphereViewer.utils.addClasses(this.$el, this.config.className);
       }
 
+      if (typeof this.config.tooltip === 'string') {
+        this.config.tooltip = {
+          content: this.config.tooltip
+        };
+      }
+
       if (this.config.tooltip) {
         photoSphereViewer.utils.addClasses(this.$el, 'psv-marker--has-tooltip');
-
-        if (typeof this.config.tooltip === 'string') {
-          this.config.tooltip = {
-            content: this.config.tooltip
-          };
-        }
       }
 
       if (this.config.content) {
@@ -635,7 +711,22 @@
       } // parse anchor
 
 
-      this.props.anchor = photoSphereViewer.utils.parsePosition(this.config.anchor);
+      this.props.anchor = photoSphereViewer.utils.parsePosition(this.config.anchor); // clean scale
+
+      if (this.config.scale) {
+        if (typeof this.config.scale === 'number') {
+          logWarn('Single value marker scale is deprecated, please use an array of two values.');
+          this.config.scale = {
+            zoom: [0, this.config.scale]
+          };
+        }
+
+        if (Array.isArray(this.config.scale)) {
+          this.config.scale = {
+            zoom: this.config.scale
+          };
+        }
+      }
 
       if (this.isNormal()) {
         this.__updateNormal();
@@ -862,7 +953,7 @@
 
       var found = [];
       photoSphereViewer.utils.each(MARKER_TYPES, function (type) {
-        if (type in properties) {
+        if (properties[type]) {
           found.push(type);
         }
       });
@@ -911,6 +1002,8 @@
         _this.toggleActive(true);
       }
 
+      _this.hide();
+
       return _this;
     }
     /**
@@ -934,7 +1027,9 @@
     ;
 
     _proto.isSupported = function isSupported() {
-      return !!this.plugin;
+      var _this$plugin;
+
+      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.hideButton;
     }
     /**
      * @summary Handles events
@@ -1029,7 +1124,9 @@
     ;
 
     _proto.isSupported = function isSupported() {
-      return !!this.plugin;
+      var _this$plugin;
+
+      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.listButton;
     }
     /**
      * @summary Handles events
@@ -1071,6 +1168,8 @@
 
   /**
    * @typedef {Object} PSV.plugins.MarkersPlugin.Options
+   * @property {boolean} [hideButton=true] - adds a button to show/hide the markers
+   * @property {boolean} [listButton=true] - adds a button to show the list of markers
    * @property {boolean} [clickEventOnMarker=false] If a `click` event is triggered on the viewer additionally to the `select-marker` event.
    * @property {PSV.plugins.MarkersPlugin.Properties[]} [markers]
    */
@@ -1083,11 +1182,10 @@
    */
   // add markers buttons
 
-  photoSphereViewer.DEFAULTS.navbar.splice(photoSphereViewer.DEFAULTS.navbar.indexOf('caption'), 0, MarkersButton.id, MarkersListButton.id);
   photoSphereViewer.DEFAULTS.lang[MarkersButton.id] = 'Markers';
   photoSphereViewer.DEFAULTS.lang[MarkersListButton.id] = 'Markers list';
-  photoSphereViewer.registerButton(MarkersButton);
-  photoSphereViewer.registerButton(MarkersListButton);
+  photoSphereViewer.registerButton(MarkersButton, 'caption:left');
+  photoSphereViewer.registerButton(MarkersListButton, 'caption:left');
   /**
    * @summary Displays various markers on the viewer
    * @extends PSV.plugins.AbstractPlugin
@@ -1144,6 +1242,8 @@
        */
 
       _this.config = _extends({
+        hideButton: true,
+        listButton: true,
         clickEventOnMarker: false
       }, options);
       /**
@@ -1458,6 +1558,30 @@
       }
     }
     /**
+     * @summary Removes multiple markers
+     * @param {string[]} markerIds
+     * @param {boolean} [render=true] - renders the markers immediately
+     */
+    ;
+
+    _proto.removeMarkers = function removeMarkers(markerIds, render) {
+      var _this2 = this;
+
+      if (render === void 0) {
+        render = true;
+      }
+
+      markerIds.forEach(function (markerId) {
+        return _this2.removeMarker(markerId, false);
+      });
+
+      if (render) {
+        this.__refreshUi();
+
+        this.trigger(EVENTS.SET_MARKERS, this.getMarkers());
+      }
+    }
+    /**
      * @summary Replaces all markers
      * @param {PSV.plugins.MarkersPlugin.Properties[]} markers
      * @param {boolean} [render=true] - renders the marker immediately
@@ -1465,7 +1589,7 @@
     ;
 
     _proto.setMarkers = function setMarkers(markers, render) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (render === void 0) {
         render = true;
@@ -1473,7 +1597,7 @@
 
       this.clearMarkers(false);
       photoSphereViewer.utils.each(markers, function (marker) {
-        return _this2.addMarker(marker, false);
+        return _this3.addMarker(marker, false);
       });
 
       if (render) {
@@ -1491,14 +1615,14 @@
     ;
 
     _proto.clearMarkers = function clearMarkers(render) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (render === void 0) {
         render = true;
       }
 
       photoSphereViewer.utils.each(this.markers, function (marker) {
-        return _this3.removeMarker(marker, false);
+        return _this4.removeMarker(marker, false);
       });
 
       if (render) {
@@ -1519,13 +1643,13 @@
     ;
 
     _proto.gotoMarker = function gotoMarker(markerId, speed) {
-      var _this4 = this;
+      var _this5 = this;
 
       var marker = this.getMarker(markerId);
       return this.psv.animate(_extends({}, marker.props.position, {
         speed: speed
       })).then(function () {
-        _this4.trigger(EVENTS.GOTO_MARKER_DONE, marker);
+        _this5.trigger(EVENTS.GOTO_MARKER_DONE, marker);
       });
     }
     /**
@@ -1579,7 +1703,7 @@
       }
     }
     /**
-     * @summary Toggles the visibility of markers list
+     * @summary Toggles the visibility of the list of markers
      */
     ;
 
@@ -1591,13 +1715,13 @@
       }
     }
     /**
-     * @summary Opens side panel with list of markers
+     * @summary Opens side panel with the list of markers
      * @fires PSV.plugins.MarkersPlugin.filter:render-markers-list
      */
     ;
 
     _proto.showMarkersList = function showMarkersList() {
-      var _this5 = this;
+      var _this6 = this;
 
       var markers = [];
       photoSphereViewer.utils.each(this.markers, function (marker) {
@@ -1608,20 +1732,20 @@
       markers = this.change(EVENTS.RENDER_MARKERS_LIST, markers);
       this.psv.panel.show({
         id: ID_PANEL_MARKERS_LIST,
-        content: MARKERS_LIST_TEMPLATE(markers, this.psv.config.lang.markers, photoSphereViewer.utils.dasherize(MARKER_DATA)),
+        content: MARKERS_LIST_TEMPLATE(markers, this.psv.config.lang[MarkersButton.id], photoSphereViewer.utils.dasherize(MARKER_DATA)),
         noMargin: true,
         clickHandler: function clickHandler(e) {
           var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
           var markerId = li ? li.dataset[MARKER_DATA] : undefined;
 
           if (markerId) {
-            var marker = _this5.getMarker(markerId);
+            var marker = _this6.getMarker(markerId);
 
-            _this5.trigger(EVENTS.SELECT_MARKER_LIST, marker);
+            _this6.trigger(EVENTS.SELECT_MARKER_LIST, marker);
 
-            _this5.gotoMarker(marker, 1000);
+            _this6.gotoMarker(marker, 1000);
 
-            _this5.hideMarkersList();
+            _this6.hideMarkersList();
           }
         }
       });
@@ -1640,18 +1764,20 @@
     ;
 
     _proto.renderMarkers = function renderMarkers() {
-      var _this6 = this;
+      var _this7 = this;
 
+      var zoomLevel = this.psv.getZoomLevel();
+      var viewerPosition = this.psv.getPosition();
       photoSphereViewer.utils.each(this.markers, function (marker) {
-        var isVisible = _this6.prop.visible && marker.visible;
+        var isVisible = _this7.prop.visible && marker.visible;
 
         if (isVisible && marker.isPoly()) {
-          var positions = _this6.__getPolyPositions(marker);
+          var positions = _this7.__getPolyPositions(marker);
 
           isVisible = positions.length > (marker.isPolygon() ? 2 : 1);
 
           if (isVisible) {
-            var position = _this6.__getMarkerPosition(marker);
+            var position = _this7.__getMarkerPosition(marker);
 
             marker.props.position2D = position;
             var points = positions.map(function (pos) {
@@ -1662,25 +1788,24 @@
           }
         } else if (isVisible) {
           if (marker.props.dynamicSize) {
-            _this6.__updateMarkerSize(marker);
+            _this7.__updateMarkerSize(marker);
           }
 
-          var scale = marker.getScale(_this6.psv.getZoomLevel());
+          var _position = _this7.__getMarkerPosition(marker);
 
-          var _position = _this6.__getMarkerPosition(marker);
-
-          isVisible = _this6.__isMarkerVisible(marker, _position);
+          isVisible = _this7.__isMarkerVisible(marker, _position);
 
           if (isVisible) {
             marker.props.position2D = _position;
-            var transform;
+            var scale = marker.getScale(zoomLevel, viewerPosition);
 
             if (marker.isSvg()) {
-              transform = "translate(" + _position.x + ", " + _position.y + ") scale(" + scale + ", " + scale + ")";
-              marker.$el.setAttributeNS(null, 'transform', transform);
+              // simulate transform-origin relative to SVG element
+              var x = _position.x + marker.props.width * marker.props.anchor.x * (1 - scale);
+              var y = _position.y + marker.props.width * marker.props.anchor.y * (1 - scale);
+              marker.$el.setAttributeNS(null, 'transform', "translate(" + x + ", " + y + ") scale(" + scale + ", " + scale + ")");
             } else {
-              transform = "translate3D(" + _position.x + "px, " + _position.y + "px, 0px) scale(" + scale + ", " + scale + ")";
-              marker.$el.style.transform = transform;
+              marker.$el.style.transform = "translate3D(" + _position.x + "px, " + _position.y + "px, 0px) scale(" + scale + ", " + scale + ")";
             }
           }
         }
@@ -1688,9 +1813,9 @@
         marker.props.inViewport = isVisible;
         photoSphereViewer.utils.toggleClass(marker.$el, 'psv-marker--visible', isVisible);
 
-        if (marker.props.inViewport && (_this6.prop.showAllTooltips || marker === _this6.prop.hoveringMarker && !marker.isPoly())) {
+        if (marker.props.inViewport && (_this7.prop.showAllTooltips || marker === _this7.prop.hoveringMarker && !marker.isPoly())) {
           marker.showTooltip();
-        } else if (!marker.props.inViewport || marker !== _this6.prop.hoveringMarker) {
+        } else if (!marker.props.inViewport || marker !== _this7.prop.hoveringMarker) {
           marker.hideTooltip();
         }
       });
@@ -1773,14 +1898,14 @@
     ;
 
     _proto.__getPolyPositions = function __getPolyPositions(marker) {
-      var _this7 = this;
+      var _this8 = this;
 
       var nbVectors = marker.props.positions3D.length; // compute if each vector is visible
 
       var positions3D = marker.props.positions3D.map(function (vector) {
         return {
           vector: vector,
-          visible: vector.dot(_this7.psv.prop.direction) > 0
+          visible: vector.dot(_this8.psv.prop.direction) > 0
         };
       }); // get pairs of visible/invisible vectors for each invisible vector connected to a visible vector
 
@@ -1802,7 +1927,7 @@
 
       toBeComputed.reverse().forEach(function (pair) {
         positions3D.splice(pair.index, 0, {
-          vector: _this7.__getPolyIntermediaryPoint(pair.visible.vector, pair.invisible.vector),
+          vector: _this8.__getPolyIntermediaryPoint(pair.visible.vector, pair.invisible.vector),
           visible: true
         });
       }); // translate vectors to screen pos
@@ -1810,7 +1935,7 @@
       return positions3D.filter(function (pos) {
         return pos.visible;
       }).map(function (pos) {
-        return _this7.psv.dataHelper.vector3ToViewerCoords(pos.vector);
+        return _this8.psv.dataHelper.vector3ToViewerCoords(pos.vector);
       });
     }
     /**
@@ -2024,8 +2149,13 @@
           this.psv.panel.hide();
         }
       } else {
-        markersButton == null ? void 0 : markersButton.show();
-        markersListButton == null ? void 0 : markersListButton.show();
+        if (this.config.hideButton) {
+          markersButton == null ? void 0 : markersButton.show();
+        }
+
+        if (this.config.listButton) {
+          markersListButton == null ? void 0 : markersListButton.show();
+        }
 
         if (this.psv.panel.isVisible(ID_PANEL_MARKERS_LIST)) {
           this.showMarkersList();

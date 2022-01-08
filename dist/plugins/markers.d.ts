@@ -33,7 +33,7 @@ type MarkerProperties = Partial<ExtendedPosition> & {
   id: string;
   width?: number;
   height?: number;
-  scale?: number | [number, number];
+  scale?: number | [number, number] | { zoom?: [number, number], longitude?: [number, number] };
   className?: string;
   style?: Record<string, string>;
   svgStyle?: Record<string, string>;
@@ -183,6 +183,11 @@ declare class MarkersPlugin extends AbstractPlugin {
   removeMarker(markerId: string, render?: boolean);
 
   /**
+   * @summary Removes multiple markers
+   */
+  removeMarkers(markerIds, render?: boolean);
+
+  /**
    * @summary Replaces all markers
    */
   setMarkers(markers: MarkerProperties[], render?: boolean);
@@ -218,12 +223,12 @@ declare class MarkersPlugin extends AbstractPlugin {
   showMarkerPanel(markerId: string);
 
   /**
-   * @summary Toggles the visibility of markers list
+   * @summary Toggles the visibility of the list of markers
    */
   toggleMarkersList();
 
   /**
-   * @summary Opens side panel with list of markers
+   * @summary Opens side panel with the list of markers
    */
   showMarkersList();
 

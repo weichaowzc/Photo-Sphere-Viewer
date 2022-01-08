@@ -12,7 +12,7 @@ This plugin is available in the core `photo-sphere-viewer` package in `dist/plug
 
 The plugin allows to define `nodes` which contains a `panorama` and one or more `links` to other nodes. The links are represented with a 3D arrow (default) or using the [Markers plugin](./plugin-markers.md).
 
-There two different ways to define the position of the links : the manual way and the GPS way.
+There are two different ways to define the position of the links : the manual mode and the GPS mode.
 
 <md-tabs md-elevation="1">
 <md-tab md-label="Manual mode">
@@ -131,6 +131,11 @@ Short name of this node, used in links tooltips.
 
 Caption displayed in th navbar, if not defined the global caption will be used.
 
+#### `thumbnail`
+- type: `string`
+
+Thumbnail for the nodes list in the side panel (see `listButton` configuration option).
+
 #### `markers`
 - type: `array`
 
@@ -172,6 +177,17 @@ Overrides the global style of the marker used to display the link. See global co
 
 ## Configuration
 
+#### `lang`
+- type: `object`
+- default:
+```js
+lang: {
+  nodesList: Locations',
+}
+```
+
+_Note: this option is not part of the plugin but is merged with the main [`lang`](../guide/config.md#lang) object._
+
 #### `dataMode`
 - type: `'client' | 'server'`
 - default: `'client'`
@@ -200,10 +216,10 @@ Initial list of nodes. You can also call `setNodes` method later.
 
 Callback to load the configuration of a node.
 
-#### `getLinks(nodeId)` (required in server mode)
+#### `getLinks(nodeId)` (server mode only)
 - type: `function(nodeId: string) => Promise<NodeLink[]>`
 
-Callback to load the links of a node.
+Callback to load the links of a node. Only used if `getNode()` does not return the links of each node.
 
 #### `startNodeId`
 - type: `string`
@@ -215,6 +231,18 @@ Id of the initially loaded node. If empty the first node will be displayed. You 
 - default: `false`
 
 Enable the preloading of linked nodes, can be a function that returns true or false for each link.
+
+#### `listButton`
+- type: `boolean`
+- default: `true` id client data mode
+
+Adds a navbar button to display the list of all nodes.
+
+#### `linksOnCompass`
+- type: `boolean`
+- default: `true` if markers render mode
+
+If the [Compass plugin](plugin-compass.md) is enabled, displays the links on the compass.
 
 
 #### `markerStyle` (markers mode only)
@@ -236,6 +264,16 @@ Default value is:
   },
 }
 ```
+
+::: tip
+If you want to use another marker type like `image` you must define `html: null` to remove the default value.
+```js
+markerStyle: {
+  html : null,
+  image: 'path/to/image.png',
+}
+```
+:::
 
 #### `arrowStyle` (3d mode only)
 - type: `object`
@@ -265,12 +303,6 @@ Vertical offset in radians applied to the markers to compensate for the viewer p
 - default: `'bottom'`
 
 Vertical position of the arrows.
-
-#### `linksOnCompass`
-- type: `boolean`
-- default: `true` if markers mode
-
-If the [Compass plugin](plugin-compass.md) is enabled, displays the links on the compass.
 
 
 ## Methods

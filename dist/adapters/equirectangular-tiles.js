@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -377,9 +377,8 @@
         return Promise.reject(new photoSphereViewer.PSVError('Panorama cols and rows must be powers of 2.'));
       }
 
-      panorama.height = panorama.width / 2;
       this.prop.colSize = panorama.width / panorama.cols;
-      this.prop.rowSize = panorama.height / panorama.rows;
+      this.prop.rowSize = panorama.width / 2 / panorama.rows;
       this.prop.facesByCol = SPHERE_SEGMENTS / panorama.cols;
       this.prop.facesByRow = SPHERE_SEGMENTS / 2 / panorama.rows;
 
@@ -391,9 +390,9 @@
 
       var panoData = {
         fullWidth: panorama.width,
-        fullHeight: panorama.height,
+        fullHeight: panorama.width / 2,
         croppedWidth: panorama.width,
-        croppedHeight: panorama.height,
+        croppedHeight: panorama.width / 2,
         croppedX: 0,
         croppedY: 0
       };
@@ -402,14 +401,17 @@
         return this.psv.textureLoader.loadImage(panorama.baseUrl, function (p) {
           return _this2.psv.loader.setProgress(p);
         }).then(function (img) {
+          var texture = _this2.__createBaseTexture(img);
+
           return {
-            texture: _this2.__createBaseTexture(img),
+            panorama: panorama,
+            texture: texture,
             panoData: panoData
           };
         });
       } else {
         return Promise.resolve({
-          texture: null,
+          panorama: panorama,
           panoData: panoData
         });
       }

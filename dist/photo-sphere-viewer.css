@@ -1,7 +1,7 @@
 /*!
- * Photo Sphere Viewer 4.4.1
+ * Photo Sphere Viewer 4.4.2
  * @copyright 2014-2015 Jérémy Heleine
- * @copyright 2015-2021 Damien "Mistic" Sorel
+ * @copyright 2015-2022 Damien "Mistic" Sorel
  * @licence MIT (https://opensource.org/licenses/MIT)
  */
 .psv-container {
@@ -456,6 +456,10 @@
           justify-content: flex-start;
   -webkit-transition: background 0.1s ease-in-out;
   transition: background 0.1s ease-in-out;
+}
+.psv-panel-menu-item--active {
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
 }
 .psv-panel-menu-item-icon {
   -webkit-box-flex: 0;

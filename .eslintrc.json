@@ -16,6 +16,7 @@
     "import/prefer-default-export": "off",
     "key-spacing": "off",
     "no-bitwise": "off",
+    "no-case-declarations": "off",
     "no-else-return": "off",
     "no-multiple-empty-lines": "off",
     "no-param-reassign": "off",
@@ -41,7 +42,10 @@
     ],
     "max-len": [
       "error",
-      150
+      {
+        "code": 150,
+        "ignoreComments": true
+      }
     ],
     "brace-style": [
       "error",

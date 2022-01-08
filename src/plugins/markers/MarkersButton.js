@@ -29,6 +29,8 @@ export class MarkersButton extends AbstractButton {
 
       this.toggleActive(true);
     }
+
+    this.hide();
   }
 
   /**
@@ -47,7 +49,7 @@ export class MarkersButton extends AbstractButton {
    * @override
    */
   isSupported() {
-    return !!this.plugin;
+    return this.plugin?.config.hideButton;
   }
 
   /**

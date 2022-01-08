@@ -1,7 +1,7 @@
 /*!
-* Photo Sphere Viewer 4.4.1
+* Photo Sphere Viewer 4.4.2
 * @copyright 2014-2015 Jérémy Heleine
-* @copyright 2015-2021 Damien "Mistic" Sorel
+* @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
@@ -187,9 +187,8 @@
    */
   // add stereo button
 
-  photoSphereViewer.DEFAULTS.navbar.splice(-1, 0, StereoButton.id);
   photoSphereViewer.DEFAULTS.lang[StereoButton.id] = 'Stereo view';
-  photoSphereViewer.registerButton(StereoButton); // other lang strings
+  photoSphereViewer.registerButton(StereoButton, 'caption:right'); // other lang strings
 
   photoSphereViewer.DEFAULTS.lang.stereoNotification = 'Click anywhere to exit stereo view.';
   photoSphereViewer.DEFAULTS.lang.pleaseRotate = ['Please rotate your device', '(or tap to continue)'];
