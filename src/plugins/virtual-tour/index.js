@@ -1,5 +1,5 @@
-import { AbstractPlugin, CONSTANTS, DEFAULTS, PSVError, registerButton, utils } from 'photo-sphere-viewer';
 import * as THREE from 'three';
+import { AbstractPlugin, CONSTANTS, DEFAULTS, PSVError, registerButton, utils } from '../..';
 import { ClientSideDatasource } from './ClientSideDatasource';
 import {
   ARROW_GEOM,
@@ -91,6 +91,7 @@ import { bearing, distance, setMeshColor } from './utils';
  * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks]
  * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
  * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
+ * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
  * @property {boolean} [listButton] - adds a button to show the list of nodes, defaults to `true` only in client data mode
  * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass, defaults to `true` on in markers render mode
  * @property {PSV.plugins.MarkersPlugin.Properties} [markerStyle] - global marker style
@@ -99,6 +100,13 @@ import { bearing, distance, setMeshColor } from './utils';
  * @property {'top'|'bottom'} [arrowPosition='bottom'] - (3D mode) arrows vertical position
  */
 
+/**
+ * @typedef {Object} PSV.plugins.VirtualTourPlugin.NodeChangedData
+ * @summary Data associated to the "node-changed" event
+ * @type {PSV.plugins.VirtualTourPlugin.Node} [fromNode] - The previous node
+ * @type {PSV.plugins.VirtualTourPlugin.NodeLink} [fromLink] - The link that was clicked in the previous node
+ * @type {PSV.Position} [fromLinkPosition] - The position of the link on the previous node
+ */
 
 // add markers buttons
 DEFAULTS.lang[NodesListButton.id] = 'Locations';
@@ -155,42 +163,38 @@ export class VirtualTourPlugin extends AbstractPlugin {
       positionMode   : MODE_MANUAL,
       renderMode     : MODE_3D,
       preload        : false,
+      rotateSpeed    : '20rpm',
       markerLatOffset: -0.1,
       arrowPosition  : 'bottom',
       linksOnCompass : options?.renderMode === MODE_MARKERS,
       listButton     : options?.dataMode !== MODE_SERVER,
       ...options,
-      markerStyle: {
+      markerStyle    : {
         ...DEFAULT_MARKER,
         ...options?.markerStyle,
       },
-      arrowStyle : {
+      arrowStyle     : {
         ...DEFAULT_ARROW,
         ...options?.arrowStyle,
       },
-      nodes      : null,
     };
 
     /**
      * @type {PSV.plugins.MarkersPlugin}
      * @private
      */
-    this.markers = this.psv.getPlugin('markers');
+    this.markers = null;
 
     /**
      * @type {PSV.plugins.CompassPlugin}
      * @private
      */
-    this.compass = this.psv.getPlugin('compass');
-
-    if (!this.is3D() && !this.markers) {
-      throw new PSVError('Tour plugin requires the Markers plugin in markers mode');
-    }
+    this.compass = null;
 
     /**
      * @type {PSV.plugins.VirtualTourPlugin.AbstractDatasource}
      */
-    this.datasource = this.isServerSide() ? new ServerSideDatasource(this) : new ClientSideDatasource(this);
+    this.datasource = null;
 
     /**
      * @type {external:THREE.Group}
@@ -204,7 +208,25 @@ export class VirtualTourPlugin extends AbstractPlugin {
       const localLight = new THREE.PointLight(0xffffff, 1, 0);
       localLight.position.set(2, 0, 0);
       this.arrowsGroup.add(localLight);
+    }
+  }
 
+  /**
+   * @package
+   */
+  init() {
+    super.init();
+
+    this.markers = this.psv.getPlugin('markers');
+    this.compass = this.psv.getPlugin('compass');
+
+    if (!this.is3D() && !this.markers) {
+      throw new PSVError('Tour plugin requires the Markers plugin in markers mode');
+    }
+
+    this.datasource = this.isServerSide() ? new ServerSideDatasource(this) : new ClientSideDatasource(this);
+
+    if (this.is3D()) {
       this.psv.once(CONSTANTS.EVENTS.READY, () => {
         this.__positionArrows();
         this.psv.renderer.scene.add(this.arrowsGroup);
@@ -230,11 +252,15 @@ export class VirtualTourPlugin extends AbstractPlugin {
         this.setCurrentNode(this.config.startNodeId);
       }
     }
-    else if (options?.nodes) {
-      this.setNodes(options.nodes, this.config.startNodeId);
+    else if (this.config.nodes) {
+      this.setNodes(this.config.nodes, this.config.startNodeId);
+      delete this.config.nodes;
     }
   }
 
+  /**
+   * @package
+   */
   destroy() {
     if (this.markers) {
       this.markers.off('select-marker', this);
@@ -253,19 +279,19 @@ export class VirtualTourPlugin extends AbstractPlugin {
     delete this.preload;
     delete this.datasource;
     delete this.markers;
-    delete this.prop;
+    delete this.compass;
     delete this.arrowsGroup;
 
     super.destroy();
   }
 
   handleEvent(e) {
-    let nodeId;
+    let link;
     switch (e.type) {
       case 'select-marker':
-        nodeId = e.args[0].data?.[LINK_DATA]?.nodeId;
-        if (nodeId) {
-          this.setCurrentNode(nodeId);
+        link = e.args[0].data?.[LINK_DATA];
+        if (link) {
+          this.setCurrentNode(link.nodeId, link);
         }
         break;
 
@@ -277,14 +303,14 @@ export class VirtualTourPlugin extends AbstractPlugin {
         break;
 
       case CONSTANTS.EVENTS.CLICK:
-        nodeId = this.prop.currentArrow?.userData?.[LINK_DATA]?.nodeId;
-        if (!nodeId) {
+        link = this.prop.currentArrow?.userData?.[LINK_DATA];
+        if (!link) {
           // on touch screens "currentArrow" may be null (no hover state)
           const arrow = this.psv.dataHelper.getIntersection({ x: e.args[0].viewerX, y: e.args[0].viewerY }, LINK_DATA)?.object;
-          nodeId = arrow?.userData?.[LINK_DATA]?.nodeId;
+          link = arrow?.userData?.[LINK_DATA];
         }
-        if (nodeId) {
-          this.setCurrentNode(nodeId);
+        if (link) {
+          this.setCurrentNode(link.nodeId, link);
         }
         break;
 
@@ -347,29 +373,46 @@ export class VirtualTourPlugin extends AbstractPlugin {
   /**
    * @summary Changes the current node
    * @param {string} nodeId
+   * @param {PSV.plugins.VirtualTourPlugin.NodeLink} [fromLink]
    * @returns {Promise<boolean>} resolves false if the loading was aborted by another call
    */
-  setCurrentNode(nodeId) {
+  setCurrentNode(nodeId, fromLink = null) {
     if (nodeId === this.prop.currentNode?.id) {
       return Promise.resolve(true);
     }
 
-    this.psv.loader.show();
     this.psv.hideError();
 
     this.prop.loadingNode = nodeId;
 
-    // if this node is already preloading, wait for it
-    return Promise.resolve(this.preload[nodeId])
-      .then(() => {
-        if (this.prop.loadingNode !== nodeId) {
-          return Promise.reject(utils.getAbortError());
-        }
+    const fromNode = this.prop.currentNode;
+    const fromLinkPosition = fromNode && fromLink ? this.__getLinkPosition(fromNode, fromLink) : null;
 
-        this.psv.textureLoader.abortLoading();
-        return this.datasource.loadNode(nodeId);
-      })
-      .then((node) => {
+    return Promise.all([
+      // if this node is already preloading, wait for it
+      Promise.resolve(this.preload[nodeId])
+        .then(() => {
+          if (this.prop.loadingNode !== nodeId) {
+            return Promise.reject(utils.getAbortError());
+          }
+
+          this.psv.textureLoader.abortLoading();
+          return this.datasource.loadNode(nodeId);
+        }),
+      Promise.resolve(fromLinkPosition ? this.config.rotateSpeed : false)
+        .then((speed) => {
+          if (!speed) {
+            return Promise.resolve();
+          }
+          else {
+            return this.psv.animate({ ...fromLinkPosition, speed });
+          }
+        })
+        .then(() => {
+          this.psv.loader.show();
+        }),
+    ])
+      .then(([node]) => {
         if (this.prop.loadingNode !== nodeId) {
           return Promise.reject(utils.getAbortError());
         }
@@ -429,8 +472,13 @@ export class VirtualTourPlugin extends AbstractPlugin {
          * @memberof PSV.plugins.VirtualTourPlugin
          * @summary Triggered when the current node is changed
          * @param {string} nodeId
+         * @param {PSV.plugins.VirtualTourPlugin.NodeChangedData} data
          */
-        this.trigger(EVENTS.NODE_CHANGED, nodeId);
+        this.trigger(EVENTS.NODE_CHANGED, nodeId, {
+          fromNode,
+          fromLink,
+          fromLinkPosition,
+        });
 
         this.prop.loadingNode = null;
 
@@ -475,11 +523,11 @@ export class VirtualTourPlugin extends AbstractPlugin {
 
         setMeshColor(mesh, link.arrowStyle?.color || this.config.arrowStyle.color);
 
-        mesh.userData = { [LINK_DATA]: link, longitude  : position.longitude };
+        mesh.userData = { [LINK_DATA]: link, longitude: position.longitude };
         mesh.rotation.order = 'YXZ';
         mesh.rotateY(-position.longitude);
         this.psv.dataHelper
-          .sphericalCoordsToVector3({ longitude: position.longitude, latitude : 0 }, mesh.position)
+          .sphericalCoordsToVector3({ longitude: position.longitude, latitude: 0 }, mesh.position)
           .multiplyScalar(1 / CONSTANTS.SPHERE_RADIUS);
 
         this.arrowsGroup.add(mesh);

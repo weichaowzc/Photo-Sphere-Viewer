@@ -233,7 +233,7 @@ export class Viewer extends EventEmitter {
         latitude : new Dynamic(null, this.config.defaultLat, -Math.PI / 2, Math.PI / 2),
       }, (position) => {
         this.dataHelper.sphericalCoordsToVector3(position, this.prop.direction);
-        this.trigger(EVENTS.POSITION_UPDATED, position);
+        this.trigger(EVENTS.POSITION_UPDATED, this.dataHelper.cleanPosition(position));
       }),
     };
 
@@ -250,6 +250,7 @@ export class Viewer extends EventEmitter {
     this.config.plugins.forEach(([plugin, opts]) => {
       this.plugins[plugin.id] = new plugin(this, opts); // eslint-disable-line new-cap
     });
+    each(this.plugins, plugin => plugin.init?.());
 
     // init buttons
     this.navbar.setButtons(this.config.navbar);
@@ -372,7 +373,7 @@ export class Viewer extends EventEmitter {
    * @returns {PSV.Position}
    */
   getPosition() {
-    return this.dynamics.position.current;
+    return this.dataHelper.cleanPosition(this.dynamics.position.current);
   }
 
   /**
@@ -626,8 +627,14 @@ export class Viewer extends EventEmitter {
    * @summary Starts the automatic rotation
    * @fires PSV.autorotate
    */
-  startAutorotate() {
-    this.__stopAll();
+  startAutorotate(refresh = false) {
+    if (refresh && !this.isAutorotateEnabled()) {
+      return;
+    }
+
+    if (!refresh) {
+      this.__stopAll();
+    }
 
     this.dynamics.position.roll({
       longitude: this.config.autorotateSpeed < 0,
@@ -639,7 +646,9 @@ export class Viewer extends EventEmitter {
 
     this.prop.autorotateEnabled = true;
 
-    this.trigger(EVENTS.AUTOROTATE, true);
+    if (!refresh) {
+      this.trigger(EVENTS.AUTOROTATE, true);
+    }
   }
 
   /**
@@ -708,6 +717,7 @@ export class Viewer extends EventEmitter {
 
     const cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
     this.dynamics.position.setValue(cleanPosition);
+    this.stopAutorotate();
   }
 
   /**

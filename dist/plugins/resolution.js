@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,24 @@
   typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.ResolutionPlugin = {}), global.PhotoSphereViewer));
 })(this, (function (exports, photoSphereViewer) { 'use strict';
+
+  function _extends() {
+    _extends = Object.assign || function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+
+      return target;
+    };
+
+    return _extends.apply(this, arguments);
+  }
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -24,14 +42,6 @@
     };
 
     return _setPrototypeOf(o, p);
-  }
-
-  function _assertThisInitialized(self) {
-    if (self === void 0) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    }
-
-    return self;
   }
 
   /**
@@ -124,31 +134,11 @@
        * @private
        */
 
-      _this.settings = psv.getPlugin('settings');
-
-      if (!_this.settings) {
-        throw new photoSphereViewer.PSVError('Resolution plugin requires the Settings plugin');
-      }
-
-      _this.settings.addSetting({
-        id: ResolutionPlugin.id,
-        type: 'options',
-        label: _this.psv.config.lang.resolution,
-        current: function current() {
-          return _this.prop.resolution;
-        },
-        options: function options() {
-          return _this.__getSettingsOptions();
-        },
-        apply: function apply(resolution) {
-          return _this.setResolution(resolution);
-        }
-      });
+      _this.settings = null;
       /**
        * @summary Available resolutions
        * @member {PSV.plugins.ResolutionPlugin.Resolution[]}
        */
-
 
       _this.resolutions = [];
       /**
@@ -167,13 +157,11 @@
       _this.prop = {
         resolution: null
       };
+      /**
+       * @type {PSV.plugins.ResolutionPlugin.Options}
+       */
 
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, _assertThisInitialized(_this));
-
-      if (options != null && options.resolutions) {
-        _this.setResolutions(options.resolutions);
-      }
-
+      _this.config = _extends({}, options);
       return _this;
     }
     /**
@@ -182,6 +170,43 @@
 
 
     var _proto = ResolutionPlugin.prototype;
+
+    _proto.init = function init() {
+      var _this2 = this;
+
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.settings = this.psv.getPlugin('settings');
+
+      if (!this.settings) {
+        throw new photoSphereViewer.PSVError('Resolution plugin requires the Settings plugin');
+      }
+
+      this.settings.addSetting({
+        id: ResolutionPlugin.id,
+        type: 'options',
+        label: this.psv.config.lang.resolution,
+        current: function current() {
+          return _this2.prop.resolution;
+        },
+        options: function options() {
+          return _this2.__getSettingsOptions();
+        },
+        apply: function apply(resolution) {
+          return _this2.setResolution(resolution);
+        }
+      });
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+
+      if (this.config.resolutions) {
+        this.setResolutions(this.config.resolutions);
+        delete this.config.resolutions;
+      }
+    }
+    /**
+     * @package
+     */
+    ;
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
@@ -208,7 +233,7 @@
     ;
 
     _proto.setResolutions = function setResolutions(resolutions) {
-      var _this2 = this;
+      var _this3 = this;
 
       this.resolutions = resolutions;
       this.resolutionsById = {};
@@ -217,7 +242,7 @@
           throw new photoSphereViewer.PSVError('Missing resolution id');
         }
 
-        _this2.resolutionsById[resolution.id] = resolution;
+        _this3.resolutionsById[resolution.id] = resolution;
       });
 
       this.__refreshResolution();
@@ -254,10 +279,10 @@
     ;
 
     _proto.__refreshResolution = function __refreshResolution() {
-      var _this3 = this;
+      var _this4 = this;
 
       var resolution = this.resolutions.find(function (r) {
-        return deepEqual(_this3.psv.config.panorama, r.panorama);
+        return deepEqual(_this4.psv.config.panorama, r.panorama);
       });
 
       if (this.prop.resolution !== (resolution == null ? void 0 : resolution.id)) {

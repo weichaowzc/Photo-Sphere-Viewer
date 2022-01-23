@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1208,20 +1208,9 @@
 
       _this = _AbstractPlugin.call(this, psv) || this;
       /**
-       * @member {HTMLElement}
-       * @readonly
-       */
-
-      _this.container = document.createElement('div');
-      _this.container.className = 'psv-markers';
-      _this.container.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
-
-      _this.psv.container.appendChild(_this.container);
-      /**
        * @summary All registered markers
        * @member {Object<string, PSV.plugins.MarkersPlugin.Marker>}
        */
-
 
       _this.markers = {};
       /**
@@ -1247,6 +1236,14 @@
         clickEventOnMarker: false
       }, options);
       /**
+       * @member {HTMLElement}
+       * @readonly
+       */
+
+      _this.container = document.createElement('div');
+      _this.container.className = 'psv-markers';
+      _this.container.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
+      /**
        * @member {SVGElement}
        * @readonly
        */
@@ -1264,22 +1261,7 @@
 
       _this.container.addEventListener('mousemove', _assertThisInitialized(_this), true);
 
-      _this.container.addEventListener('contextmenu', _assertThisInitialized(_this)); // Viewer events
-
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.DOUBLE_CLICK, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.RENDER, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CONFIG_CHANGED, _assertThisInitialized(_this));
-
-      if (options != null && options.markers) {
-        _this.psv.once(photoSphereViewer.CONSTANTS.EVENTS.READY, function () {
-          _this.setMarkers(options.markers);
-        });
-      }
+      _this.container.addEventListener('contextmenu', _assertThisInitialized(_this));
 
       return _this;
     }
@@ -1289,6 +1271,31 @@
 
 
     var _proto = MarkersPlugin.prototype;
+
+    _proto.init = function init() {
+      var _this2 = this;
+
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.psv.container.appendChild(this.container); // Viewer events
+
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.DOUBLE_CLICK, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.RENDER, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CONFIG_CHANGED, this);
+
+      if (this.config.markers) {
+        this.psv.once(photoSphereViewer.CONSTANTS.EVENTS.READY, function () {
+          _this2.setMarkers(_this2.config.markers);
+
+          delete _this2.config.markers;
+        });
+      }
+    }
+    /**
+     * @package
+     */
+    ;
 
     _proto.destroy = function destroy() {
       this.clearMarkers(false);
@@ -1304,7 +1311,6 @@
       delete this.svgContainer;
       delete this.markers;
       delete this.container;
-      delete this.prop;
 
       _AbstractPlugin.prototype.destroy.call(this);
     }
@@ -1565,14 +1571,14 @@
     ;
 
     _proto.removeMarkers = function removeMarkers(markerIds, render) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (render === void 0) {
         render = true;
       }
 
       markerIds.forEach(function (markerId) {
-        return _this2.removeMarker(markerId, false);
+        return _this3.removeMarker(markerId, false);
       });
 
       if (render) {
@@ -1589,7 +1595,7 @@
     ;
 
     _proto.setMarkers = function setMarkers(markers, render) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (render === void 0) {
         render = true;
@@ -1597,7 +1603,7 @@
 
       this.clearMarkers(false);
       photoSphereViewer.utils.each(markers, function (marker) {
-        return _this3.addMarker(marker, false);
+        return _this4.addMarker(marker, false);
       });
 
       if (render) {
@@ -1615,14 +1621,14 @@
     ;
 
     _proto.clearMarkers = function clearMarkers(render) {
-      var _this4 = this;
+      var _this5 = this;
 
       if (render === void 0) {
         render = true;
       }
 
       photoSphereViewer.utils.each(this.markers, function (marker) {
-        return _this4.removeMarker(marker, false);
+        return _this5.removeMarker(marker, false);
       });
 
       if (render) {
@@ -1643,13 +1649,13 @@
     ;
 
     _proto.gotoMarker = function gotoMarker(markerId, speed) {
-      var _this5 = this;
+      var _this6 = this;
 
       var marker = this.getMarker(markerId);
       return this.psv.animate(_extends({}, marker.props.position, {
         speed: speed
       })).then(function () {
-        _this5.trigger(EVENTS.GOTO_MARKER_DONE, marker);
+        _this6.trigger(EVENTS.GOTO_MARKER_DONE, marker);
       });
     }
     /**
@@ -1721,7 +1727,7 @@
     ;
 
     _proto.showMarkersList = function showMarkersList() {
-      var _this6 = this;
+      var _this7 = this;
 
       var markers = [];
       photoSphereViewer.utils.each(this.markers, function (marker) {
@@ -1739,13 +1745,13 @@
           var markerId = li ? li.dataset[MARKER_DATA] : undefined;
 
           if (markerId) {
-            var marker = _this6.getMarker(markerId);
+            var marker = _this7.getMarker(markerId);
 
-            _this6.trigger(EVENTS.SELECT_MARKER_LIST, marker);
+            _this7.trigger(EVENTS.SELECT_MARKER_LIST, marker);
 
-            _this6.gotoMarker(marker, 1000);
+            _this7.gotoMarker(marker, 1000);
 
-            _this6.hideMarkersList();
+            _this7.hideMarkersList();
           }
         }
       });
@@ -1764,20 +1770,20 @@
     ;
 
     _proto.renderMarkers = function renderMarkers() {
-      var _this7 = this;
+      var _this8 = this;
 
       var zoomLevel = this.psv.getZoomLevel();
       var viewerPosition = this.psv.getPosition();
       photoSphereViewer.utils.each(this.markers, function (marker) {
-        var isVisible = _this7.prop.visible && marker.visible;
+        var isVisible = _this8.prop.visible && marker.visible;
 
         if (isVisible && marker.isPoly()) {
-          var positions = _this7.__getPolyPositions(marker);
+          var positions = _this8.__getPolyPositions(marker);
 
           isVisible = positions.length > (marker.isPolygon() ? 2 : 1);
 
           if (isVisible) {
-            var position = _this7.__getMarkerPosition(marker);
+            var position = _this8.__getMarkerPosition(marker);
 
             marker.props.position2D = position;
             var points = positions.map(function (pos) {
@@ -1788,12 +1794,12 @@
           }
         } else if (isVisible) {
           if (marker.props.dynamicSize) {
-            _this7.__updateMarkerSize(marker);
+            _this8.__updateMarkerSize(marker);
           }
 
-          var _position = _this7.__getMarkerPosition(marker);
+          var _position = _this8.__getMarkerPosition(marker);
 
-          isVisible = _this7.__isMarkerVisible(marker, _position);
+          isVisible = _this8.__isMarkerVisible(marker, _position);
 
           if (isVisible) {
             marker.props.position2D = _position;
@@ -1813,9 +1819,9 @@
         marker.props.inViewport = isVisible;
         photoSphereViewer.utils.toggleClass(marker.$el, 'psv-marker--visible', isVisible);
 
-        if (marker.props.inViewport && (_this7.prop.showAllTooltips || marker === _this7.prop.hoveringMarker && !marker.isPoly())) {
+        if (marker.props.inViewport && (_this8.prop.showAllTooltips || marker === _this8.prop.hoveringMarker && !marker.isPoly())) {
           marker.showTooltip();
-        } else if (!marker.props.inViewport || marker !== _this7.prop.hoveringMarker) {
+        } else if (!marker.props.inViewport || marker !== _this8.prop.hoveringMarker) {
           marker.hideTooltip();
         }
       });
@@ -1898,14 +1904,14 @@
     ;
 
     _proto.__getPolyPositions = function __getPolyPositions(marker) {
-      var _this8 = this;
+      var _this9 = this;
 
       var nbVectors = marker.props.positions3D.length; // compute if each vector is visible
 
       var positions3D = marker.props.positions3D.map(function (vector) {
         return {
           vector: vector,
-          visible: vector.dot(_this8.psv.prop.direction) > 0
+          visible: vector.dot(_this9.psv.prop.direction) > 0
         };
       }); // get pairs of visible/invisible vectors for each invisible vector connected to a visible vector
 
@@ -1927,7 +1933,7 @@
 
       toBeComputed.reverse().forEach(function (pair) {
         positions3D.splice(pair.index, 0, {
-          vector: _this8.__getPolyIntermediaryPoint(pair.visible.vector, pair.invisible.vector),
+          vector: _this9.__getPolyIntermediaryPoint(pair.visible.vector, pair.invisible.vector),
           visible: true
         });
       }); // translate vectors to screen pos
@@ -1935,7 +1941,7 @@
       return positions3D.filter(function (pos) {
         return pos.visible;
       }).map(function (pos) {
-        return _this8.psv.dataHelper.vector3ToViewerCoords(pos.vector);
+        return _this9.psv.dataHelper.vector3ToViewerCoords(pos.vector);
       });
     }
     /**

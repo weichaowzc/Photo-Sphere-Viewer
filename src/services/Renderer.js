@@ -92,10 +92,7 @@ export class Renderer extends AbstractService {
     psv.on(EVENTS.SIZE_UPDATED, this);
     psv.on(EVENTS.ZOOM_UPDATED, this);
     psv.on(EVENTS.POSITION_UPDATED, this);
-
-    psv.on(EVENTS.CONFIG_CHANGED, () => {
-      this.canvasContainer.style.cursor = this.psv.config.mousemove ? 'move' : 'default';
-    });
+    psv.on(EVENTS.CONFIG_CHANGED, this);
 
     this.hide();
   }
@@ -136,6 +133,14 @@ export class Renderer extends AbstractService {
       case EVENTS.SIZE_UPDATED:     this.__onSizeUpdated(); break;
       case EVENTS.ZOOM_UPDATED:     this.__onZoomUpdated(); break;
       case EVENTS.POSITION_UPDATED: this.__onPositionUpdated(); break;
+      case EVENTS.CONFIG_CHANGED:
+        if (evt.args[0].indexOf('fisheye') !== -1) {
+          this.__onPositionUpdated();
+        }
+        if (evt.args[0].indexOf('mousemove') !== -1) {
+          this.canvasContainer.style.cursor = this.psv.config.mousemove ? 'move' : 'default';
+        }
+        break;
       // @formatter:on
     }
     /* eslint-enable */
@@ -300,7 +305,7 @@ export class Renderer extends AbstractService {
     const mesh = this.psv.adapter.createMesh(0.5);
     this.psv.adapter.setTexture(mesh, textureData);
     this.psv.adapter.setTextureOpacity(mesh, 0);
-    this.setPanoramaPose(options.panoData, mesh);
+    this.setPanoramaPose(textureData.panoData, mesh);
     this.setSphereCorrection(options.sphereCorrection, group);
 
     // rotate the new sphere to make the target position face the camera
@@ -330,6 +335,7 @@ export class Renderer extends AbstractService {
       easing    : 'outCubic',
       onTick    : (properties) => {
         this.psv.adapter.setTextureOpacity(mesh, properties.opacity);
+        this.psv.adapter.setTextureOpacity(this.mesh, 1 - properties.opacity);
 
         if (zoomProvided) {
           this.psv.zoom(properties.zoom);
@@ -341,7 +347,8 @@ export class Renderer extends AbstractService {
       .then(() => {
         // remove temp sphere and transfer the texture to the main sphere
         this.setTexture(textureData);
-        this.setPanoramaPose(options.panoData);
+        this.psv.adapter.setTextureOpacity(this.mesh, 1);
+        this.setPanoramaPose(textureData.panoData);
         this.setSphereCorrection(options.sphereCorrection);
 
         this.scene.remove(group);

@@ -232,18 +232,27 @@ Id of the initially loaded node. If empty the first node will be displayed. You 
 
 Enable the preloading of linked nodes, can be a function that returns true or false for each link.
 
+#### `rotateSpeed`
+- type: `boolean | string | number`
+- default: `20rpm`
+
+When a link is clicked, adds a panorama rotation to face it before actually changing the node. If `false` the viewer won't rotate at all and keep the current orientation.
+
 #### `listButton`
 - type: `boolean`
 - default: `true` id client data mode
 
 Adds a navbar button to display the list of all nodes.
 
+::: tip Custom navbar
+The button is added to the default navbar configuration. If you use a [custom navbar](../guide/navbar.md) you will need to manually add the `'nodesList'` button to the list.
+:::
+
 #### `linksOnCompass`
 - type: `boolean`
 - default: `true` if markers render mode
 
 If the [Compass plugin](plugin-compass.md) is enabled, displays the links on the compass.
-
 
 #### `markerStyle` (markers mode only)
 - type: `object`
@@ -318,12 +327,15 @@ Changes the current node.
 
 ## Events
 
-#### `node-changed(nodeId)`
+#### `node-changed(nodeId, data)`
 
 Triggered when the current node is changed.
 
 ```js
-virtualTourPlugin.on('node-changed', (e, nodeId) => {
+virtualTourPlugin.on('node-changed', (e, nodeId, data) => {
   console.log(`Current node is ${nodeId}`);
+  if (data.fromNode) { // other data are available
+    console.log(`Previous node was ${data.fromNode.id}`);
+  }
 });
 ```

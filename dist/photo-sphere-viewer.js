@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1024,20 +1024,6 @@
     });
   }
   /**
-   * @summary Returns the intersection between two arrays
-   * @memberOf PSV.utils
-   * @template T
-   * @param {T[]} array1
-   * @param {T[]} array2
-   * @returns {T[]}
-   */
-
-  function intersect(array1, array2) {
-    return array1.filter(function (value) {
-      return array2.indexOf(value) !== -1;
-    });
-  }
-  /**
    * @summary Returns if a valu is null or undefined
    * @memberOf PSV.utils
    * @param {*} val
@@ -1469,7 +1455,6 @@
     clone: clone,
     isEmpty: isEmpty,
     each: each,
-    intersect: intersect,
     isNil: isNil,
     firstNonNull: firstNonNull,
     pluginInterop: pluginInterop,
@@ -1708,6 +1693,9 @@
   function _createClass(Constructor, protoProps, staticProps) {
     if (protoProps) _defineProperties(Constructor.prototype, protoProps);
     if (staticProps) _defineProperties(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", {
+      writable: false
+    });
     return Constructor;
   }
 
@@ -3962,12 +3950,19 @@
       return _this;
     }
     /**
-     * @summary Destroys the plugin
+     * @summary Initializes the plugin
      * @package
      */
 
 
     var _proto = AbstractPlugin.prototype;
+
+    _proto.init = function init() {}
+    /**
+     * @summary Destroys the plugin
+     * @package
+     */
+    ;
 
     _proto.destroy = function destroy() {
       delete this.psv;
@@ -5801,11 +5796,11 @@
       this.psv.container.addEventListener('mouseenter', this);
       this.psv.container.addEventListener('mousedown', this);
       this.psv.container.addEventListener('mouseleave', this);
+      this.psv.container.addEventListener('mousemove', this);
       window.addEventListener('mouseup', this);
       this.psv.container.addEventListener('touchstart', this);
-      window.addEventListener('touchend', this);
-      this.psv.container.addEventListener('mousemove', this);
       this.psv.container.addEventListener('touchmove', this);
+      window.addEventListener('touchend', this);
       this.psv.container.addEventListener(SYSTEM.mouseWheelEvent, this);
 
       if (SYSTEM.fullscreenEvent) {
@@ -5824,11 +5819,11 @@
       this.psv.container.removeEventListener('mouseenter', this);
       this.psv.container.removeEventListener('mousedown', this);
       this.psv.container.removeEventListener('mouseleave', this);
+      this.psv.container.removeEventListener('mousemove', this);
       window.removeEventListener('mouseup', this);
       this.psv.container.removeEventListener('touchstart', this);
-      window.removeEventListener('touchend', this);
-      this.psv.container.removeEventListener('mousemove', this);
       this.psv.container.removeEventListener('touchmove', this);
+      window.removeEventListener('touchend', this);
       this.psv.container.removeEventListener(SYSTEM.mouseWheelEvent, this);
 
       if (SYSTEM.fullscreenEvent) {
@@ -5902,11 +5897,6 @@
 
             break;
 
-          case 'touchstart':
-            this.__onTouchStart(evt);
-
-            break;
-
           case 'mouseleave':
             this.__onMouseLeave(evt);
 
@@ -5914,6 +5904,11 @@
 
           case 'mousemove':
             this.__onMouseMove(evt);
+
+            break;
+
+          case 'touchstart':
+            this.__onTouchStart(evt);
 
             break;
 
@@ -6307,7 +6302,6 @@
     _proto.__startMove = function __startMove(evt) {
       var _this6 = this;
 
-      this.psv.stopAutorotate();
       this.psv.stopAnimation().then(function () {
         _this6.state.mouseX = evt.clientX;
         _this6.state.mouseY = evt.clientY;
@@ -6697,9 +6691,7 @@
       psv.on(EVENTS.SIZE_UPDATED, _assertThisInitialized(_this));
       psv.on(EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
       psv.on(EVENTS.POSITION_UPDATED, _assertThisInitialized(_this));
-      psv.on(EVENTS.CONFIG_CHANGED, function () {
-        _this.canvasContainer.style.cursor = _this.psv.config.mousemove ? 'move' : 'default';
-      });
+      psv.on(EVENTS.CONFIG_CHANGED, _assertThisInitialized(_this));
 
       _this.hide();
 
@@ -6753,6 +6745,17 @@
 
         case EVENTS.POSITION_UPDATED:
           this.__onPositionUpdated();
+
+          break;
+
+        case EVENTS.CONFIG_CHANGED:
+          if (evt.args[0].indexOf('fisheye') !== -1) {
+            this.__onPositionUpdated();
+          }
+
+          if (evt.args[0].indexOf('mousemove') !== -1) {
+            this.canvasContainer.style.cursor = this.psv.config.mousemove ? 'move' : 'default';
+          }
 
           break;
         // @formatter:on
@@ -6931,7 +6934,7 @@
       var mesh = this.psv.adapter.createMesh(0.5);
       this.psv.adapter.setTexture(mesh, textureData);
       this.psv.adapter.setTextureOpacity(mesh, 0);
-      this.setPanoramaPose(options.panoData, mesh);
+      this.setPanoramaPose(textureData.panoData, mesh);
       this.setSphereCorrection(options.sphereCorrection, group); // rotate the new sphere to make the target position face the camera
 
       if (positionProvided) {
@@ -6964,6 +6967,8 @@
         onTick: function onTick(properties) {
           _this3.psv.adapter.setTextureOpacity(mesh, properties.opacity);
 
+          _this3.psv.adapter.setTextureOpacity(_this3.mesh, 1 - properties.opacity);
+
           if (zoomProvided) {
             _this3.psv.zoom(properties.zoom);
           }
@@ -6974,7 +6979,9 @@
         // remove temp sphere and transfer the texture to the main sphere
         _this3.setTexture(textureData);
 
-        _this3.setPanoramaPose(options.panoData);
+        _this3.psv.adapter.setTextureOpacity(_this3.mesh, 1);
+
+        _this3.setPanoramaPose(textureData.panoData);
 
         _this3.setSphereCorrection(options.sphereCorrection);
 
@@ -8191,7 +8198,7 @@
         }, function (position) {
           _this.dataHelper.sphericalCoordsToVector3(position, _this.prop.direction);
 
-          _this.trigger(EVENTS.POSITION_UPDATED, position);
+          _this.trigger(EVENTS.POSITION_UPDATED, _this.dataHelper.cleanPosition(position));
         })
       };
 
@@ -8210,8 +8217,11 @@
         var plugin = _ref[0],
             opts = _ref[1];
         _this.plugins[plugin.id] = new plugin(_assertThisInitialized(_this), opts); // eslint-disable-line new-cap
-      }); // init buttons
+      });
 
+      each(_this.plugins, function (plugin) {
+        return plugin.init == null ? void 0 : plugin.init();
+      }); // init buttons
 
       _this.navbar.setButtons(_this.config.navbar); // load panorama
 
@@ -8339,7 +8349,7 @@
     ;
 
     _proto.getPosition = function getPosition() {
-      return this.dynamics.position.current;
+      return this.dataHelper.cleanPosition(this.dynamics.position.current);
     }
     /**
      * @summary Returns the current zoom level
@@ -8612,8 +8622,18 @@
      */
     ;
 
-    _proto.startAutorotate = function startAutorotate() {
-      this.__stopAll();
+    _proto.startAutorotate = function startAutorotate(refresh) {
+      if (refresh === void 0) {
+        refresh = false;
+      }
+
+      if (refresh && !this.isAutorotateEnabled()) {
+        return;
+      }
+
+      if (!refresh) {
+        this.__stopAll();
+      }
 
       this.dynamics.position.roll({
         longitude: this.config.autorotateSpeed < 0
@@ -8622,7 +8642,10 @@
         latitude: this.config.autorotateLat
       }, Math.abs(this.config.autorotateSpeed / this.config.moveSpeed));
       this.prop.autorotateEnabled = true;
-      this.trigger(EVENTS.AUTOROTATE, true);
+
+      if (!refresh) {
+        this.trigger(EVENTS.AUTOROTATE, true);
+      }
     }
     /**
      * @summary Stops the automatic rotation
@@ -8694,6 +8717,7 @@
 
       var cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
       this.dynamics.position.setValue(cleanPosition);
+      this.stopAutorotate();
     }
     /**
      * @summary Rotates and zooms the view with a smooth animation

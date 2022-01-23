@@ -70,7 +70,7 @@ export class CompassPlugin extends AbstractPlugin {
      * @type {PSV.plugins.MarkersPlugin}
      * @private
      */
-    this.markers = this.psv.getPlugin('markers');
+    this.markers = null;
 
     /**
      * @member {HTMLElement}
@@ -90,26 +90,39 @@ export class CompassPlugin extends AbstractPlugin {
       this.container.style.marginLeft = `calc(-${this.config.size} / 2)`;
     }
 
-    if (this.config.navigation) {
-      this.container.addEventListener('mouseenter', this);
-      this.container.addEventListener('mouseleave', this);
-      this.container.addEventListener('mousemove', this);
-      this.container.addEventListener('mousedown', this);
-      this.container.addEventListener('mouseup', this);
-    }
-
-    this.psv.container.appendChild(this.container);
-
     /**
      * @member {HTMLCanvasElement}
      * @readonly
      * @private
      */
     this.canvas = document.createElement('canvas');
-    this.canvas.width = this.container.clientWidth * SYSTEM.pixelRatio;
-    this.canvas.height = this.container.clientWidth * SYSTEM.pixelRatio;
 
     this.container.appendChild(this.canvas);
+
+    if (this.config.navigation) {
+      this.container.addEventListener('mouseenter', this);
+      this.container.addEventListener('mouseleave', this);
+      this.container.addEventListener('mousemove', this);
+      this.container.addEventListener('mousedown', this);
+      this.container.addEventListener('mouseup', this);
+      this.container.addEventListener('touchstart', this);
+      this.container.addEventListener('touchmove', this);
+      this.container.addEventListener('touchend', this);
+    }
+  }
+
+  /**
+   * @package
+   */
+  init() {
+    super.init();
+
+    this.markers = this.psv.getPlugin('markers');
+
+    this.psv.container.appendChild(this.container);
+
+    this.canvas.width = this.container.clientWidth * SYSTEM.pixelRatio;
+    this.canvas.height = this.container.clientWidth * SYSTEM.pixelRatio;
 
     this.psv.on(CONSTANTS.EVENTS.RENDER, this);
 
@@ -150,7 +163,8 @@ export class CompassPlugin extends AbstractPlugin {
         break;
       case 'mouseenter':
       case 'mousemove':
-        this.prop.mouse = e;
+      case 'touchmove':
+        this.prop.mouse = e.changedTouches?.[0] || e;
         if (this.prop.mouseDown) {
           this.__click();
         }
@@ -158,15 +172,25 @@ export class CompassPlugin extends AbstractPlugin {
           this.__update();
         }
         e.stopPropagation();
+        e.preventDefault();
         break;
       case 'mousedown':
+      case 'touchstart':
         this.prop.mouseDown = true;
+        e.stopPropagation();
+        e.preventDefault();
         break;
       case 'mouseup':
-        this.prop.mouse = e;
+      case 'touchend':
+        this.prop.mouse = e.changedTouches?.[0] || e;
         this.prop.mouseDown = false;
         this.__click();
+        if (e.changedTouches) {
+          this.prop.mouse = null;
+          this.__update();
+        }
         e.stopPropagation();
+        e.preventDefault();
         break;
       case 'mouseleave':
         this.prop.mouse = null;

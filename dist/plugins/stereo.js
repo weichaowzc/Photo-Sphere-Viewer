@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -218,11 +218,14 @@
        * @private
        */
 
-      _this.gyroscope = psv.getPlugin('gyroscope');
+      _this.gyroscope = null;
+      /**
+       * @type {PSV.plugins.MarkersPlugin}
+       * @readonly
+       * @private
+       */
 
-      if (!_this.gyroscope) {
-        throw new photoSphereViewer.PSVError('Stereo plugin requires the Gyroscope plugin');
-      }
+      _this.markers = null;
       /**
        * @member {Object}
        * @protected
@@ -232,24 +235,12 @@
        * @property {WakeLockSentinel} wakeLock
        */
 
-
       _this.prop = {
-        isSupported: _this.gyroscope.prop.isSupported,
+        isSupported: false,
         renderer: null,
         noSleep: null,
         wakeLock: null
       };
-      /**
-       * @type {PSV.plugins.MarkersPlugin}
-       * @private
-       */
-
-      _this.markers = _this.psv.getPlugin('markers');
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, _assertThisInitialized(_this));
-
       return _this;
     }
     /**
@@ -259,14 +250,29 @@
 
     var _proto = StereoPlugin.prototype;
 
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.markers = this.psv.getPlugin('markers');
+      this.gyroscope = this.psv.getPlugin('gyroscope');
+
+      if (!this.gyroscope) {
+        throw new photoSphereViewer.PSVError('Stereo plugin requires the Gyroscope plugin');
+      }
+
+      this.prop.isSupported = this.gyroscope.prop.isSupported;
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
+    }
+    /**
+     * @package
+     */
+    ;
+
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
       this.stop();
-
-      if (this.prop.noSleep) {
-        delete this.prop.noSleep;
-      }
 
       _AbstractPlugin.prototype.destroy.call(this);
     }
@@ -317,15 +323,15 @@
       this.__lockOrientation();
 
       return this.gyroscope.start().then(function () {
+        var _this2$markers;
+
         // switch renderer
         _this2.prop.renderer = _this2.psv.renderer.renderer;
         _this2.psv.renderer.renderer = new StereoEffect(_this2.psv.renderer.renderer);
 
         _this2.psv.needsUpdate();
 
-        if (_this2.markers) {
-          _this2.markers.hide();
-        }
+        (_this2$markers = _this2.markers) == null ? void 0 : _this2$markers.hide();
 
         _this2.psv.navbar.hide();
 
@@ -353,14 +359,12 @@
 
     _proto.stop = function stop() {
       if (this.isEnabled()) {
+        var _this$markers;
+
         this.psv.renderer.renderer = this.prop.renderer;
         this.prop.renderer = null;
         this.psv.needsUpdate();
-
-        if (this.markers) {
-          this.markers.show();
-        }
-
+        (_this$markers = this.markers) == null ? void 0 : _this$markers.show();
         this.psv.navbar.show();
 
         this.__unlockOrientation();

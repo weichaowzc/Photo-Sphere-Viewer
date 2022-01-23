@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -320,13 +320,6 @@
        */
 
       _this.controls = null;
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, _assertThisInitialized(_this));
-
       return _this;
     }
     /**
@@ -336,13 +329,24 @@
 
     var _proto = GyroscopePlugin.prototype;
 
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
+    }
+    /**
+     * @package
+     */
+    ;
+
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.STOP_ALL, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_ROTATE, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
       this.stop();
       delete this.controls;
-      delete this.prop;
 
       _AbstractPlugin.prototype.destroy.call(this);
     }

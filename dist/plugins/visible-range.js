@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,24 @@
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VisibleRangePlugin = {}), global.THREE, global.PhotoSphereViewer));
 })(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
+
+  function _extends() {
+    _extends = Object.assign || function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+
+      return target;
+    };
+
+    return _extends.apply(this, arguments);
+  }
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -24,14 +42,6 @@
     };
 
     return _setPrototypeOf(o, p);
-  }
-
-  function _assertThisInitialized(self) {
-    if (self === void 0) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    }
-
-    return self;
   }
 
   /**
@@ -63,28 +73,11 @@
        * @private
        */
 
-      _this.config = {
+      _this.config = _extends({
         latitudeRange: null,
         longitudeRange: null,
         usePanoData: false
-      };
-
-      if (options) {
-        _this.config.usePanoData = !!options.usePanoData;
-
-        _this.setLatitudeRange(options.latitudeRange);
-
-        _this.setLongitudeRange(options.longitudeRange);
-      }
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, _assertThisInitialized(_this));
-
+      }, options);
       return _this;
     }
     /**
@@ -94,8 +87,25 @@
 
     var _proto = VisibleRangePlugin.prototype;
 
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
+      this.setLatitudeRange(this.config.latitudeRange);
+      this.setLongitudeRange(this.config.longitudeRange);
+    }
+    /**
+     * @package
+     */
+    ;
+
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
+      this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION, this);
       this.psv.off(photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION, this);
@@ -109,36 +119,39 @@
     ;
 
     _proto.handleEvent = function handleEvent(e) {
-      if (e.type === photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION) {
-        var _this$applyRanges = this.applyRanges(e.value),
-            rangedPosition = _this$applyRanges.rangedPosition;
+      switch (e.type) {
+        case photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ANIMATE_POSITION:
+        case photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION:
+          return this.applyRanges(e.value).rangedPosition;
 
-        return rangedPosition;
-      } else if (e.type === photoSphereViewer.CONSTANTS.CHANGE_EVENTS.GET_ROTATE_POSITION) {
-        var _this$applyRanges2 = this.applyRanges(e.value),
-            _rangedPosition = _this$applyRanges2.rangedPosition,
-            sidesReached = _this$applyRanges2.sidesReached;
+        case photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED:
+          var _this$applyRanges = this.applyRanges(e.args[0]),
+              sidesReached = _this$applyRanges.sidesReached;
 
-        if (photoSphereViewer.utils.intersect(['left', 'right'], sidesReached).length > 0 && this.psv.isAutorotateEnabled()) {
-          this.__reverseAutorotate();
+          if ((sidesReached.left || sidesReached.right) && this.psv.isAutorotateEnabled()) {
+            this.__reverseAutorotate(sidesReached.left, sidesReached.right);
+          }
 
-          return e.value;
-        }
+          break;
 
-        return _rangedPosition;
-      } else if (e.type === photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED) {
-        if (this.config.usePanoData) {
-          this.setRangesFromPanoData();
-        }
-      } else if (e.type === photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED) {
-        var currentPosition = this.psv.getPosition();
+        case photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED:
+          if (this.config.usePanoData) {
+            this.setRangesFromPanoData();
+          }
 
-        var _this$applyRanges3 = this.applyRanges(currentPosition),
-            _rangedPosition2 = _this$applyRanges3.rangedPosition;
+          break;
 
-        if (currentPosition.longitude !== _rangedPosition2.longitude || currentPosition.latitude !== _rangedPosition2.latitude) {
-          this.psv.rotate(_rangedPosition2);
-        }
+        case photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED:
+          var currentPosition = this.psv.getPosition();
+
+          var _this$applyRanges2 = this.applyRanges(currentPosition),
+              rangedPosition = _this$applyRanges2.rangedPosition;
+
+          if (currentPosition.longitude !== rangedPosition.longitude || currentPosition.latitude !== rangedPosition.latitude) {
+            this.psv.rotate(rangedPosition);
+          }
+
+          break;
       }
     }
     /**
@@ -259,7 +272,7 @@
         longitude: position.longitude,
         latitude: position.latitude
       };
-      var sidesReached = [];
+      var sidesReached = {};
       var range;
       var offset;
 
@@ -275,18 +288,18 @@
             if (position.longitude > range[0] / 2 + range[1] / 2) {
               // detect which side we are closer too
               rangedPosition.longitude = range[0];
-              sidesReached.push('left');
+              sidesReached.left = true;
             } else {
               rangedPosition.longitude = range[1];
-              sidesReached.push('right');
+              sidesReached.right = true;
             }
           }
         } else if (position.longitude < range[0]) {
           rangedPosition.longitude = range[0];
-          sidesReached.push('left');
+          sidesReached.left = true;
         } else if (position.longitude > range[1]) {
           rangedPosition.longitude = range[1];
-          sidesReached.push('right');
+          sidesReached.right = true;
         }
       }
 
@@ -298,10 +311,10 @@
 
         if (position.latitude < range[0]) {
           rangedPosition.latitude = range[0];
-          sidesReached.push('bottom');
+          sidesReached.bottom = true;
         } else if (position.latitude > range[1]) {
           rangedPosition.latitude = range[1];
-          sidesReached.push('top');
+          sidesReached.top = true;
         }
       }
 
@@ -316,41 +329,14 @@
      */
     ;
 
-    _proto.__reverseAutorotate = function __reverseAutorotate() {
-      var _this2 = this;
+    _proto.__reverseAutorotate = function __reverseAutorotate(left, right) {
+      // reverse already ongoing
+      if (left && this.psv.config.autorotateSpeed > 0 || right && this.psv.config.autorotateSpeed < 0) {
+        return;
+      }
 
-      var newSpeed = -this.psv.config.autorotateSpeed;
-      var range = this.config.longitudeRange;
-      this.config.longitudeRange = null;
-      new photoSphereViewer.Animation({
-        properties: {
-          speed: {
-            start: this.psv.config.autorotateSpeed,
-            end: 0
-          }
-        },
-        duration: 300,
-        easing: 'inSine',
-        onTick: function onTick(properties) {
-          _this2.psv.config.autorotateSpeed = properties.speed;
-        }
-      }).then(function () {
-        return new photoSphereViewer.Animation({
-          properties: {
-            speed: {
-              start: 0,
-              end: newSpeed
-            }
-          },
-          duration: 300,
-          easing: 'outSine',
-          onTick: function onTick(properties) {
-            _this2.psv.config.autorotateSpeed = properties.speed;
-          }
-        });
-      }).then(function () {
-        _this2.config.longitudeRange = range;
-      });
+      this.psv.config.autorotateSpeed = -this.psv.config.autorotateSpeed;
+      this.psv.startAutorotate(true);
     };
 
     return VisibleRangePlugin;

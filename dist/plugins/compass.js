@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -118,7 +118,7 @@
        * @private
        */
 
-      _this.markers = _this.psv.getPlugin('markers');
+      _this.markers = null;
       /**
        * @member {HTMLElement}
        * @readonly
@@ -138,6 +138,16 @@
       if (_this.config.position[1] === 'center') {
         _this.container.style.marginLeft = "calc(-" + _this.config.size + " / 2)";
       }
+      /**
+       * @member {HTMLCanvasElement}
+       * @readonly
+       * @private
+       */
+
+
+      _this.canvas = document.createElement('canvas');
+
+      _this.container.appendChild(_this.canvas);
 
       if (_this.config.navigation) {
         _this.container.addEventListener('mouseenter', _assertThisInitialized(_this));
@@ -149,26 +159,12 @@
         _this.container.addEventListener('mousedown', _assertThisInitialized(_this));
 
         _this.container.addEventListener('mouseup', _assertThisInitialized(_this));
-      }
 
-      _this.psv.container.appendChild(_this.container);
-      /**
-       * @member {HTMLCanvasElement}
-       * @readonly
-       * @private
-       */
+        _this.container.addEventListener('touchstart', _assertThisInitialized(_this));
 
+        _this.container.addEventListener('touchmove', _assertThisInitialized(_this));
 
-      _this.canvas = document.createElement('canvas');
-      _this.canvas.width = _this.container.clientWidth * photoSphereViewer.SYSTEM.pixelRatio;
-      _this.canvas.height = _this.container.clientWidth * photoSphereViewer.SYSTEM.pixelRatio;
-
-      _this.container.appendChild(_this.canvas);
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.RENDER, _assertThisInitialized(_this));
-
-      if (_this.markers) {
-        _this.markers.on('set-markers', _assertThisInitialized(_this));
+        _this.container.addEventListener('touchend', _assertThisInitialized(_this));
       }
 
       return _this;
@@ -179,6 +175,24 @@
 
 
     var _proto = CompassPlugin.prototype;
+
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.markers = this.psv.getPlugin('markers');
+      this.psv.container.appendChild(this.container);
+      this.canvas.width = this.container.clientWidth * photoSphereViewer.SYSTEM.pixelRatio;
+      this.canvas.height = this.container.clientWidth * photoSphereViewer.SYSTEM.pixelRatio;
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.RENDER, this);
+
+      if (this.markers) {
+        this.markers.on('set-markers', this);
+      }
+    }
+    /**
+     * @package
+     */
+    ;
 
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.RENDER, this);
@@ -199,6 +213,8 @@
     ;
 
     _proto.handleEvent = function handleEvent(e) {
+      var _e$changedTouches, _e$changedTouches2;
+
       switch (e.type) {
         case photoSphereViewer.CONSTANTS.EVENTS.RENDER:
           this.__update();
@@ -218,7 +234,8 @@
 
         case 'mouseenter':
         case 'mousemove':
-          this.prop.mouse = e;
+        case 'touchmove':
+          this.prop.mouse = ((_e$changedTouches = e.changedTouches) == null ? void 0 : _e$changedTouches[0]) || e;
 
           if (this.prop.mouseDown) {
             this.__click();
@@ -227,19 +244,31 @@
           }
 
           e.stopPropagation();
+          e.preventDefault();
           break;
 
         case 'mousedown':
+        case 'touchstart':
           this.prop.mouseDown = true;
+          e.stopPropagation();
+          e.preventDefault();
           break;
 
         case 'mouseup':
-          this.prop.mouse = e;
+        case 'touchend':
+          this.prop.mouse = ((_e$changedTouches2 = e.changedTouches) == null ? void 0 : _e$changedTouches2[0]) || e;
           this.prop.mouseDown = false;
 
           this.__click();
 
+          if (e.changedTouches) {
+            this.prop.mouse = null;
+
+            this.__update();
+          }
+
           e.stopPropagation();
+          e.preventDefault();
           break;
 
         case 'mouseleave':

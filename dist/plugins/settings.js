@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -265,7 +265,17 @@
 
     var _proto = SettingsPlugin.prototype;
 
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+    }
+    /**
+     * @package
+     */
+    ;
+
     _proto.destroy = function destroy() {
+      delete this.settings;
+
       _AbstractPlugin.prototype.destroy.call(this);
     }
     /**

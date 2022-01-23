@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,24 @@
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.CubemapAdapter = {}), global.THREE, global.PhotoSphereViewer));
 })(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
+
+  function _extends() {
+    _extends = Object.assign || function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+
+      return target;
+    };
+
+    return _extends.apply(this, arguments);
+  }
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -37,9 +55,15 @@
    * @property {string} bottom
    */
 
+  /**
+   * @typedef {Object} PSV.adapters.CubemapAdapter.Options
+   * @property {boolean} [flipTopBottom=false] - set to true if the top and bottom faces are not correctly oriented
+   */
+
   var CUBE_VERTICES = 8;
   var CUBE_MAP = [0, 2, 4, 5, 3, 1];
   var CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
+  var VECTOR2D_CENTER = new THREE.Vector2(0.5, 0.5);
   /**
    * @summary Adapter for cubemaps
    * @memberof PSV.adapters
@@ -48,19 +72,35 @@
   var CubemapAdapter = /*#__PURE__*/function (_AbstractAdapter) {
     _inheritsLoose(CubemapAdapter, _AbstractAdapter);
 
-    function CubemapAdapter() {
-      return _AbstractAdapter.apply(this, arguments) || this;
+    /**
+     * @param {PSV.Viewer} psv
+     * @param {PSV.adapters.CubemapAdapter.Options} options
+     */
+    function CubemapAdapter(psv, options) {
+      var _this;
+
+      _this = _AbstractAdapter.call(this, psv) || this;
+      /**
+       * @member {PSV.adapters.CubemapAdapter.Options}
+       * @private
+       */
+
+      _this.config = _extends({
+        flipTopBottom: false
+      }, options);
+      return _this;
     }
-
-    var _proto = CubemapAdapter.prototype;
-
     /**
      * @override
      * @param {string[] | PSV.adapters.CubemapAdapter.Cubemap} panorama
      * @returns {Promise.<PSV.TextureData>}
      */
+
+
+    var _proto = CubemapAdapter.prototype;
+
     _proto.loadTexture = function loadTexture(panorama) {
-      var _this = this;
+      var _this2 = this;
 
       var cleanPanorama = [];
 
@@ -96,12 +136,12 @@
       var progress = [0, 0, 0, 0, 0, 0];
 
       var _loop = function _loop(_i) {
-        promises.push(_this.psv.textureLoader.loadImage(cleanPanorama[_i], function (p) {
+        promises.push(_this2.psv.textureLoader.loadImage(cleanPanorama[_i], function (p) {
           progress[_i] = p;
 
-          _this.psv.loader.setProgress(photoSphereViewer.utils.sum(progress) / 6);
+          _this2.psv.loader.setProgress(photoSphereViewer.utils.sum(progress) / 6);
         }).then(function (img) {
-          return _this.__createCubemapTexture(img);
+          return _this2.__createCubemapTexture(img);
         }));
       };
 
@@ -176,6 +216,11 @@
       for (var i = 0; i < 6; i++) {
         if (mesh.material[i].map) {
           mesh.material[i].map.dispose();
+        }
+
+        if (this.config.flipTopBottom && (i === 2 || i === 3)) {
+          texture[i].center = VECTOR2D_CENTER;
+          texture[i].rotation = Math.PI;
         }
 
         mesh.material[i].map = texture[i];

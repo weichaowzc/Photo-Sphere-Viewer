@@ -1,5 +1,5 @@
 import { Event } from 'uevent';
-import { ViewerOptions, AbstractPlugin, Viewer } from 'photo-sphere-viewer';
+import { ViewerOptions, Position, AbstractPlugin, Viewer } from 'photo-sphere-viewer';
 import { Marker, MarkerProperties } from 'photo-sphere-viewer/dist/plugins/markers';
 
 /**
@@ -38,6 +38,15 @@ type VirtualTourArrowStyle = {
   scale?: [number, number];
 };
 
+/**
+ * @summary Data associated to the "node-changed" event
+ */
+type VirtualTourNodeChangedData = {
+  fromNode?: VirtualTourNode,
+  fromLink?: VirtualTourNodeLink,
+  fromLinkPosition?: Position,
+};
+
 type VirtualTourPluginPluginOptions = {
   dataMode?: 'client' | 'server';
   positionMode?: 'manual' | 'gps';
@@ -47,15 +56,16 @@ type VirtualTourPluginPluginOptions = {
   getLinks?: (nodeId: string) => VirtualTourNodeLink[] | Promise<VirtualTourNodeLink[]>;
   startNodeId?: string;
   preload?: boolean | ((node: VirtualTourNode, link: VirtualTourNodeLink) => boolean);
+  rotateSpeed?: boolean | string | number;
   markerStyle?: MarkerProperties;
   arrowStyle?: VirtualTourArrowStyle;
   markerLatOffset?: number;
   arrowPosition?: 'top' | 'bottom';
-}
+};
 
 declare const EVENTS: {
   NODE_CHANGED: 'node-changed',
-  RENDER_NODES_LIST: 'render-nodes-list,
+  RENDER_NODES_LIST: 'render-nodes-list',
 };
 
 /**
@@ -94,13 +104,13 @@ declare class VirtualTourPlugin extends AbstractPlugin {
   /**
    * @summary Triggered when the current node changes
    */
-  on(e: 'node-changed', cb: (e: Event, node: Node) => void): this;
+  on(e: 'node-changed', cb: (e: Event, nodeId: VirtualTourNode['id'], data: VirtualTourNodeChangedData) => void): this;
 
   /**
    * @summary Used to alter the list of nodes displayed on the side-panel
    */
-  on(e: 'render-nodes-list', cb: (e: Event, nodes: Node[]) => Node[]): this;
+  on(e: 'render-nodes-list', cb: (e: Event, nodes: VirtualTourNode[]) => VirtualTourNode[]): this;
 
 }
 
-export { EVENTS, VirtualTourArrowStyle, VirtualTourNode, VirtualTourNodeLink, VirtualTourPlugin, VirtualTourPluginPluginOptions };
+export { EVENTS, VirtualTourArrowStyle, VirtualTourNode, VirtualTourNodeChangedData, VirtualTourNodeLink, VirtualTourPlugin, VirtualTourPluginPluginOptions };

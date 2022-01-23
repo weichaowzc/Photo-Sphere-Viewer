@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer'), require('three')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer', 'three'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VirtualTourPlugin = {}), global.PhotoSphereViewer, global.THREE));
-})(this, (function (exports, photoSphereViewer, THREE) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.VirtualTourPlugin = {}), global.THREE, global.PhotoSphereViewer));
+})(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -648,12 +648,21 @@
    * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks]
    * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
    * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
+   * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
    * @property {boolean} [listButton] - adds a button to show the list of nodes, defaults to `true` only in client data mode
    * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass, defaults to `true` on in markers render mode
    * @property {PSV.plugins.MarkersPlugin.Properties} [markerStyle] - global marker style
    * @property {PSV.plugins.VirtualTourPlugin.ArrowStyle} [arrowStyle] - global arrow style
    * @property {number} [markerLatOffset=-0.1] - (GPS & Markers mode) latitude offset applied to link markers, to compensate for viewer height
    * @property {'top'|'bottom'} [arrowPosition='bottom'] - (3D mode) arrows vertical position
+   */
+
+  /**
+   * @typedef {Object} PSV.plugins.VirtualTourPlugin.NodeChangedData
+   * @summary Data associated to the "node-changed" event
+   * @type {PSV.plugins.VirtualTourPlugin.Node} [fromNode] - The previous node
+   * @type {PSV.plugins.VirtualTourPlugin.NodeLink} [fromLink] - The link that was clicked in the previous node
+   * @type {PSV.Position} [fromLinkPosition] - The position of the link on the previous node
    */
   // add markers buttons
 
@@ -708,37 +717,32 @@
         positionMode: MODE_MANUAL,
         renderMode: MODE_3D,
         preload: false,
+        rotateSpeed: '20rpm',
         markerLatOffset: -0.1,
         arrowPosition: 'bottom',
         linksOnCompass: (options == null ? void 0 : options.renderMode) === MODE_MARKERS,
         listButton: (options == null ? void 0 : options.dataMode) !== MODE_SERVER
       }, options, {
         markerStyle: _extends({}, DEFAULT_MARKER, options == null ? void 0 : options.markerStyle),
-        arrowStyle: _extends({}, DEFAULT_ARROW, options == null ? void 0 : options.arrowStyle),
-        nodes: null
+        arrowStyle: _extends({}, DEFAULT_ARROW, options == null ? void 0 : options.arrowStyle)
       });
       /**
        * @type {PSV.plugins.MarkersPlugin}
        * @private
        */
 
-      _this.markers = _this.psv.getPlugin('markers');
+      _this.markers = null;
       /**
        * @type {PSV.plugins.CompassPlugin}
        * @private
        */
 
-      _this.compass = _this.psv.getPlugin('compass');
-
-      if (!_this.is3D() && !_this.markers) {
-        throw new photoSphereViewer.PSVError('Tour plugin requires the Markers plugin in markers mode');
-      }
+      _this.compass = null;
       /**
        * @type {PSV.plugins.VirtualTourPlugin.AbstractDatasource}
        */
 
-
-      _this.datasource = _this.isServerSide() ? new ServerSideDatasource(_assertThisInitialized(_this)) : new ClientSideDatasource(_assertThisInitialized(_this));
+      _this.datasource = null;
       /**
        * @type {external:THREE.Group}
        * @private
@@ -752,42 +756,65 @@
         localLight.position.set(2, 0, 0);
 
         _this.arrowsGroup.add(localLight);
-
-        _this.psv.once(photoSphereViewer.CONSTANTS.EVENTS.READY, function () {
-          _this.__positionArrows();
-
-          _this.psv.renderer.scene.add(_this.arrowsGroup);
-
-          var ambientLight = new THREE.AmbientLight(0xffffff, 1);
-
-          _this.psv.renderer.scene.add(ambientLight);
-
-          _this.psv.needsUpdate();
-
-          _this.psv.container.addEventListener('mousemove', _assertThisInitialized(_this));
-        });
-
-        _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, _assertThisInitialized(_this));
-
-        _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
-
-        _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, _assertThisInitialized(_this));
-      } else {
-        _this.markers.on('select-marker', _assertThisInitialized(_this));
-      }
-
-      if (_this.isServerSide()) {
-        if (_this.config.startNodeId) {
-          _this.setCurrentNode(_this.config.startNodeId);
-        }
-      } else if (options != null && options.nodes) {
-        _this.setNodes(options.nodes, _this.config.startNodeId);
       }
 
       return _this;
     }
+    /**
+     * @package
+     */
+
 
     var _proto = VirtualTourPlugin.prototype;
+
+    _proto.init = function init() {
+      var _this2 = this;
+
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.markers = this.psv.getPlugin('markers');
+      this.compass = this.psv.getPlugin('compass');
+
+      if (!this.is3D() && !this.markers) {
+        throw new photoSphereViewer.PSVError('Tour plugin requires the Markers plugin in markers mode');
+      }
+
+      this.datasource = this.isServerSide() ? new ServerSideDatasource(this) : new ClientSideDatasource(this);
+
+      if (this.is3D()) {
+        this.psv.once(photoSphereViewer.CONSTANTS.EVENTS.READY, function () {
+          _this2.__positionArrows();
+
+          _this2.psv.renderer.scene.add(_this2.arrowsGroup);
+
+          var ambientLight = new THREE.AmbientLight(0xffffff, 1);
+
+          _this2.psv.renderer.scene.add(ambientLight);
+
+          _this2.psv.needsUpdate();
+
+          _this2.psv.container.addEventListener('mousemove', _this2);
+        });
+        this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, this);
+        this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
+        this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
+      } else {
+        this.markers.on('select-marker', this);
+      }
+
+      if (this.isServerSide()) {
+        if (this.config.startNodeId) {
+          this.setCurrentNode(this.config.startNodeId);
+        }
+      } else if (this.config.nodes) {
+        this.setNodes(this.config.nodes, this.config.startNodeId);
+        delete this.config.nodes;
+      }
+    }
+    /**
+     * @package
+     */
+    ;
 
     _proto.destroy = function destroy() {
       if (this.markers) {
@@ -806,23 +833,23 @@
       delete this.preload;
       delete this.datasource;
       delete this.markers;
-      delete this.prop;
+      delete this.compass;
       delete this.arrowsGroup;
 
       _AbstractPlugin.prototype.destroy.call(this);
     };
 
     _proto.handleEvent = function handleEvent(e) {
-      var _e$args$0$data, _e$args$0$data$LINK_D, _this$prop$currentArr, _this$prop$currentArr2, _this$prop$currentArr3;
+      var _e$args$0$data, _this$prop$currentArr, _this$prop$currentArr2;
 
-      var nodeId;
+      var link;
 
       switch (e.type) {
         case 'select-marker':
-          nodeId = (_e$args$0$data = e.args[0].data) == null ? void 0 : (_e$args$0$data$LINK_D = _e$args$0$data[LINK_DATA]) == null ? void 0 : _e$args$0$data$LINK_D.nodeId;
+          link = (_e$args$0$data = e.args[0].data) == null ? void 0 : _e$args$0$data[LINK_DATA];
 
-          if (nodeId) {
-            this.setCurrentNode(nodeId);
+          if (link) {
+            this.setCurrentNode(link.nodeId, link);
           }
 
           break;
@@ -836,21 +863,21 @@
           break;
 
         case photoSphereViewer.CONSTANTS.EVENTS.CLICK:
-          nodeId = (_this$prop$currentArr = this.prop.currentArrow) == null ? void 0 : (_this$prop$currentArr2 = _this$prop$currentArr.userData) == null ? void 0 : (_this$prop$currentArr3 = _this$prop$currentArr2[LINK_DATA]) == null ? void 0 : _this$prop$currentArr3.nodeId;
+          link = (_this$prop$currentArr = this.prop.currentArrow) == null ? void 0 : (_this$prop$currentArr2 = _this$prop$currentArr.userData) == null ? void 0 : _this$prop$currentArr2[LINK_DATA];
 
-          if (!nodeId) {
-            var _this$psv$dataHelper$, _arrow$userData, _arrow$userData$LINK_;
+          if (!link) {
+            var _this$psv$dataHelper$, _arrow$userData;
 
             // on touch screens "currentArrow" may be null (no hover state)
             var arrow = (_this$psv$dataHelper$ = this.psv.dataHelper.getIntersection({
               x: e.args[0].viewerX,
               y: e.args[0].viewerY
             }, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$.object;
-            nodeId = arrow == null ? void 0 : (_arrow$userData = arrow.userData) == null ? void 0 : (_arrow$userData$LINK_ = _arrow$userData[LINK_DATA]) == null ? void 0 : _arrow$userData$LINK_.nodeId;
+            link = arrow == null ? void 0 : (_arrow$userData = arrow.userData) == null ? void 0 : _arrow$userData[LINK_DATA];
           }
 
-          if (nodeId) {
-            this.setCurrentNode(nodeId);
+          if (link) {
+            this.setCurrentNode(link.nodeId, link);
           }
 
           break;
@@ -915,110 +942,133 @@
     /**
      * @summary Changes the current node
      * @param {string} nodeId
+     * @param {PSV.plugins.VirtualTourPlugin.NodeLink} [fromLink]
      * @returns {Promise<boolean>} resolves false if the loading was aborted by another call
      */
     ;
 
-    _proto.setCurrentNode = function setCurrentNode(nodeId) {
+    _proto.setCurrentNode = function setCurrentNode(nodeId, fromLink) {
       var _this$prop$currentNod,
-          _this2 = this;
+          _this3 = this;
+
+      if (fromLink === void 0) {
+        fromLink = null;
+      }
 
       if (nodeId === ((_this$prop$currentNod = this.prop.currentNode) == null ? void 0 : _this$prop$currentNod.id)) {
         return Promise.resolve(true);
       }
 
-      this.psv.loader.show();
       this.psv.hideError();
-      this.prop.loadingNode = nodeId; // if this node is already preloading, wait for it
-
-      return Promise.resolve(this.preload[nodeId]).then(function () {
-        if (_this2.prop.loadingNode !== nodeId) {
+      this.prop.loadingNode = nodeId;
+      var fromNode = this.prop.currentNode;
+      var fromLinkPosition = fromNode && fromLink ? this.__getLinkPosition(fromNode, fromLink) : null;
+      return Promise.all([// if this node is already preloading, wait for it
+      Promise.resolve(this.preload[nodeId]).then(function () {
+        if (_this3.prop.loadingNode !== nodeId) {
           return Promise.reject(photoSphereViewer.utils.getAbortError());
         }
 
-        _this2.psv.textureLoader.abortLoading();
+        _this3.psv.textureLoader.abortLoading();
 
-        return _this2.datasource.loadNode(nodeId);
-      }).then(function (node) {
-        var _this2$markers, _this2$compass;
+        return _this3.datasource.loadNode(nodeId);
+      }), Promise.resolve(fromLinkPosition ? this.config.rotateSpeed : false).then(function (speed) {
+        if (!speed) {
+          return Promise.resolve();
+        } else {
+          return _this3.psv.animate(_extends({}, fromLinkPosition, {
+            speed: speed
+          }));
+        }
+      }).then(function () {
+        _this3.psv.loader.show();
+      })]).then(function (_ref) {
+        var _this3$markers, _this3$compass;
 
-        if (_this2.prop.loadingNode !== nodeId) {
+        var node = _ref[0];
+
+        if (_this3.prop.loadingNode !== nodeId) {
           return Promise.reject(photoSphereViewer.utils.getAbortError());
         }
 
-        _this2.psv.navbar.setCaption("<em>" + _this2.psv.config.lang.loading + "</em>");
+        _this3.psv.navbar.setCaption("<em>" + _this3.psv.config.lang.loading + "</em>");
 
-        _this2.prop.currentNode = node;
+        _this3.prop.currentNode = node;
 
-        if (_this2.prop.currentTooltip) {
-          _this2.prop.currentTooltip.hide();
+        if (_this3.prop.currentTooltip) {
+          _this3.prop.currentTooltip.hide();
 
-          _this2.prop.currentTooltip = null;
+          _this3.prop.currentTooltip = null;
         }
 
-        if (_this2.is3D()) {
-          var _this2$arrowsGroup;
+        if (_this3.is3D()) {
+          var _this3$arrowsGroup;
 
-          (_this2$arrowsGroup = _this2.arrowsGroup).remove.apply(_this2$arrowsGroup, _this2.arrowsGroup.children.filter(function (o) {
+          (_this3$arrowsGroup = _this3.arrowsGroup).remove.apply(_this3$arrowsGroup, _this3.arrowsGroup.children.filter(function (o) {
             return o.type === 'Mesh';
           }));
 
-          _this2.prop.currentArrow = null;
+          _this3.prop.currentArrow = null;
         }
 
-        (_this2$markers = _this2.markers) == null ? void 0 : _this2$markers.clearMarkers();
-        (_this2$compass = _this2.compass) == null ? void 0 : _this2$compass.clearHotspots();
-        return Promise.all([_this2.psv.setPanorama(node.panorama, {
+        (_this3$markers = _this3.markers) == null ? void 0 : _this3$markers.clearMarkers();
+        (_this3$compass = _this3.compass) == null ? void 0 : _this3$compass.clearHotspots();
+        return Promise.all([_this3.psv.setPanorama(node.panorama, {
           panoData: node.panoData,
           sphereCorrection: node.sphereCorrection
         }).catch(function (err) {
           // the error is already displayed by the core
           return Promise.reject(photoSphereViewer.utils.isAbortError(err) ? err : null);
-        }), _this2.datasource.loadLinkedNodes(nodeId)]);
+        }), _this3.datasource.loadLinkedNodes(nodeId)]);
       }).then(function () {
-        if (_this2.prop.loadingNode !== nodeId) {
+        if (_this3.prop.loadingNode !== nodeId) {
           return Promise.reject(photoSphereViewer.utils.getAbortError());
         }
 
-        var node = _this2.prop.currentNode;
+        var node = _this3.prop.currentNode;
 
         if (node.markers) {
-          if (_this2.markers) {
-            _this2.markers.setMarkers(node.markers);
+          if (_this3.markers) {
+            _this3.markers.setMarkers(node.markers);
           } else {
             photoSphereViewer.utils.logWarn("Node " + node.id + " markers ignored because the plugin is not loaded.");
           }
         }
 
-        _this2.__renderLinks(node);
+        _this3.__renderLinks(node);
 
-        _this2.__preload(node);
+        _this3.__preload(node);
 
-        _this2.psv.navbar.setCaption(node.caption || _this2.psv.config.caption);
+        _this3.psv.navbar.setCaption(node.caption || _this3.psv.config.caption);
         /**
          * @event node-changed
          * @memberof PSV.plugins.VirtualTourPlugin
          * @summary Triggered when the current node is changed
          * @param {string} nodeId
+         * @param {PSV.plugins.VirtualTourPlugin.NodeChangedData} data
          */
 
 
-        _this2.trigger(EVENTS.NODE_CHANGED, nodeId);
+        _this3.trigger(EVENTS.NODE_CHANGED, nodeId, {
+          fromNode: fromNode,
+          fromLink: fromLink,
+          fromLinkPosition: fromLinkPosition
+        });
 
-        _this2.prop.loadingNode = null;
+        _this3.prop.loadingNode = null;
         return true;
       }).catch(function (err) {
         if (photoSphereViewer.utils.isAbortError(err)) {
           return Promise.resolve(false);
         } else if (err) {
-          _this2.psv.showError(_this2.psv.config.lang.loadError);
+          _this3.psv.showError(_this3.psv.config.lang.loadError);
         }
 
-        _this2.psv.loader.hide();
+        _this3.psv.loader.hide();
 
-        _this2.psv.navbar.setCaption('');
+        _this3.psv.navbar.setCaption('');
 
-        _this2.prop.loadingNode = null;
+        _this3.prop.loadingNode = null;
         return Promise.reject(err);
       });
     }
@@ -1030,42 +1080,42 @@
     ;
 
     _proto.__renderLinks = function __renderLinks(node) {
-      var _this3 = this;
+      var _this4 = this;
 
       var positions = [];
       node.links.forEach(function (link) {
-        var position = _this3.__getLinkPosition(node, link);
+        var position = _this4.__getLinkPosition(node, link);
 
         positions.push(position);
 
-        if (_this3.is3D()) {
+        if (_this4.is3D()) {
           var _link$arrowStyle, _link$arrowStyle2, _mesh$userData;
 
           var arrow = ARROW_GEOM.clone();
           var mat = new THREE.MeshLambertMaterial({
             transparent: true,
-            opacity: ((_link$arrowStyle = link.arrowStyle) == null ? void 0 : _link$arrowStyle.opacity) || _this3.config.arrowStyle.opacity
+            opacity: ((_link$arrowStyle = link.arrowStyle) == null ? void 0 : _link$arrowStyle.opacity) || _this4.config.arrowStyle.opacity
           });
           var mesh = new THREE.Mesh(arrow, mat);
-          setMeshColor(mesh, ((_link$arrowStyle2 = link.arrowStyle) == null ? void 0 : _link$arrowStyle2.color) || _this3.config.arrowStyle.color);
+          setMeshColor(mesh, ((_link$arrowStyle2 = link.arrowStyle) == null ? void 0 : _link$arrowStyle2.color) || _this4.config.arrowStyle.color);
           mesh.userData = (_mesh$userData = {}, _mesh$userData[LINK_DATA] = link, _mesh$userData.longitude = position.longitude, _mesh$userData);
           mesh.rotation.order = 'YXZ';
           mesh.rotateY(-position.longitude);
 
-          _this3.psv.dataHelper.sphericalCoordsToVector3({
+          _this4.psv.dataHelper.sphericalCoordsToVector3({
             longitude: position.longitude,
             latitude: 0
           }, mesh.position).multiplyScalar(1 / photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
 
-          _this3.arrowsGroup.add(mesh);
+          _this4.arrowsGroup.add(mesh);
         } else {
           var _data;
 
-          if (_this3.isGps()) {
-            position.latitude += _this3.config.markerLatOffset;
+          if (_this4.isGps()) {
+            position.latitude += _this4.config.markerLatOffset;
           }
 
-          _this3.markers.addMarker(_extends({}, _this3.config.markerStyle, link.markerStyle, {
+          _this4.markers.addMarker(_extends({}, _this4.config.markerStyle, link.markerStyle, {
             id: "tour-link-" + link.nodeId,
             tooltip: link.name,
             hideList: true,
@@ -1211,7 +1261,7 @@
     ;
 
     _proto.__preload = function __preload(node) {
-      var _this4 = this;
+      var _this5 = this;
 
       if (!this.config.preload || !this.isServerSide()) {
         return;
@@ -1219,20 +1269,20 @@
 
       this.preload[node.id] = true;
       this.prop.currentNode.links.filter(function (link) {
-        return !_this4.preload[link.nodeId];
+        return !_this5.preload[link.nodeId];
       }).filter(function (link) {
-        if (typeof _this4.config.preload === 'function') {
-          return _this4.config.preload(_this4.prop.currentNode, link);
+        if (typeof _this5.config.preload === 'function') {
+          return _this5.config.preload(_this5.prop.currentNode, link);
         } else {
           return true;
         }
       }).forEach(function (link) {
-        _this4.preload[link.nodeId] = _this4.datasource.loadNode(link.nodeId).then(function (linkNode) {
-          return _this4.psv.textureLoader.preloadPanorama(linkNode.panorama);
+        _this5.preload[link.nodeId] = _this5.datasource.loadNode(link.nodeId).then(function (linkNode) {
+          return _this5.psv.textureLoader.preloadPanorama(linkNode.panorama);
         }).then(function () {
-          _this4.preload[link.nodeId] = true;
+          _this5.preload[link.nodeId] = true;
         }).catch(function () {
-          delete _this4.preload[link.nodeId];
+          delete _this5.preload[link.nodeId];
         });
       });
     }
@@ -1255,7 +1305,7 @@
 
     _proto.showNodesList = function showNodesList() {
       var _this$prop$currentNod2,
-          _this5 = this;
+          _this6 = this;
 
       var nodes = this.change(EVENTS.RENDER_NODES_LIST, Object.values(this.datasource.nodes));
       this.psv.panel.show({
@@ -1267,9 +1317,9 @@
           var nodeId = li ? li.dataset.nodeId : undefined;
 
           if (nodeId) {
-            _this5.setCurrentNode(nodeId);
+            _this6.setCurrentNode(nodeId);
 
-            _this5.hideNodesList();
+            _this6.hideNodesList();
           }
         }
       });

@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.2
+* Photo Sphere Viewer 4.4.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -42,14 +42,6 @@
     };
 
     return _setPrototypeOf(o, p);
-  }
-
-  function _assertThisInitialized(self) {
-    if (self === void 0) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    }
-
-    return self;
   }
 
   /**
@@ -112,9 +104,7 @@
 
       _this.config = _extends({
         startFromClosest: true
-      }, options, {
-        keypoints: null
-      });
+      }, options);
       /**
        * @type {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
        */
@@ -125,16 +115,7 @@
        * @private
        */
 
-      _this.markers = _this.psv.getPlugin('markers');
-
-      if (options != null && options.keypoints) {
-        _this.setKeypoints(options.keypoints);
-      }
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, _assertThisInitialized(_this));
-
-      _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, _assertThisInitialized(_this));
-
+      _this.markers = null;
       return _this;
     }
     /**
@@ -144,12 +125,29 @@
 
     var _proto = AutorotateKeypointsPlugin.prototype;
 
+    _proto.init = function init() {
+      _AbstractPlugin.prototype.init.call(this);
+
+      this.markers = this.psv.getPlugin('markers');
+
+      if (this.config.keypoints) {
+        this.setKeypoints(this.config.keypoints);
+        delete this.config.keypoints;
+      }
+
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, this);
+      this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
+    }
+    /**
+     * @package
+     */
+    ;
+
     _proto.destroy = function destroy() {
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.AUTOROTATE, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.BEFORE_RENDER, this);
       delete this.markers;
       delete this.keypoints;
-      delete this.state;
 
       _AbstractPlugin.prototype.destroy.call(this);
     }

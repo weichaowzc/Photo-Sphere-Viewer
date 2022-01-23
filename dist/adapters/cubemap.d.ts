@@ -1,4 +1,4 @@
-import { AbstractAdapter } from 'photo-sphere-viewer';
+import { AbstractAdapter, Viewer } from 'photo-sphere-viewer';
 
 /**
  * @summary Cubemap defined as an array of images
@@ -18,11 +18,17 @@ type Cubemap = {
   bottom: string;
 };
 
+type CubemapAdapterOptions = {
+  flipTopBottom?: boolean;
+};
+
 /**
  * @summary Adapter for cubemaps
  */
 declare class CubemapAdapter extends AbstractAdapter<CubemapArray | Cubemap> {
 
+  constructor(psv: Viewer, options: CubemapAdapterOptions);
+
 }
 
-export { Cubemap, CubemapAdapter, CubemapArray };
+export { Cubemap, CubemapAdapter, CubemapAdapterOptions, CubemapArray };
