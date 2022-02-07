@@ -6,8 +6,8 @@
 Photo Sphere Viewer uses a lot of angles for its configuration, most of them can be defined in radians by using a simple number (`3.5`) or in degrees using the "deg" suffix (`'55deg'`).
 :::
 
-::: tip Positions defintions
-Some methods take a `position` parameter. It is an object with either `longitude` and `latitude` properties (radians or degrees) or `x` and `y` properies (corresponding to the pixel position on the source panorama file).
+::: tip Positions definitions
+Some methods takes positionnal arguments, this is either on combination `longitude` and `latitude` (radians or degrees, **note:** those are local coordinates and not related to GPS) or `x` and `y` properies (corresponding to the pixel position on the source panorama file).
 :::
 
 ## Standard options
@@ -47,10 +47,6 @@ A text displayed in the navbar. If the navbar is disabled it will be shown anywa
 - type: `{ width: integer, height: integer }`
 
 The final size if the panorama container. By default the size of `container` is used and is followed during window resizes.
-
-#### `markers`
-
-Now part of a [plugin](../plugins/plugin-markers.md).
 
 #### `navbar`
 
@@ -95,14 +91,6 @@ Initial longitude, between 0 and 2π.
 - default: `0`
 
 Initial latitude, between -π/2 and π/2.
-
-#### `longitudeRange`
-
-Now part of a [plugin](../plugins/plugin-visible-range.md).
-
-#### `latitudeRange`
-
-Now part of a [plugin](../plugins/plugin-visible-range.md).
 
 #### `autorotateDelay`
 - type: `integer`
@@ -240,11 +228,11 @@ It can also be a function to dynamically compute the cropping config depending o
 ```js
 panoData: (image) => ({
   fullWidth    : image.width,
-  fullHeight   : image.width / 2,
+  fullHeight   : Math.round(image.width / 2),
   croppedWidth : image.width,
   croppedHeight: image.height,
   croppedX     : 0,
-  croppedY     : image.width / 2 - image.height,
+  croppedY     : Math.round((image.width / 2 - image.height) / 2),
 })
 ```
 
@@ -280,10 +268,6 @@ Background of the canvas, which will be visible when using cropped panoramas.
 - default: `true`
 
 Enabled smooth animation after a manual move.
-
-#### `clickEventOnMarker`
-
-Now part of a [plugin](../plugins/plugin-markers.md).
 
 #### `withCredentials`
 - type: `boolean`

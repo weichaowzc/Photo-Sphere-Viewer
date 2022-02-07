@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.3
+* Photo Sphere Viewer 4.5.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -308,6 +308,18 @@
     GET_ROTATE_POSITION: 'get-rotate-position'
   };
   /**
+   * @summary Special events emitted to listener using {@link Viewer#observeObjects}
+   * @memberOf PSV.constants
+   * @constant
+   * @package
+   */
+
+  var OBJECT_EVENTS = {
+    ENTER_OBJECT: 'enter-object',
+    HOVER_OBJECT: 'hover-object',
+    LEAVE_OBJECT: 'leave-object'
+  };
+  /**
    * @summary Internal identifiers for various stuff
    * @memberOf PSV.constants
    * @enum {string}
@@ -438,6 +450,7 @@
     ACTIONS: ACTIONS,
     EVENTS: EVENTS,
     CHANGE_EVENTS: CHANGE_EVENTS,
+    OBJECT_EVENTS: OBJECT_EVENTS,
     IDS: IDS,
     EASINGS: EASINGS,
     KEY_CODES: KEY_CODES
@@ -777,6 +790,16 @@
     return typeof value === 'number' && Number.isFinite(value) && Math.floor(value) === value;
   }
   /**
+   * @summary Tests if a number is power of two
+   * @memberOf PSV.utils
+   * @param {number} x
+   * @return {boolean}
+   */
+
+  function isPowerOfTwo(x) {
+    return Math.log(x) / Math.log(2) % 1 === 0;
+  }
+  /**
    * @summary Computes the sum of an array
    * @memberOf PSV.utils
    * @param {number[]} array
@@ -1099,6 +1122,7 @@
   }
   /**
    * @summary Builds an Error with name 'AbortError'
+   * @memberOf PSV.utils
    * @return {Error}
    */
 
@@ -1109,6 +1133,7 @@
   }
   /**
    * @summary Tests if an Error has name 'AbortError'
+   * @memberOf PSV.utils
    * @param {Error} err
    * @return {boolean}
    */
@@ -1422,6 +1447,18 @@
     texture.generateMipmaps = false;
     return texture;
   }
+  var quaternion = new THREE.Quaternion();
+  /**
+   * @summary Applies the inverse of Euler angles to a vector
+   * @memberOf PSV.utils
+   * @param {external:THREE.Vector3} vector
+   * @param {external:THREE.Euler} euler
+   */
+
+  function applyEulerInverse(vector, euler) {
+    quaternion.setFromEuler(euler).invert();
+    vector.applyQuaternion(quaternion);
+  }
 
   /**
    * @namespace PSV.utils
@@ -1443,6 +1480,7 @@
     normalizeWheel: normalizeWheel,
     bound: bound,
     isInteger: isInteger,
+    isPowerOfTwo: isPowerOfTwo,
     sum: sum,
     distance: distance,
     getShortestArc: getShortestArc,
@@ -1467,7 +1505,8 @@
     cleanPosition: cleanPosition,
     parseSpeed: parseSpeed,
     parseAngle: parseAngle,
-    createTexture: createTexture
+    createTexture: createTexture,
+    applyEulerInverse: applyEulerInverse
   });
 
   /**
@@ -3683,7 +3722,11 @@
   AbstractAdapter.id = null;
   AbstractAdapter.supportsTransition = false;
 
-  var SPHERE_SEGMENTS = 64;
+  /**
+   * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
+   * @property {number} [resolution=64] - number of faces of the sphere geometry, higher values may decrease performances
+   */
+
   /**
    * @summary Adapter for equirectangular panoramas
    * @memberof PSV.adapters
@@ -3692,20 +3735,43 @@
   var EquirectangularAdapter = /*#__PURE__*/function (_AbstractAdapter) {
     _inheritsLoose(EquirectangularAdapter, _AbstractAdapter);
 
-    function EquirectangularAdapter() {
-      return _AbstractAdapter.apply(this, arguments) || this;
+    /**
+     * @param {PSV.Viewer} psv
+     * @param {PSV.adapters.EquirectangularAdapter.Options} options
+     */
+    function EquirectangularAdapter(psv, options) {
+      var _this;
+
+      _this = _AbstractAdapter.call(this, psv) || this;
+      /**
+       * @member {PSV.adapters.EquirectangularAdapter.Options}
+       * @private
+       */
+
+      _this.config = _extends({
+        resolution: 64
+      }, options);
+
+      if (!isPowerOfTwo(_this.config.resolution)) {
+        throw new PSVError('EquirectangularAdapter resolution must be power of two');
+      }
+
+      _this.SPHERE_SEGMENTS = _this.config.resolution;
+      _this.SPHERE_HORIZONTAL_SEGMENTS = _this.SPHERE_SEGMENTS / 2;
+      return _this;
     }
-
-    var _proto = EquirectangularAdapter.prototype;
-
     /**
      * @override
      * @param {string} panorama
      * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
      * @returns {Promise.<PSV.TextureData>}
      */
+
+
+    var _proto = EquirectangularAdapter.prototype;
+
     _proto.loadTexture = function loadTexture(panorama, newPanoData) {
-      var _this = this;
+      var _this2 = this;
 
       if (typeof panorama !== 'string') {
         if (Array.isArray(panorama) || typeof panorama === 'object' && !!panorama.left) {
@@ -3716,16 +3782,16 @@
       }
 
       return (!this.psv.config.useXmpData ? this.psv.textureLoader.loadImage(panorama, function (p) {
-        return _this.psv.loader.setProgress(p);
+        return _this2.psv.loader.setProgress(p);
       }).then(function (img) {
         return {
           img: img,
           xmpPanoData: null
         };
       }) : this.__loadXMP(panorama, function (p) {
-        return _this.psv.loader.setProgress(p);
+        return _this2.psv.loader.setProgress(p);
       }).then(function (xmpPanoData) {
-        return _this.psv.textureLoader.loadImage(panorama).then(function (img) {
+        return _this2.psv.textureLoader.loadImage(panorama).then(function (img) {
           return {
             img: img,
             xmpPanoData: xmpPanoData
@@ -3748,9 +3814,9 @@
           croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
           croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
           croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
-          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading),
-          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch),
-          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll)
+          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading, 0),
+          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch, 0),
+          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll, 0)
         };
 
         if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
@@ -3761,7 +3827,7 @@
           logWarn('Invalid panoData, fullWidth should be twice fullHeight');
         }
 
-        var texture = _this.__createEquirectangularTexture(img, panoData);
+        var texture = _this2.__createEquirectangularTexture(img, panoData);
 
         return {
           panorama: panorama,
@@ -3781,10 +3847,10 @@
     ;
 
     _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
-      var _this2 = this;
+      var _this3 = this;
 
       return this.psv.textureLoader.loadFile(panorama, onProgress).then(function (blob) {
-        return _this2.__loadBlobAsString(blob);
+        return _this3.__loadBlobAsString(blob);
       }).then(function (binary) {
         var a = binary.indexOf('<x:xmpmeta');
         var b = binary.indexOf('</x:xmpmeta>');
@@ -3837,12 +3903,11 @@
     ;
 
     _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
-      var finalImage; // resize image / fill cropped parts with black
-
+      // resize image / fill cropped parts with black
       if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
-        var resizedPanoData = _extends({}, panoData);
-
         var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
+
+        var resizedPanoData = _extends({}, panoData);
 
         if (ratio < 1) {
           resizedPanoData.fullWidth *= ratio;
@@ -3858,12 +3923,10 @@
         buffer.height = resizedPanoData.fullHeight;
         var ctx = buffer.getContext('2d');
         ctx.drawImage(img, resizedPanoData.croppedX, resizedPanoData.croppedY, resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
-        finalImage = buffer;
-      } else {
-        finalImage = img;
+        return createTexture(buffer);
       }
 
-      return createTexture(finalImage);
+      return createTexture(img);
     }
     /**
      * @override
@@ -3876,13 +3939,9 @@
       }
 
       // The middle of the panorama is placed at longitude=0
-      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, SPHERE_SEGMENTS, SPHERE_SEGMENTS / 2, -Math.PI / 2);
-      var material = new THREE.MeshBasicMaterial({
-        side: THREE.BackSide
-      });
-      var mesh = new THREE.Mesh(geometry, material);
-      mesh.scale.set(-1, 1, 1);
-      return mesh;
+      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2).scale(-1, 1, 1);
+      var material = new THREE.MeshBasicMaterial();
+      return new THREE.Mesh(geometry, material);
     }
     /**
      * @override
@@ -5471,6 +5530,7 @@
 
   var vector2 = new THREE.Vector2();
   var vector3 = new THREE.Vector3();
+  var eulerZero = new THREE.Euler(0, 0, 0, 'ZXY');
   /**
    * @summary Collections of data converters for the current viewer
    * @extends PSV.services.AbstractService
@@ -5553,12 +5613,20 @@
       }
 
       var relativeX = (point.x + panoData.croppedX) / panoData.fullWidth * Math.PI * 2;
-      var relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI; // TODO apply the inverse transformation from sphereCorrection/panoData[pose]
-
-      return {
+      var relativeY = (point.y + panoData.croppedY) / panoData.fullHeight * Math.PI;
+      var result = {
         longitude: relativeX >= Math.PI ? relativeX - Math.PI : relativeX + Math.PI,
         latitude: Math.PI / 2 - relativeY
-      };
+      }; // Apply panoData pose and sphereCorrection
+
+      if (!eulerZero.equals(this.psv.renderer.mesh.rotation) || !eulerZero.equals(this.psv.renderer.meshContainer.rotation)) {
+        this.sphericalCoordsToVector3(result, vector3);
+        vector3.applyEuler(this.psv.renderer.mesh.rotation);
+        vector3.applyEuler(this.psv.renderer.meshContainer.rotation);
+        return this.vector3ToSphericalCoords(vector3);
+      } else {
+        return result;
+      }
     }
     /**
      * @summary Converts spherical radians coordinates to pixel texture coordinates
@@ -5573,6 +5641,14 @@
 
       if (!panoData) {
         throw new PSVError('Current adapter does not support texture coordinates.');
+      } // Apply panoData pose and sphereCorrection
+
+
+      if (!eulerZero.equals(this.psv.renderer.mesh.rotation) || !eulerZero.equals(this.psv.renderer.meshContainer.rotation)) {
+        this.sphericalCoordsToVector3(position, vector3);
+        applyEulerInverse(vector3, this.psv.renderer.meshContainer.rotation);
+        applyEulerInverse(vector3, this.psv.renderer.mesh.rotation);
+        position = this.vector3ToSphericalCoords(vector3);
       }
 
       var relativeLong = position.longitude / Math.PI / 2 * panoData.fullWidth;
@@ -5623,7 +5699,9 @@
     ;
 
     _proto.viewerCoordsToVector3 = function viewerCoordsToVector3(viewerPoint) {
-      var sphereIntersect = this.getIntersection(viewerPoint, 'psvSphere');
+      var sphereIntersect = this.getIntersections(viewerPoint).filter(function (i) {
+        return i.object.userData.psvSphere;
+      });
 
       if (sphereIntersect) {
         return sphereIntersect.point;
@@ -5657,22 +5735,18 @@
       return this.vector3ToViewerCoords(this.sphericalCoordsToVector3(position, vector3));
     }
     /**
-     * @summary Returns the first intersection with the cursor and having specific data
+     * @summary Returns intersections with objects in the scene
      * @param {PSV.Point} viewerPoint
-     * @param {string} objectDataName
-     * @return {external:THREE.Intersection}
+     * @return {external:THREE.Intersection[]}
      */
     ;
 
-    _proto.getIntersection = function getIntersection(viewerPoint, objectDataName) {
+    _proto.getIntersections = function getIntersections(viewerPoint) {
       vector2.x = 2 * viewerPoint.x / this.prop.size.width - 1;
       vector2.y = -2 * viewerPoint.y / this.prop.size.height + 1;
       this.psv.renderer.raycaster.setFromCamera(vector2, this.psv.renderer.camera);
-      var intersects = this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true);
-      return intersects.find(function (i) {
-        var _i$object$userData;
-
-        return (_i$object$userData = i.object.userData) == null ? void 0 : _i$object$userData[objectDataName];
+      return this.psv.renderer.raycaster.intersectObjects(this.psv.renderer.scene.children, true).filter(function (i) {
+        return !!i.object.userData;
       });
     }
     /**
@@ -5701,9 +5775,23 @@
 
     _proto.cleanSphereCorrection = function cleanSphereCorrection(sphereCorrection) {
       return {
-        pan: parseAngle(sphereCorrection.pan || 0),
-        tilt: parseAngle(sphereCorrection.tilt || 0, true),
-        roll: parseAngle(sphereCorrection.roll || 0, true, false)
+        pan: parseAngle((sphereCorrection == null ? void 0 : sphereCorrection.pan) || 0),
+        tilt: parseAngle((sphereCorrection == null ? void 0 : sphereCorrection.tilt) || 0, true),
+        roll: parseAngle((sphereCorrection == null ? void 0 : sphereCorrection.roll) || 0, true, false)
+      };
+    }
+    /**
+     * @summary Parse the pose angles of the pano data
+     * @param {PSV.PanoData} panoData
+     * @returns {PSV.SphereCorrection}
+     */
+    ;
+
+    _proto.cleanPanoramaPose = function cleanPanoramaPose(panoData) {
+      return {
+        pan: THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0),
+        tilt: THREE.Math.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0),
+        roll: THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0)
       };
     };
 
@@ -6098,16 +6186,57 @@
     ;
 
     _proto.__onMouseMove = function __onMouseMove(evt) {
-      if (!this.config.mousemove) {
-        return;
+      if (this.config.mousemove) {
+        if (evt.buttons !== 0) {
+          evt.preventDefault();
+
+          this.__move(evt);
+        } else if (this.config.captureCursor) {
+          this.__moveAbsolute(evt);
+        }
       }
 
-      if (evt.buttons !== 0) {
-        evt.preventDefault();
+      if (!isEmpty(this.prop.objectsObservers)) {
+        var viewerPos = getPosition(this.psv.container);
+        var viewerPoint = {
+          x: evt.clientX - viewerPos.left,
+          y: evt.clientY - viewerPos.top
+        };
+        var intersections = this.psv.dataHelper.getIntersections(viewerPoint);
 
-        this.__move(evt);
-      } else if (this.config.captureCursor) {
-        this.__moveAbsolute(evt);
+        var emit = function emit(observer, key, type) {
+          observer.listener.handleEvent(new CustomEvent(type, {
+            detail: {
+              originalEvent: evt,
+              object: observer.object,
+              data: observer.object.userData[key],
+              viewerPoint: viewerPoint
+            }
+          }));
+        };
+
+        each(this.prop.objectsObservers, function (observer, key) {
+          var intersection = intersections.find(function (i) {
+            return i.object.userData[key];
+          });
+
+          if (intersection) {
+            if (observer.object && intersection.object !== observer.object) {
+              emit(observer, key, OBJECT_EVENTS.LEAVE_OBJECT);
+              delete observer.object;
+            }
+
+            if (!observer.object) {
+              observer.object = intersection.object;
+              emit(observer, key, OBJECT_EVENTS.ENTER_OBJECT);
+            } else {
+              emit(observer, key, OBJECT_EVENTS.HOVER_OBJECT);
+            }
+          } else if (observer.object) {
+            emit(observer, key, OBJECT_EVENTS.LEAVE_OBJECT);
+            delete observer.object;
+          }
+        });
       }
     }
     /**
@@ -6447,15 +6576,23 @@
         viewerX: evt.clientX - boundingRect.left,
         viewerY: evt.clientY - boundingRect.top
       };
-      var intersect = this.psv.dataHelper.viewerCoordsToVector3({
+      var intersections = this.psv.dataHelper.getIntersections({
         x: data.viewerX,
         y: data.viewerY
       });
+      var sphereIntersection = intersections.find(function (i) {
+        return i.object.userData.psvSphere;
+      });
 
-      if (intersect) {
-        var sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(intersect);
+      if (sphereIntersection) {
+        var sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(sphereIntersection.point);
         data.longitude = sphericalCoords.longitude;
         data.latitude = sphericalCoords.latitude;
+        data.objects = intersections.map(function (i) {
+          return i.object;
+        }).filter(function (o) {
+          return !o.userData.psvSphere;
+        });
 
         try {
           var textureCoords = this.psv.dataHelper.sphericalCoordsToTextureCoords(data);
@@ -6614,6 +6751,8 @@
       _this.renderer = new THREE.WebGLRenderer({
         alpha: true
       });
+
+      _this.renderer.context.disable(_this.renderer.context.DEPTH_TEST);
 
       _this.renderer.setPixelRatio(SYSTEM.pixelRatio);
 
@@ -6888,13 +7027,10 @@
         mesh = this.mesh;
       }
 
-      if (!isNil(panoData == null ? void 0 : panoData.poseHeading) || !isNil(panoData == null ? void 0 : panoData.posePitch) || !isNil(panoData == null ? void 0 : panoData.poseRoll)) {
-        // By Google documentation the angles are applied on the camera in order : heading, pitch, roll
-        // here we apply the reverse transformation on the sphere
-        mesh.rotation.set(-THREE.Math.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0), -THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0), 'ZXY');
-      } else {
-        mesh.rotation.set(0, 0, 0);
-      }
+      // By Google documentation the angles are applied on the camera in order : heading, pitch, roll
+      // here we apply the reverse transformation on the sphere
+      var cleanCorrection = this.psv.dataHelper.cleanPanoramaPose(panoData);
+      mesh.rotation.set(-cleanCorrection.tilt, -cleanCorrection.pan, -cleanCorrection.roll, 'ZXY');
     }
     /**
      * @summary Apply a SphereCorrection to a Mesh
@@ -6909,12 +7045,8 @@
         mesh = this.meshContainer;
       }
 
-      if (sphereCorrection) {
-        var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
-        mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll, 'ZXY');
-      } else {
-        mesh.rotation.set(0, 0, 0);
-      }
+      var cleanCorrection = this.psv.dataHelper.cleanSphereCorrection(sphereCorrection);
+      mesh.rotation.set(cleanCorrection.tilt, cleanCorrection.pan, cleanCorrection.roll, 'ZXY');
     }
     /**
      * @summary Performs transition between the current and a new texture
@@ -8037,6 +8169,7 @@
        * @property {PSV.Animation} animationPromise - promise of the current animation
        * @property {Promise} loadingPromise - promise of the setPanorama method
        * @property startTimeout - timeout id of the automatic rotation delay
+       * @property {object} objectsObservers
        * @property {PSV.Size} size - size of the container
        * @property {PSV.PanoData} panoData - panorama metadata, if supported
        */
@@ -8055,6 +8188,7 @@
         animationPromise: null,
         loadingPromise: null,
         startTimeout: null,
+        objectsObservers: {},
         size: {
           width: 0,
           height: 0
@@ -8065,7 +8199,10 @@
           croppedWidth: 0,
           croppedHeight: 0,
           croppedX: 0,
-          croppedY: 0
+          croppedY: 0,
+          poseHeading: 0,
+          posePitch: 0,
+          poseRoll: 0
         }
       };
       /**
@@ -8937,6 +9074,25 @@
       this.eventsHandler.disableKeyboard();
     }
     /**
+     * @summary Subscribes to events on objects in the scene
+     * @param {string} userDataKey - only objects with the following `userData` will be emitted
+     * @param {EventListener} listener - must implement `handleEvent
+     * @return {function} call to stop the subscription
+     * @package
+     */
+    ;
+
+    _proto.observeObjects = function observeObjects(userDataKey, listener) {
+      var _this8 = this;
+
+      this.prop.objectsObservers[userDataKey] = {
+        listener: listener
+      };
+      return function () {
+        delete _this8.prop.objectsObservers[userDataKey];
+      };
+    }
+    /**
      * @summary Stops all current animations
      * @package
      */
@@ -8967,6 +9123,7 @@
   exports.Animation = Animation;
   exports.CONSTANTS = constants;
   exports.DEFAULTS = DEFAULTS;
+  exports.EquirectangularAdapter = EquirectangularAdapter;
   exports.PSVError = PSVError;
   exports.SYSTEM = SYSTEM;
   exports.Viewer = Viewer;

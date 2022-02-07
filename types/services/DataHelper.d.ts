@@ -1,5 +1,5 @@
 import { Vector3, Intersection } from 'three';
-import { ExtendedPosition, Point, Position, SphereCorrection } from '../models';
+import { ExtendedPosition, PanoData, Point, Position, SphereCorrection } from '../models';
 
 /**
  * @summary Collections of data converters for the current viewer
@@ -62,9 +62,9 @@ export class DataHelper {
   sphericalCoordsToViewerCoords(position: Position): Point;
 
   /**
-   * @summary Returns the first intersection with the cursor and having specific data
+   * @summary Returns intersections with objects in the scene
    */
-  getIntersection(viewerPoint: Point, objectDataName: string): Intersection;
+  getIntersections(viewerPoint: Point): Intersection[];
 
   /**
    * @summary Converts x/y to latitude/longitude if present and ensure boundaries
@@ -75,5 +75,10 @@ export class DataHelper {
    * @summary Ensure a SphereCorrection object is valid
    */
   cleanSphereCorrection(sphere: SphereCorrection): SphereCorrection;
+
+  /**
+   * @summary Parse the pose angles of the pano data
+   */
+  cleanPanoramaPose(panoData: PanoData): SphereCorrection;
 
 }

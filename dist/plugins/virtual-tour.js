@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.3
+* Photo Sphere Viewer 4.5.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -521,8 +521,8 @@
 
       _this = _AbstractDatasource.call(this, plugin) || this;
 
-      if (!plugin.config.getNode || !plugin.config.getLinks) {
-        throw new photoSphereViewer.PSVError('Missing getNode() and/or getLinks() options.');
+      if (!plugin.config.getNode) {
+        throw new photoSphereViewer.PSVError('Missing getNode() option.');
       }
 
       _this.nodeResolver = plugin.config.getNode;
@@ -554,6 +554,12 @@
       } else if (this.nodes[nodeId].links) {
         return Promise.resolve();
       } else {
+        if (!this.linksResolver) {
+          this.nodes[nodeId].links = [];
+          return Promise.resolve();
+        }
+
+        photoSphereViewer.utils.logWarn("getLinks() option is deprecated, instead make getNode() also return the node' links.");
         return Promise.resolve(this.linksResolver(nodeId)).then(function (links) {
           return links || [];
         }).then(function (links) {
@@ -590,6 +596,7 @@
   /**
    * @callback GetLinks
    * @summary Function to load the links of a node
+   * @deprecated `getNode` must directly return the links of each node
    * @memberOf PSV.plugins.VirtualTourPlugin
    * @param {string} nodeId
    * @returns {PSV.plugins.VirtualTourPlugin.NodeLink[]|Promise<PSV.plugins.VirtualTourPlugin.NodeLink[]>}
@@ -645,7 +652,7 @@
    * @property {'markers'|'3d'} [renderMode='3d'] - configure rendering mode of links
    * @property {PSV.plugins.VirtualTourPlugin.Node[]} [nodes] - initial nodes
    * @property {PSV.plugins.VirtualTourPlugin.GetNode} [getNode]
-   * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks]
+   * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks] - Deprecated: `getNode` must directly return the links of each node
    * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
    * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
    * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
@@ -689,17 +696,17 @@
       /**
        * @member {Object}
        * @property {PSV.plugins.VirtualTourPlugin.Node} currentNode
-       * @property {external:THREE.Mesh} currentArrow
        * @property {PSV.Tooltip} currentTooltip
        * @property {string} loadingNode
+       * @property {function} stopObserver
        * @private
        */
 
       _this.prop = {
         currentNode: null,
-        currentArrow: null,
         currentTooltip: null,
-        loadingNode: null
+        loadingNode: null,
+        stopObserver: null
       };
       /**
        * @type {Record<string, boolean | Promise>}
@@ -792,12 +799,11 @@
           _this2.psv.renderer.scene.add(ambientLight);
 
           _this2.psv.needsUpdate();
-
-          _this2.psv.container.addEventListener('mousemove', _this2);
         });
         this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, this);
         this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
         this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
+        this.prop.stopObserver = this.psv.observeObjects(LINK_DATA, this);
       } else {
         this.markers.on('select-marker', this);
       }
@@ -817,6 +823,8 @@
     ;
 
     _proto.destroy = function destroy() {
+      var _this$prop$stopObserv, _this$prop;
+
       if (this.markers) {
         this.markers.off('select-marker', this);
       }
@@ -828,7 +836,7 @@
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.POSITION_UPDATED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.ZOOM_UPDATED, this);
       this.psv.off(photoSphereViewer.CONSTANTS.EVENTS.CLICK, this);
-      this.psv.container.removeEventListener('mousemove', this);
+      (_this$prop$stopObserv = (_this$prop = this.prop).stopObserver) == null ? void 0 : _this$prop$stopObserv.call(_this$prop);
       this.datasource.destroy();
       delete this.preload;
       delete this.datasource;
@@ -840,7 +848,7 @@
     };
 
     _proto.handleEvent = function handleEvent(e) {
-      var _e$args$0$data, _this$prop$currentArr, _this$prop$currentArr2;
+      var _e$args$0$data, _e$args$0$objects$fin;
 
       var link;
 
@@ -863,18 +871,9 @@
           break;
 
         case photoSphereViewer.CONSTANTS.EVENTS.CLICK:
-          link = (_this$prop$currentArr = this.prop.currentArrow) == null ? void 0 : (_this$prop$currentArr2 = _this$prop$currentArr.userData) == null ? void 0 : _this$prop$currentArr2[LINK_DATA];
-
-          if (!link) {
-            var _this$psv$dataHelper$, _arrow$userData;
-
-            // on touch screens "currentArrow" may be null (no hover state)
-            var arrow = (_this$psv$dataHelper$ = this.psv.dataHelper.getIntersection({
-              x: e.args[0].viewerX,
-              y: e.args[0].viewerY
-            }, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$.object;
-            link = arrow == null ? void 0 : (_arrow$userData = arrow.userData) == null ? void 0 : _arrow$userData[LINK_DATA];
-          }
+          link = (_e$args$0$objects$fin = e.args[0].objects.find(function (o) {
+            return o.userData[LINK_DATA];
+          })) == null ? void 0 : _e$args$0$objects$fin.userData[LINK_DATA];
 
           if (link) {
             this.setCurrentNode(link.nodeId, link);
@@ -882,8 +881,18 @@
 
           break;
 
-        case 'mousemove':
-          this.__onMouseMove(e);
+        case photoSphereViewer.CONSTANTS.OBJECT_EVENTS.ENTER_OBJECT:
+          this.__onEnterObject(e.detail.object, e.detail.viewerPoint);
+
+          break;
+
+        case photoSphereViewer.CONSTANTS.OBJECT_EVENTS.HOVER_OBJECT:
+          this.__onHoverObject(e.detail.object, e.detail.viewerPoint);
+
+          break;
+
+        case photoSphereViewer.CONSTANTS.OBJECT_EVENTS.LEAVE_OBJECT:
+          this.__onLeaveObject(e.detail.object);
 
           break;
       }
@@ -1007,8 +1016,6 @@
           (_this3$arrowsGroup = _this3.arrowsGroup).remove.apply(_this3$arrowsGroup, _this3.arrowsGroup.children.filter(function (o) {
             return o.type === 'Mesh';
           }));
-
-          _this3.prop.currentArrow = null;
         }
 
         (_this3$markers = _this3.markers) == null ? void 0 : _this3$markers.clearMarkers();
@@ -1165,60 +1172,56 @@
       }
     }
     /**
-     * @summary Updates hovered arrow on mousemove
-     * @param {MouseEvent} evt
      * @private
      */
     ;
 
-    _proto.__onMouseMove = function __onMouseMove(evt) {
-      var _this$psv$dataHelper$2;
+    _proto.__onEnterObject = function __onEnterObject(mesh, viewerPoint) {
+      var _link$arrowStyle3;
 
-      var viewerPos = photoSphereViewer.utils.getPosition(this.psv.container);
-      var viewerPoint = {
-        x: evt.clientX - viewerPos.left,
-        y: evt.clientY - viewerPos.top
-      };
-      var mesh = (_this$psv$dataHelper$2 = this.psv.dataHelper.getIntersection(viewerPoint, LINK_DATA)) == null ? void 0 : _this$psv$dataHelper$2.object;
+      var link = mesh.userData[LINK_DATA];
+      setMeshColor(mesh, ((_link$arrowStyle3 = link.arrowStyle) == null ? void 0 : _link$arrowStyle3.hoverColor) || this.config.arrowStyle.hoverColor);
 
-      if (mesh === this.prop.currentArrow) {
-        if (this.prop.currentTooltip) {
-          this.prop.currentTooltip.move({
-            left: viewerPoint.x,
-            top: viewerPoint.y
-          });
-        }
-      } else {
-        if (this.prop.currentArrow) {
-          var _link$arrowStyle3;
-
-          var link = this.prop.currentArrow.userData[LINK_DATA];
-          setMeshColor(this.prop.currentArrow, ((_link$arrowStyle3 = link.arrowStyle) == null ? void 0 : _link$arrowStyle3.color) || this.config.arrowStyle.color);
-
-          if (this.prop.currentTooltip) {
-            this.prop.currentTooltip.hide();
-            this.prop.currentTooltip = null;
-          }
-        }
-
-        if (mesh) {
-          var _link$arrowStyle4;
-
-          var _link = mesh.userData[LINK_DATA];
-          setMeshColor(mesh, ((_link$arrowStyle4 = _link.arrowStyle) == null ? void 0 : _link$arrowStyle4.hoverColor) || this.config.arrowStyle.hoverColor);
-
-          if (_link.name) {
-            this.prop.currentTooltip = this.psv.tooltip.create({
-              left: viewerPoint.x,
-              top: viewerPoint.y,
-              content: _link.name
-            });
-          }
-        }
-
-        this.prop.currentArrow = mesh;
-        this.psv.needsUpdate();
+      if (link.name) {
+        this.prop.currentTooltip = this.psv.tooltip.create({
+          left: viewerPoint.x,
+          top: viewerPoint.y,
+          content: link.name
+        });
       }
+
+      this.psv.needsUpdate();
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onHoverObject = function __onHoverObject(mesh, viewerPoint) {
+      if (this.prop.currentTooltip) {
+        this.prop.currentTooltip.move({
+          left: viewerPoint.x,
+          top: viewerPoint.y
+        });
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onLeaveObject = function __onLeaveObject(mesh) {
+      var _link$arrowStyle4;
+
+      var link = mesh.userData[LINK_DATA];
+      setMeshColor(mesh, ((_link$arrowStyle4 = link.arrowStyle) == null ? void 0 : _link$arrowStyle4.color) || this.config.arrowStyle.color);
+
+      if (this.prop.currentTooltip) {
+        this.prop.currentTooltip.hide();
+        this.prop.currentTooltip = null;
+      }
+
+      this.psv.needsUpdate();
     }
     /**
      * @summary Updates to position of the group of arrows

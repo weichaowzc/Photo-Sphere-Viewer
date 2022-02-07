@@ -33,6 +33,7 @@ import { bearing, distance, setMeshColor } from './utils';
 /**
  * @callback GetLinks
  * @summary Function to load the links of a node
+ * @deprecated `getNode` must directly return the links of each node
  * @memberOf PSV.plugins.VirtualTourPlugin
  * @param {string} nodeId
  * @returns {PSV.plugins.VirtualTourPlugin.NodeLink[]|Promise<PSV.plugins.VirtualTourPlugin.NodeLink[]>}
@@ -88,7 +89,7 @@ import { bearing, distance, setMeshColor } from './utils';
  * @property {'markers'|'3d'} [renderMode='3d'] - configure rendering mode of links
  * @property {PSV.plugins.VirtualTourPlugin.Node[]} [nodes] - initial nodes
  * @property {PSV.plugins.VirtualTourPlugin.GetNode} [getNode]
- * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks]
+ * @property {PSV.plugins.VirtualTourPlugin.GetLinks} [getLinks] - Deprecated: `getNode` must directly return the links of each node
  * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
  * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
  * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
@@ -136,16 +137,16 @@ export class VirtualTourPlugin extends AbstractPlugin {
     /**
      * @member {Object}
      * @property {PSV.plugins.VirtualTourPlugin.Node} currentNode
-     * @property {external:THREE.Mesh} currentArrow
      * @property {PSV.Tooltip} currentTooltip
      * @property {string} loadingNode
+     * @property {function} stopObserver
      * @private
      */
     this.prop = {
       currentNode   : null,
-      currentArrow  : null,
       currentTooltip: null,
       loadingNode   : null,
+      stopObserver  : null,
     };
 
     /**
@@ -235,13 +236,12 @@ export class VirtualTourPlugin extends AbstractPlugin {
         this.psv.renderer.scene.add(ambientLight);
 
         this.psv.needsUpdate();
-
-        this.psv.container.addEventListener('mousemove', this);
       });
 
       this.psv.on(CONSTANTS.EVENTS.POSITION_UPDATED, this);
       this.psv.on(CONSTANTS.EVENTS.ZOOM_UPDATED, this);
       this.psv.on(CONSTANTS.EVENTS.CLICK, this);
+      this.prop.stopObserver = this.psv.observeObjects(LINK_DATA, this);
     }
     else {
       this.markers.on('select-marker', this);
@@ -272,7 +272,7 @@ export class VirtualTourPlugin extends AbstractPlugin {
     this.psv.off(CONSTANTS.EVENTS.POSITION_UPDATED, this);
     this.psv.off(CONSTANTS.EVENTS.ZOOM_UPDATED, this);
     this.psv.off(CONSTANTS.EVENTS.CLICK, this);
-    this.psv.container.removeEventListener('mousemove', this);
+    this.prop.stopObserver?.();
 
     this.datasource.destroy();
 
@@ -303,19 +303,20 @@ export class VirtualTourPlugin extends AbstractPlugin {
         break;
 
       case CONSTANTS.EVENTS.CLICK:
-        link = this.prop.currentArrow?.userData?.[LINK_DATA];
-        if (!link) {
-          // on touch screens "currentArrow" may be null (no hover state)
-          const arrow = this.psv.dataHelper.getIntersection({ x: e.args[0].viewerX, y: e.args[0].viewerY }, LINK_DATA)?.object;
-          link = arrow?.userData?.[LINK_DATA];
-        }
+        link = e.args[0].objects.find(o => o.userData[LINK_DATA])?.userData[LINK_DATA];
         if (link) {
           this.setCurrentNode(link.nodeId, link);
         }
         break;
 
-      case 'mousemove':
-        this.__onMouseMove(e);
+      case CONSTANTS.OBJECT_EVENTS.ENTER_OBJECT:
+        this.__onEnterObject(e.detail.object, e.detail.viewerPoint);
+        break;
+      case CONSTANTS.OBJECT_EVENTS.HOVER_OBJECT:
+        this.__onHoverObject(e.detail.object, e.detail.viewerPoint);
+        break;
+      case CONSTANTS.OBJECT_EVENTS.LEAVE_OBJECT:
+        this.__onLeaveObject(e.detail.object);
         break;
 
       default:
@@ -428,7 +429,6 @@ export class VirtualTourPlugin extends AbstractPlugin {
 
         if (this.is3D()) {
           this.arrowsGroup.remove(...this.arrowsGroup.children.filter(o => o.type === 'Mesh'));
-          this.prop.currentArrow = null;
         }
 
         this.markers?.clearMarkers();
@@ -590,57 +590,52 @@ export class VirtualTourPlugin extends AbstractPlugin {
   }
 
   /**
-   * @summary Updates hovered arrow on mousemove
-   * @param {MouseEvent} evt
    * @private
    */
-  __onMouseMove(evt) {
-    const viewerPos = utils.getPosition(this.psv.container);
-    const viewerPoint = {
-      x: evt.clientX - viewerPos.left,
-      y: evt.clientY - viewerPos.top,
-    };
+  __onEnterObject(mesh, viewerPoint) {
+    const link = mesh.userData[LINK_DATA];
 
-    const mesh = this.psv.dataHelper.getIntersection(viewerPoint, LINK_DATA)?.object;
+    setMeshColor(mesh, link.arrowStyle?.hoverColor || this.config.arrowStyle.hoverColor);
 
-    if (mesh === this.prop.currentArrow) {
-      if (this.prop.currentTooltip) {
-        this.prop.currentTooltip.move({
-          left: viewerPoint.x,
-          top : viewerPoint.y,
-        });
-      }
+    if (link.name) {
+      this.prop.currentTooltip = this.psv.tooltip.create({
+        left   : viewerPoint.x,
+        top    : viewerPoint.y,
+        content: link.name,
+      });
     }
-    else {
-      if (this.prop.currentArrow) {
-        const link = this.prop.currentArrow.userData[LINK_DATA];
 
-        setMeshColor(this.prop.currentArrow, link.arrowStyle?.color || this.config.arrowStyle.color);
+    this.psv.needsUpdate();
+  }
 
-        if (this.prop.currentTooltip) {
-          this.prop.currentTooltip.hide();
-          this.prop.currentTooltip = null;
-        }
-      }
 
-      if (mesh) {
-        const link = mesh.userData[LINK_DATA];
-
-        setMeshColor(mesh, link.arrowStyle?.hoverColor || this.config.arrowStyle.hoverColor);
-
-        if (link.name) {
-          this.prop.currentTooltip = this.psv.tooltip.create({
-            left   : viewerPoint.x,
-            top    : viewerPoint.y,
-            content: link.name,
-          });
-        }
-      }
-
-      this.prop.currentArrow = mesh;
-
-      this.psv.needsUpdate();
+  /**
+   * @private
+   */
+  __onHoverObject(mesh, viewerPoint) {
+    if (this.prop.currentTooltip) {
+      this.prop.currentTooltip.move({
+        left: viewerPoint.x,
+        top : viewerPoint.y,
+      });
     }
+  }
+
+
+  /**
+   * @private
+   */
+  __onLeaveObject(mesh) {
+    const link = mesh.userData[LINK_DATA];
+
+    setMeshColor(mesh, link.arrowStyle?.color || this.config.arrowStyle.color);
+
+    if (this.prop.currentTooltip) {
+      this.prop.currentTooltip.hide();
+      this.prop.currentTooltip = null;
+    }
+
+    this.psv.needsUpdate();
   }
 
   /**

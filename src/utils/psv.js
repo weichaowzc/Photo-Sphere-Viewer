@@ -21,6 +21,7 @@ export function pluginInterop(plugin, target) {
 
 /**
  * @summary Builds an Error with name 'AbortError'
+ * @memberOf PSV.utils
  * @return {Error}
  */
 export function getAbortError() {
@@ -31,6 +32,7 @@ export function getAbortError() {
 
 /**
  * @summary Tests if an Error has name 'AbortError'
+ * @memberOf PSV.utils
  * @param {Error} err
  * @return {boolean}
  */
@@ -315,4 +317,17 @@ export function createTexture(img) {
   texture.minFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
   return texture;
+}
+
+const quaternion = new THREE.Quaternion();
+
+/**
+ * @summary Applies the inverse of Euler angles to a vector
+ * @memberOf PSV.utils
+ * @param {external:THREE.Vector3} vector
+ * @param {external:THREE.Euler} euler
+ */
+export function applyEulerInverse(vector, euler) {
+  quaternion.setFromEuler(euler).invert();
+  vector.applyQuaternion(quaternion);
 }

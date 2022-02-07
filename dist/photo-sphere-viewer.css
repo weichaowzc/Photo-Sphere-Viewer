@@ -1,5 +1,5 @@
 /*!
- * Photo Sphere Viewer 4.4.3
+ * Photo Sphere Viewer 4.5.0
  * @copyright 2014-2015 Jérémy Heleine
  * @copyright 2015-2022 Damien "Mistic" Sorel
  * @licence MIT (https://opensource.org/licenses/MIT)
@@ -157,7 +157,7 @@
 }
 
 .psv-button:not(.psv-button--disabled):focus-visible {
-  outline: 2px dotted currentColor;
+  outline: 2px dotted currentcolor;
   outline-offset: -2px;
 }
 
@@ -458,7 +458,7 @@
   transition: background 0.1s ease-in-out;
 }
 .psv-panel-menu-item--active {
-  outline: 1px solid currentColor;
+  outline: 1px solid currentcolor;
   outline-offset: -1px;
 }
 .psv-panel-menu-item-icon {
@@ -478,7 +478,7 @@
   height: 100%;
 }
 .psv-panel-menu-item:focus-visible {
-  outline: 1px dotted currentColor;
+  outline: 1px dotted currentcolor;
   outline-offset: -1px;
 }
 .psv-panel-menu--stripped .psv-panel-menu-item:hover {

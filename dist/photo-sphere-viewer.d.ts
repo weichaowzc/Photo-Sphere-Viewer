@@ -1,4 +1,4 @@
-import { Texture, Mesh, Vector3, Intersection } from 'three';
+import { Texture, Vector3, Euler, Mesh, Intersection } from 'three';
 import { EventEmitter, Event } from 'uevent';
 
 /**
@@ -459,6 +459,11 @@ declare function parseAngle(angle: string | number, zeroCenter?: boolean, halfCi
  */
 declare function createTexture(img: HTMLImageElement | HTMLCanvasElement): Texture;
 
+/**
+ * @summary Applies the inverse of Euler angles to a vector
+ */
+declare function applyEulerInverse(vector: Vector3, euler: Euler);
+
 declare const index_d_toggleClass: typeof toggleClass;
 declare const index_d_addClasses: typeof addClasses;
 declare const index_d_removeClasses: typeof removeClasses;
@@ -495,6 +500,7 @@ declare const index_d_cleanPosition: typeof cleanPosition;
 declare const index_d_parseSpeed: typeof parseSpeed;
 declare const index_d_parseAngle: typeof parseAngle;
 declare const index_d_createTexture: typeof createTexture;
+declare const index_d_applyEulerInverse: typeof applyEulerInverse;
 declare namespace index_d {
   export {
     index_d_toggleClass as toggleClass,
@@ -533,6 +539,7 @@ declare namespace index_d {
     index_d_parseSpeed as parseSpeed,
     index_d_parseAngle as parseAngle,
     index_d_createTexture as createTexture,
+    index_d_applyEulerInverse as applyEulerInverse,
   };
 }
 
@@ -925,9 +932,9 @@ declare class DataHelper {
   sphericalCoordsToViewerCoords(position: Position): Point;
 
   /**
-   * @summary Returns the first intersection with the cursor and having specific data
+   * @summary Returns intersections with objects in the scene
    */
-  getIntersection(viewerPoint: Point, objectDataName: string): Intersection;
+  getIntersections(viewerPoint: Point): Intersection[];
 
   /**
    * @summary Converts x/y to latitude/longitude if present and ensure boundaries
@@ -938,6 +945,11 @@ declare class DataHelper {
    * @summary Ensure a SphereCorrection object is valid
    */
   cleanSphereCorrection(sphere: SphereCorrection): SphereCorrection;
+
+  /**
+   * @summary Parse the pose angles of the pano data
+   */
+  cleanPanoramaPose(panoData: PanoData): SphereCorrection;
 
 }
 
@@ -1369,6 +1381,19 @@ declare const SYSTEM: {
   isTouchEnabled: Promise<boolean>;
 };
 
+type EquirectangularAdapterOptions = {
+  resolution?: number,
+};
+
+/**
+ * @summary Adapter for equirectangular panoramas
+ */
+declare class EquirectangularAdapter extends AbstractAdapter<string> {
+
+  constructor(psv: Viewer, options: EquirectangularAdapterOptions);
+
+}
+
 /**
  * @summary Custom error used in the lib
  */
@@ -1376,4 +1401,4 @@ declare class PSVError extends Error {
   name: 'PSVError';
 }
 
-export { AbstractAdapter, AbstractButton, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, ExtendedPosition, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };
+export { AbstractAdapter, AbstractButton, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, EquirectangularAdapter, EquirectangularAdapterOptions, ExtendedPosition, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };

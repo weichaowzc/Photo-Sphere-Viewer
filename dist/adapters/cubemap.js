@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.3
+* Photo Sphere Viewer 4.5.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -59,11 +59,11 @@
    * @typedef {Object} PSV.adapters.CubemapAdapter.Options
    * @property {boolean} [flipTopBottom=false] - set to true if the top and bottom faces are not correctly oriented
    */
+  // PSV faces order is left, front, right, back, top, bottom
+  // 3JS faces order is left, right, top, bottom, back, front
 
-  var CUBE_VERTICES = 8;
-  var CUBE_MAP = [0, 2, 4, 5, 3, 1];
+  var CUBE_ARRAY = [0, 2, 4, 5, 3, 1];
   var CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
-  var VECTOR2D_CENTER = new THREE.Vector2(0.5, 0.5);
   /**
    * @summary Adapter for cubemaps
    * @memberof PSV.adapters
@@ -111,7 +111,7 @@
 
 
         for (var i = 0; i < 6; i++) {
-          cleanPanorama[i] = panorama[CUBE_MAP[i]];
+          cleanPanorama[i] = panorama[CUBE_ARRAY[i]];
         }
       } else if (typeof panorama === 'object') {
         if (!CUBE_HASHMAP.every(function (side) {
@@ -165,21 +165,22 @@
     ;
 
     _proto.__createCubemapTexture = function __createCubemapTexture(img) {
-      var finalImage; // resize image
+      if (img.width !== img.height) {
+        photoSphereViewer.utils.logWarn('Invalid base image, the width equal the height');
+      } // resize image
+
 
       if (img.width > photoSphereViewer.SYSTEM.maxTextureWidth) {
-        var buffer = document.createElement('canvas');
         var ratio = photoSphereViewer.SYSTEM.getMaxCanvasWidth() / img.width;
+        var buffer = document.createElement('canvas');
         buffer.width = img.width * ratio;
         buffer.height = img.height * ratio;
         var ctx = buffer.getContext('2d');
         ctx.drawImage(img, 0, 0, buffer.width, buffer.height);
-        finalImage = buffer;
-      } else {
-        finalImage = img;
+        return photoSphereViewer.utils.createTexture(buffer);
       }
 
-      return photoSphereViewer.utils.createTexture(finalImage);
+      return photoSphereViewer.utils.createTexture(img);
     }
     /**
      * @override
@@ -192,18 +193,14 @@
       }
 
       var cubeSize = photoSphereViewer.CONSTANTS.SPHERE_RADIUS * 2 * scale;
-      var geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize, CUBE_VERTICES, CUBE_VERTICES, CUBE_VERTICES);
+      var geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize).scale(1, 1, -1);
       var materials = [];
 
       for (var i = 0; i < 6; i++) {
-        materials.push(new THREE.MeshBasicMaterial({
-          side: THREE.BackSide
-        }));
+        materials.push(new THREE.MeshBasicMaterial());
       }
 
-      var mesh = new THREE.Mesh(geometry, materials);
-      mesh.scale.set(1, 1, -1);
-      return mesh;
+      return new THREE.Mesh(geometry, materials);
     }
     /**
      * @override
@@ -219,7 +216,7 @@
         }
 
         if (this.config.flipTopBottom && (i === 2 || i === 3)) {
-          texture[i].center = VECTOR2D_CENTER;
+          texture[i].center = new THREE.Vector2(0.5, 0.5);
           texture[i].rotation = Math.PI;
         }
 
@@ -243,6 +240,8 @@
   CubemapAdapter.id = 'cubemap';
   CubemapAdapter.supportsTransition = true;
 
+  exports.CUBE_ARRAY = CUBE_ARRAY;
+  exports.CUBE_HASHMAP = CUBE_HASHMAP;
   exports.CubemapAdapter = CubemapAdapter;
 
   Object.defineProperty(exports, '__esModule', { value: true });

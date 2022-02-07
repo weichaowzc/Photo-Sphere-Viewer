@@ -2,11 +2,14 @@ import * as THREE from 'three';
 import { SPHERE_RADIUS } from '../../data/constants';
 import { SYSTEM } from '../../data/system';
 import { PSVError } from '../../PSVError';
-import { createTexture, firstNonNull, getXMPValue, logWarn } from '../../utils';
+import { createTexture, firstNonNull, getXMPValue, isPowerOfTwo, logWarn } from '../../utils';
 import { AbstractAdapter } from '../AbstractAdapter';
 
 
-const SPHERE_SEGMENTS = 64;
+/**
+ * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
+ * @property {number} [resolution=64] - number of faces of the sphere geometry, higher values may decrease performances
+ */
 
 
 /**
@@ -17,6 +20,30 @@ export class EquirectangularAdapter extends AbstractAdapter {
 
   static id = 'equirectangular';
   static supportsTransition = true;
+
+  /**
+   * @param {PSV.Viewer} psv
+   * @param {PSV.adapters.EquirectangularAdapter.Options} options
+   */
+  constructor(psv, options) {
+    super(psv);
+
+    /**
+     * @member {PSV.adapters.EquirectangularAdapter.Options}
+     * @private
+     */
+    this.config = {
+      resolution: 64,
+      ...options,
+    };
+
+    if (!isPowerOfTwo(this.config.resolution)) {
+      throw new PSVError('EquirectangularAdapter resolution must be power of two');
+    }
+
+    this.SPHERE_SEGMENTS = this.config.resolution;
+    this.SPHERE_HORIZONTAL_SEGMENTS = this.SPHERE_SEGMENTS / 2;
+  }
 
   /**
    * @override
@@ -51,9 +78,9 @@ export class EquirectangularAdapter extends AbstractAdapter {
           croppedHeight: firstNonNull(newPanoData?.croppedHeight, xmpPanoData?.croppedHeight, img.height),
           croppedX     : firstNonNull(newPanoData?.croppedX, xmpPanoData?.croppedX, 0),
           croppedY     : firstNonNull(newPanoData?.croppedY, xmpPanoData?.croppedY, 0),
-          poseHeading  : firstNonNull(newPanoData?.poseHeading, xmpPanoData?.poseHeading),
-          posePitch    : firstNonNull(newPanoData?.posePitch, xmpPanoData?.posePitch),
-          poseRoll     : firstNonNull(newPanoData?.poseRoll, xmpPanoData?.poseRoll),
+          poseHeading  : firstNonNull(newPanoData?.poseHeading, xmpPanoData?.poseHeading, 0),
+          posePitch    : firstNonNull(newPanoData?.posePitch, xmpPanoData?.posePitch, 0),
+          poseRoll     : firstNonNull(newPanoData?.poseRoll, xmpPanoData?.poseRoll, 0),
         };
 
         if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
@@ -127,17 +154,14 @@ export class EquirectangularAdapter extends AbstractAdapter {
    * @private
    */
   __createEquirectangularTexture(img, panoData) {
-    let finalImage;
-
     // resize image / fill cropped parts with black
     if (panoData.fullWidth > SYSTEM.maxTextureWidth
       || panoData.croppedWidth !== panoData.fullWidth
       || panoData.croppedHeight !== panoData.fullHeight
     ) {
-      const resizedPanoData = { ...panoData };
-
       const ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
 
+      const resizedPanoData = { ...panoData };
       if (ratio < 1) {
         resizedPanoData.fullWidth *= ratio;
         resizedPanoData.fullHeight *= ratio;
@@ -156,13 +180,10 @@ export class EquirectangularAdapter extends AbstractAdapter {
         resizedPanoData.croppedX, resizedPanoData.croppedY,
         resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
 
-      finalImage = buffer;
-    }
-    else {
-      finalImage = img;
+      return createTexture(buffer);
     }
 
-    return createTexture(finalImage);
+    return createTexture(img);
   }
 
   /**
@@ -170,16 +191,12 @@ export class EquirectangularAdapter extends AbstractAdapter {
    */
   createMesh(scale = 1) {
     // The middle of the panorama is placed at longitude=0
-    const geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, SPHERE_SEGMENTS, SPHERE_SEGMENTS / 2, -Math.PI / 2);
+    const geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2)
+      .scale(-1, 1, 1);
 
-    const material = new THREE.MeshBasicMaterial({
-      side: THREE.BackSide,
-    });
+    const material = new THREE.MeshBasicMaterial();
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.set(-1, 1, 1);
-
-    return mesh;
+    return new THREE.Mesh(geometry, material);
   }
 
   /**

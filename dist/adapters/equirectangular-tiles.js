@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.4.3
+* Photo Sphere Viewer 4.5.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -54,8 +54,8 @@
 
   /**
    * @summary Loading task
-   * @memberOf PSV.adapters.EquirectangularTilesAdapter
-   * @package
+   * @memberOf PSV.adapters
+   * @private
    */
   var Task = /*#__PURE__*/function () {
     /**
@@ -94,6 +94,7 @@
     return Task;
   }();
   Task.STATUS = {
+    DISABLED: -1,
     PENDING: 0,
     RUNNING: 1,
     CANCELLED: 2,
@@ -103,8 +104,8 @@
 
   /**
    * @summary Loading queue
-   * @memberOf PSV.adapters.EquirectangularTilesAdapter
-   * @package
+   * @memberOf PSV.adapters
+   * @private
    */
 
   var Queue = /*#__PURE__*/function () {
@@ -112,6 +113,10 @@
      * @param {int} concurency
      */
     function Queue(concurency) {
+      if (concurency === void 0) {
+        concurency = 4;
+      }
+
       this.concurency = concurency;
       this.runningTasks = {};
       this.tasks = {};
@@ -132,14 +137,20 @@
     };
 
     _proto.setPriority = function setPriority(taskId, priority) {
-      if (this.tasks[taskId]) {
-        this.tasks[taskId].priority = priority;
+      var task = this.tasks[taskId];
+
+      if (task) {
+        task.priority = priority;
+
+        if (task.status === Task.STATUS.DISABLED) {
+          task.status = Task.STATUS.PENDING;
+        }
       }
     };
 
-    _proto.setAllPriorities = function setAllPriorities(priority) {
+    _proto.disableAllTasks = function disableAllTasks() {
       Object.values(this.tasks).forEach(function (task) {
-        task.priority = priority;
+        task.status = Task.STATUS.DISABLED;
       });
     };
 
@@ -151,9 +162,9 @@
       }
 
       var nextTask = Object.values(this.tasks).filter(function (task) {
-        return task.status === Task.STATUS.PENDING && task.priority > 0;
+        return task.status === Task.STATUS.PENDING;
       }).sort(function (a, b) {
-        return a.priority - b.priority;
+        return b.priority - a.priority;
       }).pop();
 
       if (nextTask) {
@@ -172,6 +183,59 @@
 
     return Queue;
   }();
+
+  /**
+   * @summary Generates an material for errored tiles
+   * @memberOf PSV.adapters
+   * @return {external:THREE.MeshBasicMaterial}
+   * @private
+   */
+
+  function buildErrorMaterial(width, height) {
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = canvas.width / 5 + "px serif";
+    ctx.fillStyle = '#a22';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚠', canvas.width / 2, canvas.height / 2);
+    var texture = new THREE.CanvasTexture(canvas);
+    return new THREE.MeshBasicMaterial({
+      map: texture
+    });
+  }
+  /**
+   * @summary Create the texture for the base image
+   * @memberOf PSV.adapters
+   * @param {HTMLImageElement} img
+   * @param {boolean} blur
+   * @param {function} getHeight
+   * @return {external:THREE.Texture}
+   * @private
+   */
+
+  function createBaseTexture(img, blur, getHeight) {
+    if (blur || img.width > photoSphereViewer.SYSTEM.maxTextureWidth) {
+      var ratio = Math.min(1, photoSphereViewer.SYSTEM.getMaxCanvasWidth() / img.width);
+      var buffer = document.createElement('canvas');
+      buffer.width = img.width * ratio;
+      buffer.height = getHeight(img.width);
+      var ctx = buffer.getContext('2d');
+
+      if (blur) {
+        ctx.filter = 'blur(1px)';
+      }
+
+      ctx.drawImage(img, 0, 0, buffer.width, buffer.height);
+      return photoSphereViewer.utils.createTexture(buffer);
+    }
+
+    return photoSphereViewer.utils.createTexture(img);
+  }
 
   /**
    * @callback TileUrl
@@ -194,6 +258,7 @@
 
   /**
    * @typedef {Object} PSV.adapters.EquirectangularTilesAdapter.Options
+   * @property {number} [resolution=64] - number of faces of the sphere geometry, higher values may decrease performances
    * @property {boolean} [showErrorTile=true] - shows a warning sign on tiles that cannot be loaded
    * @property {boolean} [baseBlur=true] - applies a blur to the low resolution panorama
    */
@@ -206,23 +271,49 @@
    * @property {int} angle
    */
 
-  var SPHERE_SEGMENTS = 64;
-  var NB_VERTICES = 3 * (SPHERE_SEGMENTS * 2 + (SPHERE_SEGMENTS / 2 - 2) * SPHERE_SEGMENTS * 2);
-  var NB_GROUPS = SPHERE_SEGMENTS * 2 + (SPHERE_SEGMENTS / 2 - 2) * SPHERE_SEGMENTS;
-  var QUEUE_CONCURENCY = 4;
+  /* the faces of the top and bottom rows are made of a single triangle (3 vertices)
+   * all other faces are made of two triangles (6 vertices)
+   * bellow is the indexing of each face vertices
+   *
+   * first row faces:
+   *     ⋀
+   *    /0\
+   *   /   \
+   *  /     \
+   * /1     2\
+   * ¯¯¯¯¯¯¯¯¯
+   *
+   * other rows faces:
+   * _________
+   * |\1    0|
+   * |3\     |
+   * |  \    |
+   * |   \   |
+   * |    \  |
+   * |     \2|
+   * |4    5\|
+   * ¯¯¯¯¯¯¯¯¯
+   *
+   * last row faces:
+   * _________
+   * \1     0/
+   *  \     /
+   *   \   /
+   *    \2/
+   *     ⋁
+   */
 
   function tileId(tile) {
     return tile.col + "x" + tile.row;
   }
 
-  function powerOfTwo(x) {
-    return Math.log(x) / Math.log(2) % 1 === 0;
-  }
+  var frustum = new THREE.Frustum();
+  var projScreenMatrix = new THREE.Matrix4();
+  var vertexPosition = new THREE.Vector3();
   /**
    * @summary Adapter for tiled panoramas
    * @memberof PSV.adapters
    */
-
 
   var EquirectangularTilesAdapter = /*#__PURE__*/function (_AbstractAdapter) {
     _inheritsLoose(EquirectangularTilesAdapter, _AbstractAdapter);
@@ -241,9 +332,21 @@
        */
 
       _this.config = _extends({
+        resolution: 64,
         showErrorTile: true,
         baseBlur: true
       }, options);
+
+      if (!photoSphereViewer.utils.isPowerOfTwo(_this.config.resolution)) {
+        throw new photoSphereViewer.PSVError('EquirectangularAdapter resolution must be power of two');
+      }
+
+      _this.SPHERE_SEGMENTS = _this.config.resolution;
+      _this.SPHERE_HORIZONTAL_SEGMENTS = _this.SPHERE_SEGMENTS / 2;
+      _this.NB_VERTICES_BY_FACE = 6;
+      _this.NB_VERTICES_BY_SMALL_FACE = 3;
+      _this.NB_VERTICES = 2 * _this.SPHERE_SEGMENTS * _this.NB_VERTICES_BY_SMALL_FACE + (_this.SPHERE_HORIZONTAL_SEGMENTS - 2) * _this.SPHERE_SEGMENTS * _this.NB_VERTICES_BY_FACE;
+      _this.NB_GROUPS = _this.SPHERE_SEGMENTS * _this.SPHERE_HORIZONTAL_SEGMENTS;
       /**
        * @member {external:THREE.MeshBasicMaterial[]}
        * @private
@@ -251,11 +354,11 @@
 
       _this.materials = [];
       /**
-       * @member {PSV.adapters.EquirectangularTilesAdapter.Queue}
+       * @member {PSV.adapters.Queue}
        * @private
        */
 
-      _this.queue = new Queue(QUEUE_CONCURENCY);
+      _this.queue = new Queue();
       /**
        * @type {Object}
        * @property {int} colSize - size in pixels of a column
@@ -365,22 +468,22 @@
         return Promise.reject(new photoSphereViewer.PSVError('Invalid panorama configuration, are you using the right adapter?'));
       }
 
-      if (panorama.cols > SPHERE_SEGMENTS) {
-        return Promise.reject(new photoSphereViewer.PSVError("Panorama cols must not be greater than " + SPHERE_SEGMENTS + "."));
+      if (panorama.cols > this.SPHERE_SEGMENTS) {
+        return Promise.reject(new photoSphereViewer.PSVError("Panorama cols must not be greater than " + this.SPHERE_SEGMENTS + "."));
       }
 
-      if (panorama.rows > SPHERE_SEGMENTS / 2) {
-        return Promise.reject(new photoSphereViewer.PSVError("Panorama rows must not be greater than " + SPHERE_SEGMENTS / 2 + "."));
+      if (panorama.rows > this.SPHERE_HORIZONTAL_SEGMENTS) {
+        return Promise.reject(new photoSphereViewer.PSVError("Panorama rows must not be greater than " + this.SPHERE_HORIZONTAL_SEGMENTS + "."));
       }
 
-      if (!powerOfTwo(panorama.cols) || !powerOfTwo(panorama.rows)) {
+      if (!photoSphereViewer.utils.isPowerOfTwo(panorama.cols) || !photoSphereViewer.utils.isPowerOfTwo(panorama.rows)) {
         return Promise.reject(new photoSphereViewer.PSVError('Panorama cols and rows must be powers of 2.'));
       }
 
       this.prop.colSize = panorama.width / panorama.cols;
       this.prop.rowSize = panorama.width / 2 / panorama.rows;
-      this.prop.facesByCol = SPHERE_SEGMENTS / panorama.cols;
-      this.prop.facesByRow = SPHERE_SEGMENTS / 2 / panorama.rows;
+      this.prop.facesByCol = this.SPHERE_SEGMENTS / panorama.cols;
+      this.prop.facesByRow = this.SPHERE_HORIZONTAL_SEGMENTS / panorama.rows;
 
       this.__cleanup();
 
@@ -426,29 +529,28 @@
         scale = 1;
       }
 
-      var geometry = new THREE.SphereGeometry(photoSphereViewer.CONSTANTS.SPHERE_RADIUS * scale, SPHERE_SEGMENTS, SPHERE_SEGMENTS / 2, -Math.PI / 2).toNonIndexed();
+      var geometry = new THREE.SphereGeometry(photoSphereViewer.CONSTANTS.SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2).scale(-1, 1, 1).toNonIndexed();
+      geometry.clearGroups();
       var i = 0;
       var k = 0; // first row
 
-      for (; i < SPHERE_SEGMENTS * 3; i += 3) {
-        geometry.addGroup(i, 3, k++);
+      for (; i < this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE; i += this.NB_VERTICES_BY_SMALL_FACE) {
+        geometry.addGroup(i, this.NB_VERTICES_BY_SMALL_FACE, k++);
       } // second to before last rows
 
 
-      for (; i < NB_VERTICES - SPHERE_SEGMENTS * 3; i += 6) {
-        geometry.addGroup(i, 6, k++);
+      for (; i < this.NB_VERTICES - this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE; i += this.NB_VERTICES_BY_FACE) {
+        geometry.addGroup(i, this.NB_VERTICES_BY_FACE, k++);
       } // last row
 
 
-      for (; i < NB_VERTICES; i += 3) {
-        geometry.addGroup(i, 3, k++);
+      for (; i < this.NB_VERTICES; i += this.NB_VERTICES_BY_SMALL_FACE) {
+        geometry.addGroup(i, this.NB_VERTICES_BY_SMALL_FACE, k++);
       }
 
       this.prop.geom = geometry;
       this.prop.originalUvs = geometry.getAttribute('uv').clone();
-      var mesh = new THREE.Mesh(geometry, this.materials);
-      mesh.scale.set(-1, 1, 1);
-      return mesh;
+      return new THREE.Mesh(geometry, this.materials);
     }
     /**
      * @summary Applies the base texture and starts the loading of tiles
@@ -461,120 +563,172 @@
 
       if (textureData.texture) {
         var material = new THREE.MeshBasicMaterial({
-          side: THREE.BackSide,
           map: textureData.texture
         });
 
-        for (var i = 0; i < NB_GROUPS; i++) {
+        for (var i = 0; i < this.NB_GROUPS; i++) {
           this.materials.push(material);
         }
-      }
+      } // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
+
 
       setTimeout(function () {
-        return _this3.__refresh();
+        return _this3.__refresh(true);
       });
     }
     /**
      * @summary Compute visible tiles and load them
+     * @param {boolean} [init=false] Indicates initial call
      * @private
      */
     ;
 
-    _proto.__refresh = function __refresh() {
+    _proto.__refresh = function __refresh(init) {
       var _this4 = this;
 
-      var viewerSize = this.psv.prop.size;
+      // eslint-disable-line no-unused-vars
       var panorama = this.psv.config.panorama;
 
       if (!panorama) {
         return;
       }
 
+      var camera = this.psv.renderer.camera;
+      camera.updateMatrixWorld();
+      projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      frustum.setFromProjectionMatrix(projScreenMatrix);
+      var verticesPosition = this.prop.geom.getAttribute('position');
       var tilesToLoad = [];
-      var tilePosition = new THREE.Vector3();
 
-      for (var col = 0; col <= panorama.cols; col++) {
-        for (var row = 0; row <= panorama.rows; row++) {
-          // TODO prefilter with less complex math if possible
-          var tileTexturePosition = {
-            x: col * this.prop.colSize,
-            y: row * this.prop.rowSize
-          };
-          this.psv.dataHelper.sphericalCoordsToVector3(this.psv.dataHelper.textureCoordsToSphericalCoords(tileTexturePosition), tilePosition);
+      for (var col = 0; col < panorama.cols; col++) {
+        for (var row = 0; row < panorama.rows; row++) {
+          // for each tile, find the vertices corresponding to the four corners (three for first and last rows)
+          // if at least one vertex is visible, the tile must be loaded
+          // for larger tiles we also test the four edges centers and the tile center
+          var verticesIndex = [];
 
-          if (tilePosition.dot(this.psv.prop.direction) > 0) {
-            var tileViewerPosition = this.psv.dataHelper.vector3ToViewerCoords(tilePosition);
+          if (row === 0) {
+            // bottom-left
+            var v0 = this.prop.facesByRow === 1 ? col * this.prop.facesByCol * this.NB_VERTICES_BY_SMALL_FACE + 1 : this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE + (this.prop.facesByRow - 2) * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE + col * this.prop.facesByCol * this.NB_VERTICES_BY_FACE + 4; // bottom-right
 
-            if (tileViewerPosition.x >= 0 && tileViewerPosition.x <= viewerSize.width && tileViewerPosition.y >= 0 && tileViewerPosition.y <= viewerSize.height) {
-              (function () {
-                var angle = tilePosition.angleTo(_this4.psv.prop.direction);
+            var v1 = this.prop.facesByRow === 1 ? v0 + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_SMALL_FACE + 1 : v0 + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_FACE + 1; // top (all vertices are equal)
 
-                _this4.__getAdjacentTiles(col, row).forEach(function (tile) {
-                  var existingTile = tilesToLoad.find(function (c) {
-                    return c.row === tile.row && c.col === tile.col;
-                  });
+            var v2 = 0;
+            verticesIndex.push(v0, v1, v2);
 
-                  if (existingTile) {
-                    existingTile.angle = Math.min(existingTile.angle, angle);
-                  } else {
-                    tilesToLoad.push(_extends({}, tile, {
-                      angle: angle
-                    }));
-                  }
-                });
-              })();
+            if (this.prop.facesByCol >= this.SPHERE_SEGMENTS / 8) {
+              // bottom-center
+              var v4 = v0 + this.prop.facesByCol / 2 * this.NB_VERTICES_BY_FACE;
+              verticesIndex.push(v4);
             }
+
+            if (this.prop.facesByRow >= this.SPHERE_HORIZONTAL_SEGMENTS / 4) {
+              // left-center
+              var v6 = v0 - this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE; // right-center
+
+              var v7 = v1 - this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE;
+              verticesIndex.push(v6, v7);
+            }
+          } else if (row === panorama.rows - 1) {
+            // top-left
+            var _v = this.prop.facesByRow === 1 ? -this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE + row * this.prop.facesByRow * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE + col * this.prop.facesByCol * this.NB_VERTICES_BY_SMALL_FACE + 1 : -this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE + row * this.prop.facesByRow * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE + col * this.prop.facesByCol * this.NB_VERTICES_BY_FACE + 1; // top-right
+
+
+            var _v2 = this.prop.facesByRow === 1 ? _v + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_SMALL_FACE - 1 : _v + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_FACE - 1; // bottom (all vertices are equal)
+
+
+            var _v3 = this.NB_VERTICES - 1;
+
+            verticesIndex.push(_v, _v2, _v3);
+
+            if (this.prop.facesByCol >= this.SPHERE_SEGMENTS / 8) {
+              // top-center
+              var _v4 = _v + this.prop.facesByCol / 2 * this.NB_VERTICES_BY_FACE;
+
+              verticesIndex.push(_v4);
+            }
+
+            if (this.prop.facesByRow >= this.SPHERE_HORIZONTAL_SEGMENTS / 4) {
+              // left-center
+              var _v5 = _v + this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE; // right-center
+
+
+              var _v6 = _v2 + this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE;
+
+              verticesIndex.push(_v5, _v6);
+            }
+          } else {
+            // top-left
+            var _v7 = -this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_SMALL_FACE + row * this.prop.facesByRow * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE + col * this.prop.facesByCol * this.NB_VERTICES_BY_FACE + 1; // bottom-left
+
+
+            var _v8 = _v7 + (this.prop.facesByRow - 1) * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE + 3; // bottom-right
+
+
+            var _v9 = _v8 + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_FACE + 1; // top-right
+
+
+            var v3 = _v7 + (this.prop.facesByCol - 1) * this.NB_VERTICES_BY_FACE - 1;
+            verticesIndex.push(_v7, _v8, _v9, v3);
+
+            if (this.prop.facesByCol >= this.SPHERE_SEGMENTS / 8) {
+              // top-center
+              var _v10 = _v7 + this.prop.facesByCol / 2 * this.NB_VERTICES_BY_FACE; // bottom-center
+
+
+              var v5 = _v8 + this.prop.facesByCol / 2 * this.NB_VERTICES_BY_FACE;
+              verticesIndex.push(_v10, v5);
+            }
+
+            if (this.prop.facesByRow >= this.SPHERE_HORIZONTAL_SEGMENTS / 4) {
+              // left-center
+              var _v11 = _v7 + this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE; // right-center
+
+
+              var _v12 = v3 + this.prop.facesByRow / 2 * this.SPHERE_SEGMENTS * this.NB_VERTICES_BY_FACE;
+
+              verticesIndex.push(_v11, _v12);
+
+              if (this.prop.facesByCol >= this.SPHERE_SEGMENTS / 8) {
+                // center-center
+                var v8 = _v11 + this.prop.facesByCol / 2 * this.NB_VERTICES_BY_FACE;
+                verticesIndex.push(v8);
+              }
+            }
+          } // if (init && col === 0 && row === 0) {
+          //   verticesIndex.forEach((vertexIdx) => {
+          //     this.psv.renderer.scene.add(createDot(
+          //       verticesPosition.getX(vertexIdx),
+          //       verticesPosition.getY(vertexIdx),
+          //       verticesPosition.getZ(vertexIdx)
+          //     ));
+          //   });
+          // }
+
+
+          var vertexVisible = verticesIndex.some(function (vertexIdx) {
+            vertexPosition.set(verticesPosition.getX(vertexIdx), verticesPosition.getY(vertexIdx), verticesPosition.getZ(vertexIdx));
+            vertexPosition.applyEuler(_this4.psv.renderer.meshContainer.rotation);
+            return frustum.containsPoint(vertexPosition);
+          });
+
+          if (vertexVisible) {
+            var angle = vertexPosition.angleTo(this.psv.prop.direction);
+
+            if (row === 0 || row === panorama.rows - 1) {
+              angle *= 2; // lower priority to top and bottom tiles
+            }
+
+            tilesToLoad.push({
+              col: col,
+              row: row,
+              angle: angle
+            });
           }
         }
       }
 
       this.__loadTiles(tilesToLoad);
-    }
-    /**
-     * @summary Get the 4 adjacent tiles
-     * @private
-     */
-    ;
-
-    _proto.__getAdjacentTiles = function __getAdjacentTiles(col, row) {
-      var panorama = this.psv.config.panorama;
-      return [{
-        col: col - 1,
-        row: row - 1
-      }, {
-        col: col,
-        row: row - 1
-      }, {
-        col: col,
-        row: row
-      }, // eslint-disable-line object-shorthand
-      {
-        col: col - 1,
-        row: row
-      }].map(function (tile) {
-        // examples are for cols=16 and rows=8
-        if (tile.row < 0) {
-          // wrap on top
-          tile.row = -tile.row - 1; // -1 => 0, -2 => 1
-
-          tile.col += panorama.cols / 2; // change hemisphere
-        } else if (tile.row >= panorama.rows) {
-          // wrap on bottom
-          tile.row = panorama.rows - 1 - (tile.row - panorama.rows); // 8 => 7, 9 => 6
-
-          tile.col += panorama.cols / 2; // change hemisphere
-        }
-
-        if (tile.col < 0) {
-          // wrap on left
-          tile.col += panorama.cols; // -1 => 15, -2 => 14
-        } else if (tile.col >= panorama.cols) {
-          // wrap on right
-          tile.col -= panorama.cols; // 16 => 0, 17 => 1
-        }
-
-        return tile;
-      });
     }
     /**
      * @summary Loads tiles and change existing tiles priority
@@ -586,17 +740,16 @@
     _proto.__loadTiles = function __loadTiles(tiles) {
       var _this5 = this;
 
-      this.queue.setAllPriorities(0);
+      this.queue.disableAllTasks();
       tiles.forEach(function (tile) {
         var id = tileId(tile);
-        var priority = Math.PI / 2 - tile.angle;
 
         if (_this5.prop.tiles[id]) {
-          _this5.queue.setPriority(id, priority);
+          _this5.queue.setPriority(id, tile.angle);
         } else {
           _this5.prop.tiles[id] = true;
 
-          _this5.queue.enqueue(new Task(id, priority, function (task) {
+          _this5.queue.enqueue(new Task(id, tile.angle, function (task) {
             return _this5.__loadTile(tile, task);
           }));
         }
@@ -606,7 +759,7 @@
     /**
      * @summary Loads and draw a tile
      * @param {PSV.adapters.EquirectangularTilesAdapter.Tile} tile
-     * @param {PSV.adapters.EquirectangularTilesAdapter.Task} task
+     * @param {PSV.adapters.Task} task
      * @return {Promise}
      * @private
      */
@@ -627,7 +780,6 @@
       }).then(function (image) {
         if (!task.isCancelled()) {
           var material = new THREE.MeshBasicMaterial({
-            side: THREE.BackSide,
             map: photoSphereViewer.utils.createTexture(image)
           });
 
@@ -637,9 +789,11 @@
         }
       }).catch(function () {
         if (!task.isCancelled() && _this6.config.showErrorTile) {
-          var material = _this6.__getErrorMaterial();
+          if (!_this6.prop.errorMaterial) {
+            _this6.prop.errorMaterial = buildErrorMaterial(_this6.prop.colSize, _this6.prop.rowSize);
+          }
 
-          _this6.__swapMaterial(tile.col, tile.row, material);
+          _this6.__swapMaterial(tile.col, tile.row, _this6.prop.errorMaterial);
 
           _this6.psv.needsUpdate();
         }
@@ -665,16 +819,16 @@
           var faceCol = col * _this7.prop.facesByCol + c;
           var faceRow = row * _this7.prop.facesByRow + r;
           var isFirstRow = faceRow === 0;
-          var isLastRow = faceRow === SPHERE_SEGMENTS / 2 - 1; // first vertex for this face (3 or 6 vertices in total)
+          var isLastRow = faceRow === _this7.SPHERE_HORIZONTAL_SEGMENTS - 1; // first vertex for this face (3 or 6 vertices in total)
 
           var firstVertex = void 0;
 
           if (isFirstRow) {
-            firstVertex = faceCol * 3;
+            firstVertex = faceCol * _this7.NB_VERTICES_BY_SMALL_FACE;
           } else if (isLastRow) {
-            firstVertex = NB_VERTICES - SPHERE_SEGMENTS * 3 + faceCol * 3;
+            firstVertex = _this7.NB_VERTICES - _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_SMALL_FACE + faceCol * _this7.NB_VERTICES_BY_SMALL_FACE;
           } else {
-            firstVertex = 3 * (SPHERE_SEGMENTS + (faceRow - 1) * SPHERE_SEGMENTS * 2 + faceCol * 2);
+            firstVertex = _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_SMALL_FACE + (faceRow - 1) * _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_FACE + faceCol * _this7.NB_VERTICES_BY_FACE;
           } // swap material
 
 
@@ -715,35 +869,6 @@
       uvs.needsUpdate = true;
     }
     /**
-     * @summary Generates an material for errored tiles
-     * @return {external:THREE.MeshBasicMaterial}
-     * @private
-     */
-    ;
-
-    _proto.__getErrorMaterial = function __getErrorMaterial() {
-      if (!this.prop.errorMaterial) {
-        var canvas = document.createElement('canvas');
-        canvas.width = this.prop.colSize;
-        canvas.height = this.prop.rowSize;
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#333';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = canvas.width / 5 + "px serif";
-        ctx.fillStyle = '#a22';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('⚠', canvas.width / 2, canvas.height / 2);
-        var texture = new THREE.CanvasTexture(canvas);
-        this.prop.errorMaterial = new THREE.MeshBasicMaterial({
-          side: THREE.BackSide,
-          map: texture
-        });
-      }
-
-      return this.prop.errorMaterial;
-    }
-    /**
      * @summary Create the texture for the base image
      * @param {HTMLImageElement} img
      * @return {external:THREE.Texture}
@@ -756,49 +881,13 @@
         photoSphereViewer.utils.logWarn('Invalid base image, the width should be twice the height');
       }
 
-      if (this.config.baseBlur || img.width > photoSphereViewer.SYSTEM.maxTextureWidth) {
-        var ratio = Math.min(1, photoSphereViewer.SYSTEM.getMaxCanvasWidth() / img.width);
-        var buffer = document.createElement('canvas');
-        buffer.width = img.width * ratio;
-        buffer.height = buffer.width / 2;
-        var ctx = buffer.getContext('2d');
-
-        if (this.config.baseBlur) {
-          ctx.filter = 'blur(1px)';
-        }
-
-        ctx.drawImage(img, 0, 0, buffer.width, buffer.height);
-        return photoSphereViewer.utils.createTexture(buffer);
-      }
-
-      return photoSphereViewer.utils.createTexture(img);
+      return createBaseTexture(img, this.config.baseBlur, function (w) {
+        return w / 2;
+      });
     };
 
     return EquirectangularTilesAdapter;
   }(photoSphereViewer.AbstractAdapter);
-  /* eslint-disable */
-
-  /**
-   * UNUSED : Returns the apparent size of a segment on the screen
-   * @private
-   */
-  // function getSegmentSize() {
-  //   const p1 = this.psv.prop.direction.clone();
-  //   const p2 = this.psv.prop.direction.clone();
-  //
-  //   const angle = Math.PI * 2 / SPHERE_SEGMENTS / 2;
-  //   const dst = Math.atan(angle) * CONSTANTS.SPHERE_RADIUS;
-  //   const horizontalAxis = new THREE.Vector3(0, 1, 0).cross(this.psv.prop.direction).normalize();
-  //
-  //   p1.add(horizontalAxis.clone().multiplyScalar(dst));
-  //   p2.add(horizontalAxis.clone().multiplyScalar(-dst));
-  //
-  //   const p1a = this.psv.dataHelper.vector3ToViewerCoords(p1);
-  //   const p2a = this.psv.dataHelper.vector3ToViewerCoords(p2);
-  //
-  //   const segmentSize = p2a.x - p1a.x;
-  // }
-
   EquirectangularTilesAdapter.id = 'equirectangular-tiles';
   EquirectangularTilesAdapter.supportsTransition = false;
 

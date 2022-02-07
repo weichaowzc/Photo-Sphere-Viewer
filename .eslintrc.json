@@ -1,7 +1,8 @@
 {
   "ignorePatterns": [
     "*.spec.js",
-    "DeviceOrientationControls.js"
+    "DeviceOrientationControls.js",
+    "StereoEffect.js"
   ],
   "extends": "airbnb-base",
   "parser": "@babel/eslint-parser",
@@ -91,6 +92,14 @@
     "quote-props": [
       "error",
       "consistent-as-needed"
+    ],
+    "quotes": [
+      "error",
+      "single",
+      {
+        "avoidEscape": true,
+        "allowTemplateLiterals": true
+      }
     ],
     "lines-between-class-members": [
       "error",

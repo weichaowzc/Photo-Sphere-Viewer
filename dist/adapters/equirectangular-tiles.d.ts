@@ -12,9 +12,10 @@ type EquirectangularTilesPanorama = {
 };
 
 type EquirectangularTilesAdapterOptions = {
+  resolution?: number,
   showErrorTile?: boolean;
   baseBlur?: boolean;
-}
+};
 
 /**
  * @summary Adapter for tiled panoramas

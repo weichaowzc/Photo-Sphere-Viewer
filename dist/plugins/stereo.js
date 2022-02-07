@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.4.3
+* Photo Sphere Viewer 4.5.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.THREE, global.PhotoSphereViewer));
-})(this, (function (exports, three, photoSphereViewer) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer'), require('three')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer', 'three'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.StereoPlugin = {}), global.PhotoSphereViewer, global.THREE));
+})(this, (function (exports, photoSphereViewer, three) { 'use strict';
 
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
@@ -32,42 +32,6 @@
     }
 
     return self;
-  }
-
-  class StereoEffect {
-    constructor(renderer) {
-      const _stereo = new three.StereoCamera();
-
-      _stereo.aspect = 0.5;
-      const size = new three.Vector2();
-
-      this.setEyeSeparation = function (eyeSep) {
-        _stereo.eyeSep = eyeSep;
-      };
-
-      this.setSize = function (width, height) {
-        renderer.setSize(width, height);
-      };
-
-      this.render = function (scene, camera) {
-        scene.updateMatrixWorld();
-        if (camera.parent === null) camera.updateMatrixWorld();
-
-        _stereo.update(camera);
-
-        renderer.getSize(size);
-        if (renderer.autoClear) renderer.clear();
-        renderer.setScissorTest(true);
-        renderer.setScissor(0, 0, size.width / 2, size.height);
-        renderer.setViewport(0, 0, size.width / 2, size.height);
-        renderer.render(scene, _stereo.cameraL);
-        renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
-        renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
-        renderer.render(scene, _stereo.cameraR);
-        renderer.setScissorTest(false);
-      };
-    }
-
   }
 
   /**
@@ -180,6 +144,44 @@
   }(photoSphereViewer.AbstractButton);
   StereoButton.id = 'stereo';
   StereoButton.icon = stereo;
+
+  /**
+   * Copied from three.js examples
+   * @private
+   */
+
+  var StereoEffect = function StereoEffect(renderer) {
+    var _stereo = new three.StereoCamera();
+
+    _stereo.aspect = 0.5;
+    var size = new three.Vector2();
+
+    this.setEyeSeparation = function (eyeSep) {
+      _stereo.eyeSep = eyeSep;
+    };
+
+    this.setSize = function (width, height) {
+      renderer.setSize(width, height);
+    };
+
+    this.render = function (scene, camera) {
+      scene.updateMatrixWorld();
+      if (camera.parent === null) camera.updateMatrixWorld();
+
+      _stereo.update(camera);
+
+      renderer.getSize(size);
+      if (renderer.autoClear) renderer.clear();
+      renderer.setScissorTest(true);
+      renderer.setScissor(0, 0, size.width / 2, size.height);
+      renderer.setViewport(0, 0, size.width / 2, size.height);
+      renderer.render(scene, _stereo.cameraL);
+      renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
+      renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
+      renderer.render(scene, _stereo.cameraR);
+      renderer.setScissorTest(false);
+    };
+  };
 
   /**
    * @external NoSleep

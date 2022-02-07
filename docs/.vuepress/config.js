@@ -40,7 +40,6 @@ module.exports = {
             'methods',
             'events',
             'navbar',
-            'markers',
             'cropped-panorama',
             'migration-v3',
             {
@@ -48,8 +47,10 @@ module.exports = {
               path       : '/guide/adapters/',
               collapsable: false,
               children   : [
-                'adapters/cubemap',
+                'adapters/equirectangular',
                 'adapters/tiles',
+                'adapters/cubemap',
+                ['adapters/cubemap-tiles', 'Cubemap tiles (NEW)'],
               ],
             },
             {
@@ -82,13 +83,13 @@ module.exports = {
           collapsable : false,
           children    : [
             'plugin-autorotate-keypoints',
-            ['plugin-compass', 'CompassPlugin (NEW)'],
+            'plugin-compass',
             'plugin-gyroscope',
             'plugin-markers',
             'plugin-resolution',
             'plugin-settings',
             'plugin-stereo',
-            ['plugin-virtual-tour', ' VirtualTourPlugin (NEW)'],
+            'plugin-virtual-tour',
             'plugin-visible-range',
           ],
         },
