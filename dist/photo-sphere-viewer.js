@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.0
+* Photo Sphere Viewer 4.5.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -3646,6 +3646,13 @@
      */
 
     /**
+     * @summary Indicates if the adapter supports preload
+     * @type {boolean}
+     * @readonly
+     * @static
+     */
+
+    /**
      * @param {PSV.Viewer} psv
      */
     function AbstractAdapter(psv) {
@@ -3721,6 +3728,7 @@
   }();
   AbstractAdapter.id = null;
   AbstractAdapter.supportsTransition = false;
+  AbstractAdapter.supportsPreload = false;
 
   /**
    * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
@@ -3971,6 +3979,7 @@
   }(AbstractAdapter);
   EquirectangularAdapter.id = 'equirectangular';
   EquirectangularAdapter.supportsTransition = true;
+  EquirectangularAdapter.supportsPreload = true;
 
   /**
    * @namespace PSV.plugins
@@ -6431,6 +6440,7 @@
     _proto.__startMove = function __startMove(evt) {
       var _this6 = this;
 
+      this.psv.stopAutorotate();
       this.psv.stopAnimation().then(function () {
         _this6.state.mouseX = evt.clientX;
         _this6.state.mouseY = evt.clientY;
@@ -7311,7 +7321,11 @@
     ;
 
     _proto.preloadPanorama = function preloadPanorama(panorama) {
-      return this.psv.adapter.loadTexture(panorama);
+      if (this.psv.adapter.constructor.supportsPreload) {
+        return this.psv.adapter.loadTexture(panorama);
+      } else {
+        return Promise.resolve();
+      }
     };
 
     return TextureLoader;
@@ -8854,7 +8868,6 @@
 
       var cleanPosition = this.change(CHANGE_EVENTS.GET_ROTATE_POSITION, this.dataHelper.cleanPosition(position));
       this.dynamics.position.setValue(cleanPosition);
-      this.stopAutorotate();
     }
     /**
      * @summary Rotates and zooms the view with a smooth animation

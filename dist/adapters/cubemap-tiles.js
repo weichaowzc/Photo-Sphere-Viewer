@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.0
+* Photo Sphere Viewer 4.5.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -441,8 +441,6 @@
       this.prop.tileSize = panorama.faceSize / panorama.nbTiles;
       this.prop.facesByTile = CUBE_SEGMENTS / panorama.nbTiles;
 
-      this.__cleanup();
-
       if (this.prop.geom) {
         this.prop.geom.setAttribute('uv', this.prop.originalUvs.clone());
       }
@@ -491,6 +489,8 @@
     _proto.setTexture = function setTexture(mesh, textureData) {
       var _this2 = this;
 
+      this.__cleanup();
+
       if (textureData.texture) {
         for (var i = 0; i < 6; i++) {
           var texture = textureData.texture[i];
@@ -506,6 +506,17 @@
 
           for (var j = 0; j < NB_GROUPS_BY_FACE; j++) {
             this.materials.push(material);
+          }
+        }
+      } else {
+        var _material = new THREE.MeshBasicMaterial({
+          opacity: 0,
+          transparent: true
+        });
+
+        for (var _i = 0; _i < 6; _i++) {
+          for (var _j = 0; _j < NB_GROUPS_BY_FACE; _j++) {
+            this.materials.push(_material);
           }
         }
       } // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
@@ -755,6 +766,7 @@
   }(cubemap.CubemapAdapter);
   CubemapTilesAdapter.id = 'cubemap-tiles';
   CubemapTilesAdapter.supportsTransition = false;
+  CubemapTilesAdapter.supportsPreload = false;
 
   exports.CubemapTilesAdapter = CubemapTilesAdapter;
 

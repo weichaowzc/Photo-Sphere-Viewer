@@ -1,6 +1,6 @@
 {
   "name": "photo-sphere-viewer",
-  "version": "4.5.0",
+  "version": "4.5.1",
   "description": "A JavaScript library to display Photo Sphere panoramas",
   "homepage": "https://photo-sphere-viewer.js.org",
   "main": "dist/photo-sphere-viewer.js",
@@ -95,6 +95,6 @@
     "start": "npm-run-all --parallel dev:**",
     "start:doc": "vuepress dev docs",
     "dev:serve": "live-server --watch=dist,example --open=example",
-    "dev:watch": "npm run compile:prepare && npm run compile:rollup -- --watch"
+    "dev:watch": "npm run compile -- --watch"
   }
 }

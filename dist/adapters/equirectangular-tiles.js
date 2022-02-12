@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.0
+* Photo Sphere Viewer 4.5.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -485,8 +485,6 @@
       this.prop.facesByCol = this.SPHERE_SEGMENTS / panorama.cols;
       this.prop.facesByRow = this.SPHERE_HORIZONTAL_SEGMENTS / panorama.rows;
 
-      this.__cleanup();
-
       if (this.prop.geom) {
         this.prop.geom.setAttribute('uv', this.prop.originalUvs.clone());
       }
@@ -561,14 +559,23 @@
     _proto.setTexture = function setTexture(mesh, textureData) {
       var _this3 = this;
 
+      this.__cleanup();
+
+      var material;
+
       if (textureData.texture) {
-        var material = new THREE.MeshBasicMaterial({
+        material = new THREE.MeshBasicMaterial({
           map: textureData.texture
         });
+      } else {
+        material = new THREE.MeshBasicMaterial({
+          opacity: 0,
+          transparent: true
+        });
+      }
 
-        for (var i = 0; i < this.NB_GROUPS; i++) {
-          this.materials.push(material);
-        }
+      for (var i = 0; i < this.NB_GROUPS; i++) {
+        this.materials.push(material);
       } // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
 
 
@@ -890,6 +897,7 @@
   }(photoSphereViewer.AbstractAdapter);
   EquirectangularTilesAdapter.id = 'equirectangular-tiles';
   EquirectangularTilesAdapter.supportsTransition = false;
+  EquirectangularTilesAdapter.supportsPreload = false;
 
   exports.EquirectangularTilesAdapter = EquirectangularTilesAdapter;
 

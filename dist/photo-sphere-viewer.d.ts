@@ -559,6 +559,11 @@ declare abstract class AbstractAdapter<T> {
    */
   static supportsTransition: boolean;
 
+  /**
+   * @summary Indicates if the adapter supports preload
+   */
+  static supportsPreload: boolean;
+
   constructor(parent: Viewer);
 
   /**

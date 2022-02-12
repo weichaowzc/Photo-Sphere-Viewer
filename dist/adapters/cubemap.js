@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.0
+* Photo Sphere Viewer 4.5.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -239,6 +239,7 @@
   }(photoSphereViewer.AbstractAdapter);
   CubemapAdapter.id = 'cubemap';
   CubemapAdapter.supportsTransition = true;
+  CubemapAdapter.supportsPreload = true;
 
   exports.CUBE_ARRAY = CUBE_ARRAY;
   exports.CUBE_HASHMAP = CUBE_HASHMAP;

@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.0
+* Photo Sphere Viewer 4.5.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -335,7 +335,7 @@
 
     _proto.__nextPoint = function __nextPoint() {
       // get the 4 points necessary to compute the current movement
-      // one point before and two points before current
+      // one point before and two points after the current
       var workPoints = [];
 
       if (this.state.idx === -1) {
@@ -370,10 +370,13 @@
         }
 
         workPoints2.push([workPoints[_i][0] + k * 2 * Math.PI, workPoints[_i][1]]);
-      } // only keep the curve for the current movement
+      }
+
+      var curve = this.__getCurvePoints(workPoints2, 0.6, NUM_STEPS); // __debugCurve(this.markers, curve);
+      // only keep the curve for the current movement
 
 
-      this.state.curve = this.__getCurvePoints(workPoints2, 0.6, NUM_STEPS).slice(NUM_STEPS, NUM_STEPS * 2);
+      this.state.curve = curve.slice(NUM_STEPS, NUM_STEPS * 2);
 
       if (this.state.idx !== -1) {
         this.state.remainingPause = this.keypoints[this.state.idx].pause;
@@ -447,7 +450,7 @@
       this.psv.rotate({
         longitude: this.state.startPt[0] + (this.state.endPt[0] - this.state.startPt[0]) * progress,
         latitude: this.state.startPt[1] + (this.state.endPt[1] - this.state.startPt[1]) * progress
-      }, true);
+      });
     }
     /**
      * @summary Interpolate curvature points using cardinal spline
