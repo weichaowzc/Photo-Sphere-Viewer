@@ -268,9 +268,10 @@ type PanoDataProvider = (image: HTMLImageElement) => PanoData;
  * Object defining panorama and animation options
  */
 type PanoramaOptions = (ExtendedPosition | {}) & {
-  zoom?: number;
+  caption?: string;
   transition?: boolean | number;
   showLoader?: boolean;
+  zoom?: number;
   sphereCorrection?: SphereCorrection;
   panoData?: PanoData | PanoDataProvider;
 };
@@ -555,14 +556,9 @@ declare abstract class AbstractAdapter<T> {
   static id: string;
 
   /**
-   * @summary Indicates if the adapter supports transitions between panoramas
+   * @summary Indicates if the adapter supports panorama download natively
    */
-  static supportsTransition: boolean;
-
-  /**
-   * @summary Indicates if the adapter supports preload
-   */
-  static supportsPreload: boolean;
+  static supportsDownload: boolean;
 
   constructor(parent: Viewer);
 
@@ -570,6 +566,16 @@ declare abstract class AbstractAdapter<T> {
    * @summary Destroys the adapter
    */
   destroy();
+
+  /**
+   * @summary Indicates if the adapter supports transitions between panoramas
+   */
+  supportsTransition(panorama: T): boolean;
+
+  /**
+   * @summary Indicates if the adapter supports preload of a panorama
+   */
+  supportsPreload(panorama: T): boolean;
 
   /**
    * @summary Loads the panorama texture(s)
@@ -585,50 +591,63 @@ declare abstract class AbstractAdapter<T> {
   /**
    * @summary Applies the texture to the mesh
    */
-  setTexture(mesh: Mesh, textureData: TextureData);
+  setTexture(mesh: Mesh, textureData: TextureData, transition?: boolean);
 
   /**
    * @summary Changes the opacity of the mesh
    */
   setTextureOpacity(mesh: Mesh, opacity: number);
 
+  /**
+   * @abstract
+   */
+  disposeTexture(textureData: TextureData);
+
 }
 
 type AdapterConstructor<T extends AbstractAdapter<any>> = new (psv: Viewer, options?: any) => T;
 
-type AnimationOptions = {
-  properties: { [K: string]: { start: number, end: number } };
+type AnimationOptions<T> = {
+  properties: { [key in keyof T]: { start: number, end: number } };
   duration: number;
   delay?: number;
   easing?: string | ((progress: number) => number);
-  onTick: (properties: { [K: string]: number }, progress: number) => void;
+  onTick: (properties: { [key in keyof T]: number }, progress: number) => void;
 };
 
 /**
  * @summary Interpolation helper for animations
  * @description
- * Implements the Promise API with an additional "cancel" and "finally" methods.
+ * Implements the Promise API with an additional "cancel" method.
  * The promise is resolved when the animation is complete and rejected if the animation is cancelled.
  */
-declare class Animation implements Promise<void> {
+declare class Animation<T> implements PromiseLike<boolean> {
 
-  constructor(options: AnimationOptions);
+  constructor(options: AnimationOptions<T>);
 
-  // @ts-ignore
-  then(onFulfilled?: (() => void | Animation | PromiseLike<void>) | undefined | null, onRejected?: (() => void | Animation | PromiseLike<void>) | undefined | null): Animation;
-
-  // @ts-ignore
-  catch(onRejected?: (() => void | Animation | PromiseLike<void>) | undefined | null): Animation;
-
-  // @ts-ignore
-  finally(onFinally?: (() => void | Animation | PromiseLike<void>) | undefined | null): Animation;
+  then<TResult = boolean>(onFulfilled?: ((completed: boolean) => TResult | PromiseLike<TResult>) | undefined | null): PromiseLike<TResult>;
 
   cancel();
 
   /**
-   * @summary Returns a resolved animation promise
+   * @deprecated does not accept a rejection handler anymore
    */
-  static resolve(): Animation;
+  then(onFulfilled?: (() => void | Animation<any> | PromiseLike<void>) | undefined | null, onRejected?: (() => void | Animation<any> | PromiseLike<void>) | undefined | null): Animation<unknown>;
+
+  /**
+   * @deprecated not supported anymore
+   */
+  catch(onRejected?: (() => void | Animation<any> | PromiseLike<void>) | undefined | null): Animation<unknown>;
+
+  /**
+   * @deprecated not supported anymore
+   */
+  finally(onFinally?: (() => void | Animation<any> | PromiseLike<void>) | undefined | null): Animation<unknown>;
+
+  /**
+   * @deprecated not supported anymore
+   */
+  static resolve(): Animation<unknown>;
 
 }
 
@@ -1006,6 +1025,7 @@ type ViewerOptions = {
   panorama?: any;
   adapter?: AdapterConstructor<any> | [AdapterConstructor<any>, any];
   caption?: string;
+  downloadUrl?: string;
   loadingImg?: string;
   loadingTxt?: string;
   size?: Size;
@@ -1051,7 +1071,7 @@ type ViewerProps = {
   hFov: number;
   aspect: number;
   autorotateEnabled: boolean;
-  animationPromise: Animation;
+  animationPromise: Animation<any>;
   loadingPromise: Promise<void>;
   startTimeout: any;
   size: Size;
@@ -1208,7 +1228,7 @@ declare class Viewer extends EventEmitter {
   /**
    * @summary Rotates and zooms the view with a smooth animation
    */
-  animate(options: AnimateOptions): Animation;
+  animate(options: AnimateOptions): Animation<any>;
 
   /**
    * @summary Stops the ongoing animation

@@ -35,7 +35,9 @@ type MarkerProperties = Partial<ExtendedPosition> & {
   id: string;
   width?: number;
   height?: number;
+  orientation?: 'front' | 'horizontal' | 'vertical-left' | 'vertical-right';
   scale?: number | [number, number] | { zoom?: [number, number], longitude?: [number, number] };
+  opacity?: number;
   className?: string;
   style?: Record<string, string>;
   svgStyle?: Record<string, string>;
@@ -207,7 +209,7 @@ declare class MarkersPlugin extends AbstractPlugin {
   /**
    * @summary Rotate the view to face the marker
    */
-  gotoMarker(markerId: string, speed: string | number): Animation;
+  gotoMarker(markerId: string, speed: string | number): Animation<any>;
 
   /**
    * @summary Hides a marker

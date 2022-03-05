@@ -20,20 +20,12 @@ export class AbstractAdapter {
   static id = null;
 
   /**
-   * @summary Indicates if the adapter supports transitions between panoramas
-   * @member {boolean}
-   * @readonly
-   * @static
-   */
-  static supportsTransition = false;
-
-  /**
-   * @summary Indicates if the adapter supports preload
+   * @summary Indicates if the adapter supports panorama download natively
    * @type {boolean}
    * @readonly
    * @static
    */
-  static supportsPreload = false;
+  static supportsDownload = false;
 
   /**
    * @param {PSV.Viewer} psv
@@ -52,6 +44,24 @@ export class AbstractAdapter {
    */
   destroy() {
     delete this.psv;
+  }
+
+  /**
+   * @summary Indicates if the adapter supports transitions between panoramas
+   * @param {*} panorama
+   * @return {boolean}
+   */
+  supportsTransition(panorama) { // eslint-disable-line no-unused-vars
+    return false;
+  }
+
+  /**
+   * @summary Indicates if the adapter supports preload of a panorama
+   * @param {*} panorama
+   * @return {boolean}
+   */
+  supportsPreload(panorama) { // eslint-disable-line no-unused-vars
+    return false;
   }
 
   /**
@@ -80,8 +90,9 @@ export class AbstractAdapter {
    * @summary Applies the texture to the mesh
    * @param {external:THREE.Mesh} mesh
    * @param {PSV.TextureData} textureData
+   * @param {boolean} [transition=false]
    */
-  setTexture(mesh, textureData) { // eslint-disable-line no-unused-vars
+  setTexture(mesh, textureData, transition = false) { // eslint-disable-line no-unused-vars
     throw new PSVError('setTexture not implemented');
   }
 
@@ -93,6 +104,15 @@ export class AbstractAdapter {
    */
   setTextureOpacity(mesh, opacity) { // eslint-disable-line no-unused-vars
     throw new PSVError('setTextureOpacity not implemented');
+  }
+
+  /**
+   * @abstract
+   * @summary Clear a loaded texture from memory
+   * @param {PSV.TextureData} textureData
+   */
+  disposeTexture(textureData) { // eslint-disable-line no-unused-vars
+    throw new PSVError('disposeTexture not implemented');
   }
 
 }

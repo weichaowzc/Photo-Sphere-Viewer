@@ -32,8 +32,7 @@ export const CUBE_HASHMAP = ['left', 'right', 'top', 'bottom', 'back', 'front'];
 export class CubemapAdapter extends AbstractAdapter {
 
   static id = 'cubemap';
-  static supportsTransition = true;
-  static supportsPreload = true;
+  static supportsDownload = false;
 
   /**
    * @param {PSV.Viewer} psv
@@ -50,6 +49,20 @@ export class CubemapAdapter extends AbstractAdapter {
       flipTopBottom: false,
       ...options,
     };
+  }
+
+  /**
+   * @override
+   */
+  supportsTransition() {
+    return true;
+  }
+
+  /**
+   * @override
+   */
+  supportsPreload() {
+    return true;
   }
 
   /**
@@ -156,15 +169,12 @@ export class CubemapAdapter extends AbstractAdapter {
     const { texture } = textureData;
 
     for (let i = 0; i < 6; i++) {
-      if (mesh.material[i].map) {
-        mesh.material[i].map.dispose();
-      }
-
       if (this.config.flipTopBottom && (i === 2 || i === 3)) {
         texture[i].center = new THREE.Vector2(0.5, 0.5);
         texture[i].rotation = Math.PI;
       }
 
+      mesh.material[i].map?.dispose();
       mesh.material[i].map = texture[i];
     }
   }
@@ -177,6 +187,13 @@ export class CubemapAdapter extends AbstractAdapter {
       mesh.material[i].opacity = opacity;
       mesh.material[i].transparent = opacity < 1;
     }
+  }
+
+  /**
+   * @override
+   */
+  disposeTexture(textureData) {
+    textureData.texture?.forEach(texture => texture.dispose());
   }
 
 }

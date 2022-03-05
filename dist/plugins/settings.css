@@ -1,5 +1,5 @@
 /*!
- * Photo Sphere Viewer 4.5.1
+ * Photo Sphere Viewer 4.5.2
  * @copyright 2014-2015 Jérémy Heleine
  * @copyright 2015-2022 Damien "Mistic" Sorel
  * @licence MIT (https://opensource.org/licenses/MIT)
@@ -39,5 +39,16 @@
 .psv-settings-item--header svg {
   -webkit-transform: scaleX(-1);
           transform: scaleX(-1);
+}
+
+.psv-settings-badge {
+  position: absolute;
+  top: 10%;
+  right: 10%;
+  border-radius: 0.2em;
+  padding: 0.2em;
+  background: #111;
+  color: white;
+  font: 10px/0.9 monospace;
 }
 /*# sourceMappingURL=settings.css.map */

@@ -297,15 +297,23 @@
             </div>
 
             <div class="md-layout md-gutter" v-if="markerForm.type === 'image' || markerForm.type === 'imageLayer'">
-              <md-button class="md-icon-button md-raised" style="margin: 15px 0 0 20px;"
-                         v-bind:class="{'md-primary': markerForm[markerForm.type] === PIN_RED_URL }"
-                         v-on:click="markerForm[markerForm.type] = PIN_RED_URL">
+              <md-button v-if="markerForm.type === 'image'"
+                         class="md-icon-button md-raised" style="margin: 15px 0 0 20px;"
+                         v-bind:class="{'md-primary': markerForm.image === PIN_RED_URL }"
+                         v-on:click="markerForm.image = PIN_RED_URL">
                 <img v-bind:src="PIN_RED_URL" width="32px">
               </md-button>
-              <md-button class="md-icon-button md-raised" style="margin: 15px 0 0 15px;"
+              <md-button v-if="markerForm.type === 'image'"
+                         class="md-icon-button md-raised" style="margin: 15px 0 0 15px;"
                          v-bind:class="{'md-primary': markerForm[markerForm.type] === PIN_BLUE_URL }"
                          v-on:click="markerForm[markerForm.type] = PIN_BLUE_URL">
                 <img v-bind:src="PIN_BLUE_URL" width="32px">
+              </md-button>
+              <md-button v-if="markerForm.type === 'imageLayer'"
+                         class="md-icon-button md-raised" style="margin: 15px 0 0 15px;"
+                         v-bind:class="{'md-primary': markerForm.imageLayer === TARGET_URL }"
+                         v-on:click="markerForm.imageLayer = TARGET_URL">
+                <img v-bind:src="TARGET_URL" width="32px">
               </md-button>
               <div class="md-layout-item">
                 <md-field>
@@ -342,14 +350,14 @@
             </div>
 
             <div class="md-layout md-gutter" v-if="markerForm.type === 'image' || markerForm.type === 'imageLayer' || markerForm.type === 'html'">
-              <div class="md-layout-item md-size-33">
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>Width</label>
                   <md-input type="number" min="0" step="1" v-model="markerForm.width"
                             :required="markerForm.type === 'image' || markerForm.type === 'imageLayer'"/>
                 </md-field>
               </div>
-              <div class="md-layout-item md-size-33">
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>Height</label>
                   <md-input type="number" min="0" step="1" v-model="markerForm.height"
@@ -357,7 +365,19 @@
                 </md-field>
               </div>
 
-              <div class="md-layout-item md-size-33">
+              <div class="md-layout-item md-size-25" v-if="markerForm.type === 'imageLayer'">
+                <md-field>
+                  <label>Orientation</label>
+                  <md-select v-model="markerForm.orientation">
+                    <md-option value="front">front</md-option>
+                    <md-option value="horizontal">horizontal</md-option>
+                    <md-option value="vertical-left">vertical-left</md-option>
+                    <md-option value="vertical-right">vertical-tight</md-option>
+                  </md-select>
+                </md-field>
+              </div>
+
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>Anchor</label>
                   <md-select v-model="markerForm.anchor">
@@ -376,14 +396,14 @@
             </div>
 
             <div class="md-layout md-gutter">
-              <div class="md-layout-item md-size-66">
+              <div class="md-layout-item md-size-75">
                 <md-field>
                   <label>Tooltip content</label>
                   <md-input type="text" v-model="markerForm.tooltip.content"/>
                 </md-field>
               </div>
 
-              <div class="md-layout-item md-size-33">
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>Tooltip position</label>
                   <md-select v-model="markerForm.tooltip.position">
@@ -483,7 +503,6 @@
 
   export default {
     data: () => ({
-      psv             : null,
       markers         : null,
       file            : null,
       imageData       : null,
@@ -493,7 +512,7 @@
         roll: 0
       },
       options         : {
-        ...omit(cloneDeep(DEFAULTS), ['panorama', 'panoData', 'container', 'plugins', 'navbar', 'loadingImg']),
+        ...omit(cloneDeep(DEFAULTS), ['panorama', 'panoData', 'sphereCorrection', 'container', 'plugins', 'navbar', 'loadingImg']),
       },
       panoData        : {
         fullWidth    : null,
@@ -548,6 +567,7 @@
         polylineRad: null,
         width      : null,
         height     : null,
+        orientation: null,
         anchor     : null,
         listContent: null,
         content    : null,
@@ -576,6 +596,7 @@
       this.CLIPBOARD_AVAILABLE = false; // SSR rendering dissallow "window" usage here
       this.PIN_RED_URL = 'https://photo-sphere-viewer.js.org/assets/pin-red.png';
       this.PIN_BLUE_URL = 'https://photo-sphere-viewer.js.org/assets/pin-blue.png';
+      this.TARGET_URL = 'https://photo-sphere-viewer.js.org/assets/target.png';
       this.FONT_SIZES = range(10, 31).map(i => `${i}px`);
       this.FONT_SIZES_2 = range(10, 31, 5).map(i => `${i}px`);
     },
@@ -585,42 +606,17 @@
 
       this.oldOptions = cloneDeep(this.options);
 
-      this.applyOptions = debounce(() => {
-        try {
-          if (this.options.defaultZoomLvl !== this.oldOptions.defaultZoomLvl) {
-            this.psv.zoom(this.options.defaultZoomLvl);
-          }
-          else if (this.options.defaultLong !== this.oldOptions.defaultLong || this.options.defaultLat !== this.oldOptions.defaultLat) {
-            this.psv.rotate({
-              longitude: this.options.defaultLong,
-              latitude : this.options.defaultLat,
-            });
-          }
-          else {
-            Object.keys(this.options)
-              .some(optName => {
-                if (!isEqual(this.options[optName], this.oldOptions[optName])) {
-                  this.psv.setOption(optName, this.options[optName]);
-                  return true;
-                }
-              });
-          }
-        } catch (e) {
-          // ignore parsing errors
-        }
-        this.oldOptions = cloneDeep(this.options);
-      }, 200);
+      this._applyOptions = debounce(() => this.applyOptions(), 200);
 
       this.psv = new Viewer({
         container : 'viewer',
         loadingImg: 'https://photo-sphere-viewer.js.org/assets/photosphere-logo.gif',
         plugins   : [
-          [MarkersPlugin, {
-            hideButton: false,
-            listButton: false,
-          }],
+          [MarkersPlugin, {}],
         ],
       });
+
+      this.applyNavbar();
 
       this.markers = this.psv.getPlugin(MarkersPlugin);
 
@@ -638,7 +634,7 @@
       options         : {
         deep: true,
         handler() {
-          this.applyOptions();
+          this._applyOptions();
         },
       },
       sphereCorrection: {
@@ -654,7 +650,7 @@
       navbar          : {
         deep: true,
         handler() {
-          this.psv.setOption('navbar', this.navbar.filter(i => i.enabled).map(i => i.code));
+          this.applyNavbar();
         },
       },
       markerForm      : {
@@ -726,10 +722,41 @@
         }
       },
 
+      applyOptions() {
+        try {
+          if (this.options.defaultZoomLvl !== this.oldOptions.defaultZoomLvl) {
+            this.psv.zoom(this.options.defaultZoomLvl);
+          }
+          else if (this.options.defaultLong !== this.oldOptions.defaultLong || this.options.defaultLat !== this.oldOptions.defaultLat) {
+            this.psv.rotate({
+              longitude: this.options.defaultLong,
+              latitude : this.options.defaultLat,
+            });
+          }
+          else {
+            Object.keys(this.options)
+              .some(optName => {
+                if (!isEqual(this.options[optName], this.oldOptions[optName])) {
+                  this.psv.setOption(optName, this.options[optName]);
+                  return true;
+                }
+              });
+          }
+        } catch (e) {
+          // ignore parsing errors
+        }
+        this.oldOptions = cloneDeep(this.options);
+      },
+
+      applyNavbar() {
+        this.psv.setOption('navbar', this.navbar.filter(i => i.enabled).map(i => i.code));
+      },
+
       newMarker(type) {
         this.cancelMarker();
         this.markerForm.id = 'marker-' + Math.random().toString(36).slice(2);
         this.markerForm.type = type;
+        this.markerForm.orientation = 'front';
         this.markerForm.anchor = 'center center';
         this.markerForm.tooltip.position = 'top center';
 
@@ -741,10 +768,9 @@
             this.markerForm.anchor = 'bottom center';
             break;
           case 'imageLayer':
-            this.markerForm.imageLayer = this.PIN_RED_URL;
-            this.markerForm.width = 48;
-            this.markerForm.height = 48;
-            this.markerForm.anchor = 'bottom center';
+            this.markerForm.imageLayer = this.TARGET_URL;
+            this.markerForm.width = 120;
+            this.markerForm.height = 120;
             break;
           case 'html':
             this.markerForm.html = 'Test content';
@@ -953,6 +979,12 @@
             }
             if (marker.config.height) {
               m.height = marker.config.height;
+            }
+            if (marker.config.anchor !== 'center center') {
+              m.anchor = marker.config.anchor;
+            }
+            if (marker.config.orientation !== 'front') {
+              m.orientation = marker.config.orientation;
             }
             if (marker.config.tooltip.content) {
               m.tooltip = marker.config.tooltip;

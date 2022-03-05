@@ -33,6 +33,7 @@ export type ViewerOptions = {
   panorama?: any;
   adapter?: AdapterConstructor<any> | [AdapterConstructor<any>, any];
   caption?: string;
+  downloadUrl?: string;
   loadingImg?: string;
   loadingTxt?: string;
   size?: Size;
@@ -78,7 +79,7 @@ export type ViewerProps = {
   hFov: number;
   aspect: number;
   autorotateEnabled: boolean;
-  animationPromise: Animation;
+  animationPromise: Animation<any>;
   loadingPromise: Promise<void>;
   startTimeout: any;
   size: Size;
@@ -235,7 +236,7 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Rotates and zooms the view with a smooth animation
    */
-  animate(options: AnimateOptions): Animation;
+  animate(options: AnimateOptions): Animation<any>;
 
   /**
    * @summary Stops the ongoing animation

@@ -176,7 +176,7 @@ Overrides the global style of the marker used to display the link. See global co
 - default:
 ```js
 lang: {
-  nodesList: Locations',
+  nodesList: 'Locations',
 }
 ```
 
@@ -227,15 +227,11 @@ Enable the preloading of linked nodes, can be a function that returns true or fa
 
 When a link is clicked, adds a panorama rotation to face it before actually changing the node. If `false` the viewer won't rotate at all and keep the current orientation.
 
-#### `listButton`
-- type: `boolean`
-- default: `true` id client data mode
+#### `transition`
+- type: `boolean | number`
+- default: `1500`
 
-Adds a navbar button to display the list of all nodes.
-
-::: tip Custom navbar
-The button is added to the default navbar configuration. If you use a [custom navbar](../guide/navbar.md) you will need to manually add the `'nodesList'` button to the list.
-:::
+Duration of the transition between nodes.
 
 #### `linksOnCompass`
 - type: `boolean`
@@ -281,10 +277,10 @@ Style of the arrow used to display links.
 Default value is:
 ```js
 {
-  color     : 0x0055aa,
-  hoverColor: 0xaa5500,
-  opacity   : 0.8,
-  scale     : [0.5, 2],
+  color       : 0xaaaaaa,
+  hoverColor  : 0xaa5500,
+  outlineColor: 0x000000,
+  scale       : [0.5, 2],
 }
 ```
 
@@ -328,3 +324,11 @@ virtualTourPlugin.on('node-changed', (e, nodeId, data) => {
   }
 });
 ```
+
+
+## Buttons
+
+This plugin adds buttons to the default navbar:
+- `nodesList` allows to open a list of all nodes on the left panel (client mode only)
+
+If you use a [custom navbar](../guide/navbar.md) you will need to manually add the buttons to the list.

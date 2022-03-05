@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -720,6 +720,8 @@
       this.visible = this.config.visible !== false;
 
       if (!this.is3d()) {
+        var _this$config$opacity;
+
         // reset CSS class
         if (this.isNormal()) {
           this.$el.setAttribute('class', 'psv-marker psv-marker--normal');
@@ -740,6 +742,8 @@
           photoSphereViewer.utils.addClasses(this.$el, 'psv-marler--has-content');
         } // apply style
 
+
+        this.$el.style.opacity = (_this$config$opacity = this.config.opacity) != null ? _this$config$opacity : 1;
 
         if (this.config.style) {
           photoSphereViewer.utils.deepmerge(this.$el.style, this.config.style);
@@ -999,10 +1003,12 @@
       switch (this.type) {
         case MARKER_TYPES.imageLayer:
           if (!this.$el) {
-            var _mesh$userData;
+            var _this$config$opacity2, _mesh$userData;
 
             var material = new THREE.MeshBasicMaterial({
-              transparent: true
+              transparent: true,
+              opacity: (_this$config$opacity2 = this.config.opacity) != null ? _this$config$opacity2 : 1,
+              depthTest: false
             });
             var geometry = new THREE.PlaneGeometry(1, 1);
             var mesh = new THREE.Mesh(geometry, material);
@@ -1026,15 +1032,38 @@
               this.loader.setRequestHeader(this.psv.config.requestHeaders(this.config.imageLayer));
             }
 
-            this.$el.children[0].material.map = this.loader.load(this.config.imageLayer, function () {
-              return _this3.psv.needsUpdate();
+            this.$el.children[0].material.map = this.loader.load(this.config.imageLayer, function (texture) {
+              texture.anisotropy = 4;
+
+              _this3.psv.needsUpdate();
             });
             this.props.def = this.config.imageLayer;
           }
 
           this.$el.children[0].position.set(this.props.anchor.x - 0.5, this.props.anchor.y - 0.5, 0);
           this.$el.position.copy(this.props.positions3D[0]);
-          this.$el.lookAt(0, 0, 0); // 100 is magic number that gives a coherent size at default zoom level
+
+          switch (this.config.orientation) {
+            case 'horizontal':
+              this.$el.lookAt(0, this.$el.position.y, 0);
+              this.$el.rotateX(this.props.position.latitude < 0 ? -Math.PI / 2 : Math.PI / 2);
+              break;
+
+            case 'vertical-left':
+              this.$el.lookAt(0, 0, 0);
+              this.$el.rotateY(-Math.PI * 0.4);
+              break;
+
+            case 'vertical-right':
+              this.$el.lookAt(0, 0, 0);
+              this.$el.rotateY(Math.PI * 0.4);
+              break;
+
+            default:
+              this.$el.lookAt(0, 0, 0);
+              break;
+          } // 100 is magic number that gives a coherent size at default zoom level
+
 
           this.$el.scale.set(this.config.width / 100 * photoSphereViewer.SYSTEM.pixelRatio, this.config.height / 100 * photoSphereViewer.SYSTEM.pixelRatio, 1);
           break;
@@ -1131,9 +1160,7 @@
     ;
 
     _proto.isSupported = function isSupported() {
-      var _this$plugin;
-
-      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.hideButton;
+      return !!this.plugin;
     }
     /**
      * @summary Handles events
@@ -1228,9 +1255,7 @@
     ;
 
     _proto.isSupported = function isSupported() {
-      var _this$plugin;
-
-      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.listButton;
+      return !!this.plugin;
     }
     /**
      * @summary Handles events
@@ -1272,8 +1297,6 @@
 
   /**
    * @typedef {Object} PSV.plugins.MarkersPlugin.Options
-   * @property {boolean} [hideButton=true] - adds a button to show/hide the markers
-   * @property {boolean} [listButton=true] - adds a button to show the list of markers
    * @property {boolean} [clickEventOnMarker=false] If a `click` event is triggered on the viewer additionally to the `select-marker` event.
    * @property {PSV.plugins.MarkersPlugin.Properties[]} [markers]
    */
@@ -1336,14 +1359,17 @@
        */
 
       _this.config = _extends({
-        hideButton: true,
-        listButton: true,
         clickEventOnMarker: false
       }, options);
+
+      if ((options == null ? void 0 : options.listButton) === false || (options == null ? void 0 : options.hideButton) === false) {
+        photoSphereViewer.utils.logWarn('MarkersPlugin: listButton and hideButton options are deprecated. ' + 'Please define the global navbar options according to your needs.');
+      }
       /**
        * @member {HTMLElement}
        * @readonly
        */
+
 
       _this.container = document.createElement('div');
       _this.container.className = 'psv-markers';
@@ -2294,13 +2320,8 @@
           this.psv.panel.hide();
         }
       } else {
-        if (this.config.hideButton) {
-          markersButton == null ? void 0 : markersButton.show();
-        }
-
-        if (this.config.listButton) {
-          markersListButton == null ? void 0 : markersListButton.show();
-        }
+        markersButton == null ? void 0 : markersButton.show();
+        markersListButton == null ? void 0 : markersListButton.show();
 
         if (this.psv.panel.isVisible(ID_PANEL_MARKERS_LIST)) {
           this.showMarkersList();

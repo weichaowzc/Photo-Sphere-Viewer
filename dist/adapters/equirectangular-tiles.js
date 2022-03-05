@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -268,7 +268,7 @@
    * @private
    * @property {int} col
    * @property {int} row
-   * @property {int} angle
+   * @property {float} angle
    */
 
   /* the faces of the top and bottom rows are made of a single triangle (3 vertices)
@@ -303,6 +303,10 @@
    *     ⋁
    */
 
+  var ATTR_UV = 'uv';
+  var ATTR_ORIGINAL_UV = 'originaluv';
+  var ATTR_POSITION = 'position';
+
   function tileId(tile) {
     return tile.col + "x" + tile.row;
   }
@@ -315,8 +319,8 @@
    * @memberof PSV.adapters
    */
 
-  var EquirectangularTilesAdapter = /*#__PURE__*/function (_AbstractAdapter) {
-    _inheritsLoose(EquirectangularTilesAdapter, _AbstractAdapter);
+  var EquirectangularTilesAdapter = /*#__PURE__*/function (_EquirectangularAdapt) {
+    _inheritsLoose(EquirectangularTilesAdapter, _EquirectangularAdapt);
 
     /**
      * @param {PSV.Viewer} psv
@@ -325,7 +329,8 @@
     function EquirectangularTilesAdapter(psv, options) {
       var _this;
 
-      _this = _AbstractAdapter.call(this, psv) || this;
+      _this = _EquirectangularAdapt.call(this, psv) || this;
+      _this.psv.config.useXmpData = false;
       /**
        * @member {PSV.adapters.EquirectangularTilesAdapter.Options}
        * @private
@@ -348,12 +353,6 @@
       _this.NB_VERTICES = 2 * _this.SPHERE_SEGMENTS * _this.NB_VERTICES_BY_SMALL_FACE + (_this.SPHERE_HORIZONTAL_SEGMENTS - 2) * _this.SPHERE_SEGMENTS * _this.NB_VERTICES_BY_FACE;
       _this.NB_GROUPS = _this.SPHERE_SEGMENTS * _this.SPHERE_HORIZONTAL_SEGMENTS;
       /**
-       * @member {external:THREE.MeshBasicMaterial[]}
-       * @private
-       */
-
-      _this.materials = [];
-      /**
        * @member {PSV.adapters.Queue}
        * @private
        */
@@ -367,7 +366,7 @@
        * @property {int} facesByRow - number of mesh faces by row
        * @property {Record<string, boolean>} tiles - loaded tiles
        * @property {external:THREE.SphereGeometry} geom
-       * @property {*} originalUvs
+       * @property {external:THREE.MeshBasicMaterial[]} materials
        * @property {external:THREE.MeshBasicMaterial} errorMaterial
        * @private
        */
@@ -379,7 +378,7 @@
         facesByRow: 0,
         tiles: {},
         geom: null,
-        originalUvs: null,
+        materials: [],
         errorMaterial: null
       };
       /**
@@ -403,6 +402,10 @@
 
       return _this;
     }
+    /**
+     * @override
+     */
+
 
     var _proto = EquirectangularTilesAdapter.prototype;
 
@@ -419,11 +422,14 @@
       delete this.queue;
       delete this.loader;
       delete this.prop.geom;
-      delete this.prop.originalUvs;
       delete this.prop.errorMaterial;
 
-      _AbstractAdapter.prototype.destroy.call(this);
-    };
+      _EquirectangularAdapt.prototype.destroy.call(this);
+    }
+    /**
+     * @private
+     */
+    ;
 
     _proto.handleEvent = function handleEvent(e) {
       /* eslint-disable */
@@ -446,13 +452,29 @@
     _proto.__cleanup = function __cleanup() {
       this.queue.clear();
       this.prop.tiles = {};
-      this.materials.forEach(function (mat) {
+      this.prop.materials.forEach(function (mat) {
         var _mat$map;
 
         mat == null ? void 0 : (_mat$map = mat.map) == null ? void 0 : _mat$map.dispose();
         mat == null ? void 0 : mat.dispose();
       });
-      this.materials.length = 0;
+      this.prop.materials.length = 0;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsTransition = function supportsTransition(panorama) {
+      return !!panorama.baseUrl;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload(panorama) {
+      return !!panorama.baseUrl;
     }
     /**
      * @override
@@ -462,8 +484,6 @@
     ;
 
     _proto.loadTexture = function loadTexture(panorama) {
-      var _this2 = this;
-
       if (typeof panorama !== 'object' || !panorama.width || !panorama.cols || !panorama.rows || !panorama.tileUrl) {
         return Promise.reject(new photoSphereViewer.PSVError('Invalid panorama configuration, are you using the right adapter?'));
       }
@@ -480,15 +500,6 @@
         return Promise.reject(new photoSphereViewer.PSVError('Panorama cols and rows must be powers of 2.'));
       }
 
-      this.prop.colSize = panorama.width / panorama.cols;
-      this.prop.rowSize = panorama.width / 2 / panorama.rows;
-      this.prop.facesByCol = this.SPHERE_SEGMENTS / panorama.cols;
-      this.prop.facesByRow = this.SPHERE_HORIZONTAL_SEGMENTS / panorama.rows;
-
-      if (this.prop.geom) {
-        this.prop.geom.setAttribute('uv', this.prop.originalUvs.clone());
-      }
-
       var panoData = {
         fullWidth: panorama.width,
         fullHeight: panorama.width / 2,
@@ -499,14 +510,10 @@
       };
 
       if (panorama.baseUrl) {
-        return this.psv.textureLoader.loadImage(panorama.baseUrl, function (p) {
-          return _this2.psv.loader.setProgress(p);
-        }).then(function (img) {
-          var texture = _this2.__createBaseTexture(img);
-
+        return _EquirectangularAdapt.prototype.loadTexture.call(this, panorama.baseUrl).then(function (textureData) {
           return {
             panorama: panorama,
-            texture: texture,
+            texture: textureData.texture,
             panoData: panoData
           };
         });
@@ -546,9 +553,8 @@
         geometry.addGroup(i, this.NB_VERTICES_BY_SMALL_FACE, k++);
       }
 
-      this.prop.geom = geometry;
-      this.prop.originalUvs = geometry.getAttribute('uv').clone();
-      return new THREE.Mesh(geometry, this.materials);
+      geometry.setAttribute(ATTR_ORIGINAL_UV, geometry.getAttribute(ATTR_UV).clone());
+      return new THREE.Mesh(geometry, []);
     }
     /**
      * @summary Applies the base texture and starts the loading of tiles
@@ -556,16 +562,45 @@
      */
     ;
 
-    _proto.setTexture = function setTexture(mesh, textureData) {
-      var _this3 = this;
+    _proto.setTexture = function setTexture(mesh, textureData, transition) {
+      var _this2 = this;
+
+      var panorama = textureData.panorama,
+          texture = textureData.texture;
+
+      if (transition) {
+        this.__setTexture(mesh, texture);
+
+        return;
+      }
 
       this.__cleanup();
 
+      this.__setTexture(mesh, texture);
+
+      this.prop.materials = mesh.material;
+      this.prop.geom = mesh.geometry;
+      this.prop.geom.setAttribute(ATTR_UV, this.prop.geom.getAttribute(ATTR_ORIGINAL_UV).clone());
+      this.prop.colSize = panorama.width / panorama.cols;
+      this.prop.rowSize = panorama.width / 2 / panorama.rows;
+      this.prop.facesByCol = this.SPHERE_SEGMENTS / panorama.cols;
+      this.prop.facesByRow = this.SPHERE_HORIZONTAL_SEGMENTS / panorama.rows; // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
+
+      setTimeout(function () {
+        return _this2.__refresh(true);
+      });
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__setTexture = function __setTexture(mesh, texture) {
       var material;
 
-      if (textureData.texture) {
+      if (texture) {
         material = new THREE.MeshBasicMaterial({
-          map: textureData.texture
+          map: texture
         });
       } else {
         material = new THREE.MeshBasicMaterial({
@@ -575,13 +610,17 @@
       }
 
       for (var i = 0; i < this.NB_GROUPS; i++) {
-        this.materials.push(material);
-      } // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
+        mesh.material.push(material);
+      }
+    }
+    /**
+     * @override
+     */
+    ;
 
-
-      setTimeout(function () {
-        return _this3.__refresh(true);
-      });
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      mesh.material[0].opacity = opacity;
+      mesh.material[0].transparent = opacity < 1;
     }
     /**
      * @summary Compute visible tiles and load them
@@ -591,7 +630,7 @@
     ;
 
     _proto.__refresh = function __refresh(init) {
-      var _this4 = this;
+      var _this3 = this;
 
       // eslint-disable-line no-unused-vars
       var panorama = this.psv.config.panorama;
@@ -604,7 +643,7 @@
       camera.updateMatrixWorld();
       projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(projScreenMatrix);
-      var verticesPosition = this.prop.geom.getAttribute('position');
+      var verticesPosition = this.prop.geom.getAttribute(ATTR_POSITION);
       var tilesToLoad = [];
 
       for (var col = 0; col < panorama.cols; col++) {
@@ -715,7 +754,7 @@
 
           var vertexVisible = verticesIndex.some(function (vertexIdx) {
             vertexPosition.set(verticesPosition.getX(vertexIdx), verticesPosition.getY(vertexIdx), verticesPosition.getZ(vertexIdx));
-            vertexPosition.applyEuler(_this4.psv.renderer.meshContainer.rotation);
+            vertexPosition.applyEuler(_this3.psv.renderer.meshContainer.rotation);
             return frustum.containsPoint(vertexPosition);
           });
 
@@ -745,19 +784,19 @@
     ;
 
     _proto.__loadTiles = function __loadTiles(tiles) {
-      var _this5 = this;
+      var _this4 = this;
 
       this.queue.disableAllTasks();
       tiles.forEach(function (tile) {
         var id = tileId(tile);
 
-        if (_this5.prop.tiles[id]) {
-          _this5.queue.setPriority(id, tile.angle);
+        if (_this4.prop.tiles[id]) {
+          _this4.queue.setPriority(id, tile.angle);
         } else {
-          _this5.prop.tiles[id] = true;
+          _this4.prop.tiles[id] = true;
 
-          _this5.queue.enqueue(new Task(id, tile.angle, function (task) {
-            return _this5.__loadTile(tile, task);
+          _this4.queue.enqueue(new Task(id, tile.angle, function (task) {
+            return _this4.__loadTile(tile, task);
           }));
         }
       });
@@ -773,7 +812,7 @@
     ;
 
     _proto.__loadTile = function __loadTile(tile, task) {
-      var _this6 = this;
+      var _this5 = this;
 
       var panorama = this.psv.config.panorama;
       var url = panorama.tileUrl(tile.col, tile.row);
@@ -783,26 +822,26 @@
       }
 
       return new Promise(function (resolve, reject) {
-        _this6.loader.load(url, resolve, undefined, reject);
+        _this5.loader.load(url, resolve, undefined, reject);
       }).then(function (image) {
         if (!task.isCancelled()) {
           var material = new THREE.MeshBasicMaterial({
             map: photoSphereViewer.utils.createTexture(image)
           });
 
-          _this6.__swapMaterial(tile.col, tile.row, material);
+          _this5.__swapMaterial(tile.col, tile.row, material);
 
-          _this6.psv.needsUpdate();
+          _this5.psv.needsUpdate();
         }
       }).catch(function () {
-        if (!task.isCancelled() && _this6.config.showErrorTile) {
-          if (!_this6.prop.errorMaterial) {
-            _this6.prop.errorMaterial = buildErrorMaterial(_this6.prop.colSize, _this6.prop.rowSize);
+        if (!task.isCancelled() && _this5.config.showErrorTile) {
+          if (!_this5.prop.errorMaterial) {
+            _this5.prop.errorMaterial = buildErrorMaterial(_this5.prop.colSize, _this5.prop.rowSize);
           }
 
-          _this6.__swapMaterial(tile.col, tile.row, _this6.prop.errorMaterial);
+          _this5.__swapMaterial(tile.col, tile.row, _this5.prop.errorMaterial);
 
-          _this6.psv.needsUpdate();
+          _this5.psv.needsUpdate();
         }
       });
     }
@@ -816,39 +855,39 @@
     ;
 
     _proto.__swapMaterial = function __swapMaterial(col, row, material) {
-      var _this7 = this;
+      var _this6 = this;
 
-      var uvs = this.prop.geom.getAttribute('uv');
+      var uvs = this.prop.geom.getAttribute(ATTR_UV);
 
       for (var c = 0; c < this.prop.facesByCol; c++) {
         var _loop = function _loop(r) {
           // position of the face (two triangles of the same square)
-          var faceCol = col * _this7.prop.facesByCol + c;
-          var faceRow = row * _this7.prop.facesByRow + r;
+          var faceCol = col * _this6.prop.facesByCol + c;
+          var faceRow = row * _this6.prop.facesByRow + r;
           var isFirstRow = faceRow === 0;
-          var isLastRow = faceRow === _this7.SPHERE_HORIZONTAL_SEGMENTS - 1; // first vertex for this face (3 or 6 vertices in total)
+          var isLastRow = faceRow === _this6.SPHERE_HORIZONTAL_SEGMENTS - 1; // first vertex for this face (3 or 6 vertices in total)
 
           var firstVertex = void 0;
 
           if (isFirstRow) {
-            firstVertex = faceCol * _this7.NB_VERTICES_BY_SMALL_FACE;
+            firstVertex = faceCol * _this6.NB_VERTICES_BY_SMALL_FACE;
           } else if (isLastRow) {
-            firstVertex = _this7.NB_VERTICES - _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_SMALL_FACE + faceCol * _this7.NB_VERTICES_BY_SMALL_FACE;
+            firstVertex = _this6.NB_VERTICES - _this6.SPHERE_SEGMENTS * _this6.NB_VERTICES_BY_SMALL_FACE + faceCol * _this6.NB_VERTICES_BY_SMALL_FACE;
           } else {
-            firstVertex = _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_SMALL_FACE + (faceRow - 1) * _this7.SPHERE_SEGMENTS * _this7.NB_VERTICES_BY_FACE + faceCol * _this7.NB_VERTICES_BY_FACE;
+            firstVertex = _this6.SPHERE_SEGMENTS * _this6.NB_VERTICES_BY_SMALL_FACE + (faceRow - 1) * _this6.SPHERE_SEGMENTS * _this6.NB_VERTICES_BY_FACE + faceCol * _this6.NB_VERTICES_BY_FACE;
           } // swap material
 
 
-          var matIndex = _this7.prop.geom.groups.find(function (g) {
+          var matIndex = _this6.prop.geom.groups.find(function (g) {
             return g.start === firstVertex;
           }).materialIndex;
 
-          _this7.materials[matIndex] = material; // define new uvs
+          _this6.prop.materials[matIndex] = material; // define new uvs
 
-          var top = 1 - r / _this7.prop.facesByRow;
-          var bottom = 1 - (r + 1) / _this7.prop.facesByRow;
-          var left = c / _this7.prop.facesByCol;
-          var right = (c + 1) / _this7.prop.facesByCol;
+          var top = 1 - r / _this6.prop.facesByRow;
+          var bottom = 1 - (r + 1) / _this6.prop.facesByRow;
+          var left = c / _this6.prop.facesByCol;
+          var right = (c + 1) / _this6.prop.facesByCol;
 
           if (isFirstRow) {
             uvs.setXY(firstVertex, (left + right) / 2, top);
@@ -894,10 +933,9 @@
     };
 
     return EquirectangularTilesAdapter;
-  }(photoSphereViewer.AbstractAdapter);
+  }(photoSphereViewer.EquirectangularAdapter);
   EquirectangularTilesAdapter.id = 'equirectangular-tiles';
-  EquirectangularTilesAdapter.supportsTransition = false;
-  EquirectangularTilesAdapter.supportsPreload = false;
+  EquirectangularTilesAdapter.supportsDownload = false;
 
   exports.EquirectangularTilesAdapter = EquirectangularTilesAdapter;
 

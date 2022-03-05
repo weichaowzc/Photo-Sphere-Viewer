@@ -43,6 +43,12 @@ List of enabled [plugins](../plugins/README.md).
 
 A text displayed in the navbar. If the navbar is disabled it will be shown anyway but with no button. HTML is allowed.
 
+#### `downloadUrl`
+- type: `string`
+- default: `=panorama` for equirectangular panoramas
+
+Define the file which will be downloaded with the `download` button. This is particularly useful for adapters that use multiple files, like the CubemapAdapter or the EquirectangularTilesAdapter.
+
 #### `size`
 - type: `{ width: integer, height: integer }`
 
@@ -201,7 +207,7 @@ Speed multiplicator for panorama zooms. Used for mouse wheel, touch pinch and na
 - type: `boolean`
 - default `true`
 
-Read real image size from XMP data, must be kept `true` if the panorama has been cropped after shot.
+Read real image size from XMP data, must be kept `true` if the panorama has been cropped after shot. This is used for [cropped panorama](./adapters/equirectangular.md#cropped-panorama).
 
 #### `panoData`
 - type: `object | function<Image, object>`

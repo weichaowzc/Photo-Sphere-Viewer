@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -104,6 +104,7 @@
   /**
    * @typedef {Object} PSV.plugins.ResolutionPlugin.Options
    * @property {PSV.plugins.ResolutionPlugin.Resolution[]} resolutions - list of available resolutions
+   * @property {boolean} [showBadge=true] - show the resolution id as a badge on the settings button
    */
 
   photoSphereViewer.DEFAULTS.lang.resolution = 'Quality';
@@ -161,7 +162,9 @@
        * @type {PSV.plugins.ResolutionPlugin.Options}
        */
 
-      _this.config = _extends({}, options);
+      _this.config = _extends({
+        showBadge: true
+      }, options);
       return _this;
     }
     /**
@@ -194,6 +197,9 @@
         },
         apply: function apply(resolution) {
           return _this2.setResolution(resolution);
+        },
+        badge: !this.config.showBadge ? null : function () {
+          return _this2.prop.resolution;
         }
       });
       this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.PANORAMA_LOADED, this);
@@ -286,7 +292,10 @@
       });
 
       if (this.prop.resolution !== (resolution == null ? void 0 : resolution.id)) {
+        var _this$settings;
+
         this.prop.resolution = resolution == null ? void 0 : resolution.id;
+        (_this$settings = this.settings) == null ? void 0 : _this$settings.updateBadge();
         this.trigger(EVENTS.RESOLUTION_CHANGED, this.prop.resolution);
       }
     }

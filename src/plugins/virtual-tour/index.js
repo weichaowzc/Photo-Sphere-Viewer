@@ -3,6 +3,7 @@ import { AbstractPlugin, CONSTANTS, DEFAULTS, PSVError, registerButton, utils } 
 import { ClientSideDatasource } from './ClientSideDatasource';
 import {
   ARROW_GEOM,
+  ARROW_OUTLINE_GEOM,
   DEFAULT_ARROW,
   DEFAULT_MARKER,
   EVENTS,
@@ -76,9 +77,9 @@ import { bearing, distance, setMeshColor } from './utils';
 /**
  * @typedef {Object} PSV.plugins.VirtualTourPlugin.ArrowStyle
  * @summary Style of the arrow in 3D mode
- * @property {string} [color=#0055aa]
- * @property {string} [hoverColor=#aa5500]
- * @property {number} [opacity=0.8]
+ * @property {string} [color=0xaaaaaa]
+ * @property {string} [hoverColor=0xaa5500]
+ * @property {number} [outlineColor=0x000000]
  * @property {number[]} [scale=[0.5,2]]
  */
 
@@ -93,7 +94,7 @@ import { bearing, distance, setMeshColor } from './utils';
  * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
  * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
  * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
- * @property {boolean} [listButton] - adds a button to show the list of nodes, defaults to `true` only in client data mode
+ * @property {boolean|number} [transition=1500] - duration of the transition between nodes
  * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass, defaults to `true` on in markers render mode
  * @property {PSV.plugins.MarkersPlugin.Properties} [markerStyle] - global marker style
  * @property {PSV.plugins.VirtualTourPlugin.ArrowStyle} [arrowStyle] - global arrow style
@@ -111,7 +112,6 @@ import { bearing, distance, setMeshColor } from './utils';
 
 // add markers buttons
 DEFAULTS.lang[NodesListButton.id] = 'Locations';
-DEFAULTS.lang.loading = 'Loading...';
 registerButton(NodesListButton, 'caption:left');
 
 
@@ -165,10 +165,10 @@ export class VirtualTourPlugin extends AbstractPlugin {
       renderMode     : MODE_3D,
       preload        : false,
       rotateSpeed    : '20rpm',
+      transition     : CONSTANTS.DEFAULT_TRANSITION,
       markerLatOffset: -0.1,
       arrowPosition  : 'bottom',
       linksOnCompass : options?.renderMode === MODE_MARKERS,
-      listButton     : options?.dataMode !== MODE_SERVER,
       ...options,
       markerStyle    : {
         ...DEFAULT_MARKER,
@@ -179,6 +179,14 @@ export class VirtualTourPlugin extends AbstractPlugin {
         ...options?.arrowStyle,
       },
     };
+
+    if (options?.listButton === false) {
+      utils.logWarn('VirtualTourPlugin: listButton option is deprecated. '
+        + 'Please define the global navbar options according to your needs.');
+    }
+    if (options?.listButton === true && this.config.dataMode === MODE_SERVER) {
+      utils.logWarn('VirtualTourPlugin: the list button is not supported in server mode.');
+    }
 
     /**
      * @type {PSV.plugins.MarkersPlugin}
@@ -207,7 +215,7 @@ export class VirtualTourPlugin extends AbstractPlugin {
       this.arrowsGroup = new THREE.Group();
 
       const localLight = new THREE.PointLight(0xffffff, 1, 0);
-      localLight.position.set(2, 0, 0);
+      localLight.position.set(0, this.config.arrowPosition === 'bottom' ? 2 : -2, 0);
       this.arrowsGroup.add(localLight);
     }
   }
@@ -394,18 +402,14 @@ export class VirtualTourPlugin extends AbstractPlugin {
       Promise.resolve(this.preload[nodeId])
         .then(() => {
           if (this.prop.loadingNode !== nodeId) {
-            return Promise.reject(utils.getAbortError());
+            throw utils.getAbortError();
           }
 
-          this.psv.textureLoader.abortLoading();
           return this.datasource.loadNode(nodeId);
         }),
       Promise.resolve(fromLinkPosition ? this.config.rotateSpeed : false)
-        .then((speed) => {
-          if (!speed) {
-            return Promise.resolve();
-          }
-          else {
+        .then((speed) => { // eslint-disable-line consistent-return
+          if (speed) {
             return this.psv.animate({ ...fromLinkPosition, speed });
           }
         })
@@ -415,10 +419,8 @@ export class VirtualTourPlugin extends AbstractPlugin {
     ])
       .then(([node]) => {
         if (this.prop.loadingNode !== nodeId) {
-          return Promise.reject(utils.getAbortError());
+          throw utils.getAbortError();
         }
-
-        this.psv.navbar.setCaption(`<em>${this.psv.config.lang.loading}</em>`);
 
         this.prop.currentNode = node;
 
@@ -436,19 +438,22 @@ export class VirtualTourPlugin extends AbstractPlugin {
 
         return Promise.all([
           this.psv.setPanorama(node.panorama, {
+            transition      : this.config.transition,
+            caption         : node.caption,
             panoData        : node.panoData,
             sphereCorrection: node.sphereCorrection,
           })
-            .catch((err) => {
-              // the error is already displayed by the core
-              return Promise.reject(utils.isAbortError(err) ? err : null);
+            .then((completed) => {
+              if (!completed) {
+                throw utils.getAbortError();
+              }
             }),
           this.datasource.loadLinkedNodes(nodeId),
         ]);
       })
       .then(() => {
         if (this.prop.loadingNode !== nodeId) {
-          return Promise.reject(utils.getAbortError());
+          throw utils.getAbortError();
         }
 
         const node = this.prop.currentNode;
@@ -464,8 +469,6 @@ export class VirtualTourPlugin extends AbstractPlugin {
 
         this.__renderLinks(node);
         this.__preload(node);
-
-        this.psv.navbar.setCaption(node.caption || this.psv.config.caption);
 
         /**
          * @event node-changed
@@ -486,18 +489,17 @@ export class VirtualTourPlugin extends AbstractPlugin {
       })
       .catch((err) => {
         if (utils.isAbortError(err)) {
-          return Promise.resolve(false);
+          return false;
         }
-        else if (err) {
-          this.psv.showError(this.psv.config.lang.loadError);
-        }
+
+        this.psv.showError(this.psv.config.lang.loadError);
 
         this.psv.loader.hide();
         this.psv.navbar.setCaption('');
 
         this.prop.loadingNode = null;
 
-        return Promise.reject(err);
+        throw err;
       });
   }
 
@@ -514,15 +516,7 @@ export class VirtualTourPlugin extends AbstractPlugin {
       positions.push(position);
 
       if (this.is3D()) {
-        const arrow = ARROW_GEOM.clone();
-        const mat = new THREE.MeshLambertMaterial({
-          transparent: true,
-          opacity    : link.arrowStyle?.opacity || this.config.arrowStyle.opacity,
-        });
-        const mesh = new THREE.Mesh(arrow, mat);
-
-        setMeshColor(mesh, link.arrowStyle?.color || this.config.arrowStyle.color);
-
+        const mesh = new THREE.Mesh(ARROW_GEOM, new THREE.MeshLambertMaterial());
         mesh.userData = { [LINK_DATA]: link, longitude: position.longitude };
         mesh.rotation.order = 'YXZ';
         mesh.rotateY(-position.longitude);
@@ -530,7 +524,15 @@ export class VirtualTourPlugin extends AbstractPlugin {
           .sphericalCoordsToVector3({ longitude: position.longitude, latitude: 0 }, mesh.position)
           .multiplyScalar(1 / CONSTANTS.SPHERE_RADIUS);
 
+        const outlineMesh = new THREE.Mesh(ARROW_OUTLINE_GEOM, new THREE.MeshBasicMaterial({ side: THREE.BackSide }));
+        outlineMesh.position.copy(mesh.position);
+        outlineMesh.rotation.copy(mesh.rotation);
+
+        setMeshColor(mesh, link.arrowStyle?.color || this.config.arrowStyle.color);
+        setMeshColor(outlineMesh, link.arrowStyle?.outlineColor || this.config.arrowStyle.outlineColor);
+
         this.arrowsGroup.add(mesh);
+        this.arrowsGroup.add(outlineMesh);
       }
       else {
         if (this.isGps()) {
@@ -643,32 +645,12 @@ export class VirtualTourPlugin extends AbstractPlugin {
    * @private
    */
   __positionArrows() {
-    const isBottom = this.config.arrowPosition === 'bottom';
-
     this.arrowsGroup.position.copy(this.psv.prop.direction).multiplyScalar(0.5);
     const s = this.config.arrowStyle.scale;
-    const f = s[1] + (s[0] - s[1]) * CONSTANTS.EASINGS.linear(this.psv.getZoomLevel() / 100);
-    this.arrowsGroup.position.y += isBottom ? -1.5 : 1.5;
+    const f = s[1] + (s[0] - s[1]) * (this.psv.getZoomLevel() / 100);
+    const y = 2.5 - (this.psv.getZoomLevel() / 100) * 1.5;
+    this.arrowsGroup.position.y += this.config.arrowPosition === 'bottom' ? -y : y;
     this.arrowsGroup.scale.set(f, f, f);
-
-    // slightly rotates each arrow to make the center ones standing out
-    const position = this.psv.getPosition();
-    if (isBottom ? (position.latitude < Math.PI / 8) : (position.latitude > -Math.PI / 8)) {
-      this.arrowsGroup.children
-        .filter(o => o.type === 'Mesh')
-        .forEach((arrow) => {
-          const d = Math.abs(utils.getShortestArc(arrow.userData.longitude, position.longitude));
-          const x = CONSTANTS.EASINGS.inOutSine(Math.max(0, Math.PI / 4 - d) / (Math.PI / 4)) / 3; // magic !
-          arrow.rotation.x = isBottom ? -x : x;
-        });
-    }
-    else {
-      this.arrowsGroup.children
-        .filter(o => o.type === 'Mesh')
-        .forEach((arrow) => {
-          arrow.rotation.x = 0;
-        });
-    }
   }
 
   /**

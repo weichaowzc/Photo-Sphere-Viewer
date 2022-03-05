@@ -34,6 +34,10 @@ export type VirtualTourNodeLink = {
 export type VirtualTourArrowStyle = {
   color?: string;
   hoverColor?: string;
+  outlineColor?: number;
+  /**
+   * @deprecated
+   */
   opacity?: number;
   scale?: [number, number];
 };
@@ -60,6 +64,7 @@ export type VirtualTourPluginPluginOptions = {
   startNodeId?: string;
   preload?: boolean | ((node: VirtualTourNode, link: VirtualTourNodeLink) => boolean);
   rotateSpeed?: boolean | string | number;
+  transition?: boolean | number;
   markerStyle?: MarkerProperties;
   arrowStyle?: VirtualTourArrowStyle;
   markerLatOffset?: number;

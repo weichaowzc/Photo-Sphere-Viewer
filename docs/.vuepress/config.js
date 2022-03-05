@@ -40,15 +40,14 @@ module.exports = {
             'methods',
             'events',
             'navbar',
-            'cropped-panorama',
-            'migration-v3',
+            'style',
             {
               title      : 'Adapters',
               path       : '/guide/adapters/',
               collapsable: false,
               children   : [
                 'adapters/equirectangular',
-                'adapters/tiles',
+                'adapters/equirectangular-tiles',
                 'adapters/cubemap',
                 ['adapters/cubemap-tiles', 'Cubemap tiles (NEW)'],
               ],

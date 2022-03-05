@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -281,6 +281,9 @@
   var NB_VERTICES_BY_PLANE = NB_VERTICES_BY_FACE * CUBE_SEGMENTS * CUBE_SEGMENTS;
   var NB_VERTICES = 6 * NB_VERTICES_BY_PLANE;
   var NB_GROUPS_BY_FACE = CUBE_SEGMENTS * CUBE_SEGMENTS;
+  var ATTR_UV = 'uv';
+  var ATTR_ORIGINAL_UV = 'originaluv';
+  var ATTR_POSITION = 'position';
 
   function tileId(tile) {
     return tile.face + ":" + tile.col + "x" + tile.row;
@@ -316,12 +319,6 @@
         baseBlur: true
       }, options);
       /**
-       * @member {external:THREE.MeshBasicMaterial[]}
-       * @private
-       */
-
-      _this.materials = [];
-      /**
        * @member {PSV.adapters.Queue}
        * @private
        */
@@ -333,7 +330,7 @@
        * @property {int} facesByTile - number of mesh faces by tile
        * @property {Record<string, boolean>} tiles - loaded tiles
        * @property {external:THREE.BoxGeometry} geom
-       * @property {*} originalUvs
+       * @property {external:THREE.MeshBasicMaterial[]} materials
        * @property {external:THREE.MeshBasicMaterial} errorMaterial
        * @private
        */
@@ -343,7 +340,7 @@
         facesByTile: 0,
         tiles: {},
         geom: null,
-        originalUvs: null,
+        materials: [],
         errorMaterial: null
       };
       /**
@@ -367,6 +364,10 @@
 
       return _this;
     }
+    /**
+     * @override
+     */
+
 
     var _proto = CubemapTilesAdapter.prototype;
 
@@ -383,11 +384,14 @@
       delete this.queue;
       delete this.loader;
       delete this.prop.geom;
-      delete this.prop.originalUvs;
       delete this.prop.errorMaterial;
 
       _CubemapAdapter.prototype.destroy.call(this);
-    };
+    }
+    /**
+     * @private
+     */
+    ;
 
     _proto.handleEvent = function handleEvent(e) {
       /* eslint-disable */
@@ -410,13 +414,29 @@
     _proto.__cleanup = function __cleanup() {
       this.queue.clear();
       this.prop.tiles = {};
-      this.materials.forEach(function (mat) {
+      this.prop.materials.forEach(function (mat) {
         var _mat$map;
 
         mat == null ? void 0 : (_mat$map = mat.map) == null ? void 0 : _mat$map.dispose();
         mat == null ? void 0 : mat.dispose();
       });
-      this.materials.length = 0;
+      this.prop.materials.length = 0;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsTransition = function supportsTransition(panorama) {
+      return !!panorama.baseUrl;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload(panorama) {
+      return !!panorama.baseUrl;
     }
     /**
      * @override
@@ -436,13 +456,6 @@
 
       if (!photoSphereViewer.utils.isPowerOfTwo(panorama.nbTiles)) {
         return Promise.reject(new photoSphereViewer.PSVError('Panorama nbTiles must be power of 2.'));
-      }
-
-      this.prop.tileSize = panorama.faceSize / panorama.nbTiles;
-      this.prop.facesByTile = CUBE_SEGMENTS / panorama.nbTiles;
-
-      if (this.prop.geom) {
-        this.prop.geom.setAttribute('uv', this.prop.originalUvs.clone());
       }
 
       if (panorama.baseUrl) {
@@ -476,9 +489,8 @@
         geometry.addGroup(i, NB_VERTICES_BY_FACE, k++);
       }
 
-      this.prop.geom = geometry;
-      this.prop.originalUvs = geometry.getAttribute('uv').clone();
-      return new THREE.Mesh(geometry, this.materials);
+      geometry.setAttribute(ATTR_ORIGINAL_UV, geometry.getAttribute(ATTR_UV).clone());
+      return new THREE.Mesh(geometry, []);
     }
     /**
      * @summary Applies the base texture and starts the loading of tiles
@@ -486,45 +498,72 @@
      */
     ;
 
-    _proto.setTexture = function setTexture(mesh, textureData) {
+    _proto.setTexture = function setTexture(mesh, textureData, transition) {
       var _this2 = this;
+
+      var panorama = textureData.panorama,
+          texture = textureData.texture;
+
+      if (transition) {
+        this.__setTexture(mesh, texture);
+
+        return;
+      }
 
       this.__cleanup();
 
-      if (textureData.texture) {
-        for (var i = 0; i < 6; i++) {
-          var texture = textureData.texture[i];
+      this.__setTexture(mesh, texture);
 
-          if (this.config.flipTopBottom && (i === 2 || i === 3)) {
-            texture.center = new THREE.Vector2(0.5, 0.5);
-            texture.rotation = Math.PI;
-          }
-
-          var material = new THREE.MeshBasicMaterial({
-            map: texture
-          });
-
-          for (var j = 0; j < NB_GROUPS_BY_FACE; j++) {
-            this.materials.push(material);
-          }
-        }
-      } else {
-        var _material = new THREE.MeshBasicMaterial({
-          opacity: 0,
-          transparent: true
-        });
-
-        for (var _i = 0; _i < 6; _i++) {
-          for (var _j = 0; _j < NB_GROUPS_BY_FACE; _j++) {
-            this.materials.push(_material);
-          }
-        }
-      } // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
-
+      this.prop.materials = mesh.material;
+      this.prop.geom = mesh.geometry;
+      this.prop.geom.setAttribute(ATTR_UV, this.prop.geom.getAttribute(ATTR_ORIGINAL_UV).clone());
+      this.prop.tileSize = panorama.faceSize / panorama.nbTiles;
+      this.prop.facesByTile = CUBE_SEGMENTS / panorama.nbTiles; // this.psv.renderer.scene.add(createWireFrame(this.prop.geom));
 
       setTimeout(function () {
         return _this2.__refresh(true);
       });
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__setTexture = function __setTexture(mesh, texture) {
+      for (var i = 0; i < 6; i++) {
+        var material = void 0;
+
+        if (texture) {
+          if (this.config.flipTopBottom && (i === 2 || i === 3)) {
+            texture[i].center = new THREE.Vector2(0.5, 0.5);
+            texture[i].rotation = Math.PI;
+          }
+
+          material = new THREE.MeshBasicMaterial({
+            map: texture[i]
+          });
+        } else {
+          material = new THREE.MeshBasicMaterial({
+            opacity: 0,
+            transparent: true
+          });
+        }
+
+        for (var j = 0; j < NB_GROUPS_BY_FACE; j++) {
+          mesh.material.push(material);
+        }
+      }
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      for (var i = 0; i < 6; i++) {
+        mesh.material[i * NB_GROUPS_BY_FACE].opacity = opacity;
+        mesh.material[i * NB_GROUPS_BY_FACE].transparent = opacity < 1;
+      }
     }
     /**
      * @summary Compute visible tiles and load them
@@ -546,7 +585,7 @@
       camera.updateMatrixWorld();
       projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(projScreenMatrix);
-      var verticesPosition = this.prop.geom.getAttribute('position');
+      var verticesPosition = this.prop.geom.getAttribute(ATTR_POSITION);
       var tilesToLoad = [];
 
       for (var face = 0; face < 6; face++) {
@@ -700,7 +739,7 @@
     _proto.__swapMaterial = function __swapMaterial(face, col, row, material) {
       var _this6 = this;
 
-      var uvs = this.prop.geom.getAttribute('uv');
+      var uvs = this.prop.geom.getAttribute(ATTR_UV);
 
       for (var c = 0; c < this.prop.facesByTile; c++) {
         var _loop = function _loop(r) {
@@ -714,7 +753,7 @@
             return g.start === firstVertex;
           }).materialIndex;
 
-          _this6.materials[matIndex] = material; // define new uvs
+          _this6.prop.materials[matIndex] = material; // define new uvs
 
           var top = 1 - r / _this6.prop.facesByTile;
           var bottom = 1 - (r + 1) / _this6.prop.facesByTile;
@@ -765,8 +804,7 @@
     return CubemapTilesAdapter;
   }(cubemap.CubemapAdapter);
   CubemapTilesAdapter.id = 'cubemap-tiles';
-  CubemapTilesAdapter.supportsTransition = false;
-  CubemapTilesAdapter.supportsPreload = false;
+  CubemapTilesAdapter.supportsDownload = false;
 
   exports.CubemapTilesAdapter = CubemapTilesAdapter;
 

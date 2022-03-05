@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -44,6 +44,23 @@
 
   var switchOn = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 100\" width=\"2.4em\" height=\"1.2em\"><path fill=\"currentColor\" transform=\"scale(1.88) translate(0, -25)\" d=\"M72 73.2A21.6 21.6 0 1172 30a21.6 21.6 0 010 43.2M2.4 51.6A26.4 26.4 0 0028.8 78H72a26.4 26.4 0 000-52.8H28.8A26.4 26.4 0 002.4 51.6\"/><!-- Created by Nikita from the Noun Project --></svg>\n";
 
+  /**
+   * @summary Available events
+   * @enum {string}
+   * @memberof PSV.plugins.ResolutionPlugin
+   * @constant
+   */
+
+  var EVENTS = {
+    /**
+     * @event setting-changed
+     * @memberof PSV.plugins.SettingsPlugin
+     * @summary Triggered when a setting is changed
+     * @param {string} settingId
+     * @param {any} value
+     */
+    SETTING_CHANGED: 'setting-changed'
+  };
   /**
    * @summary Panel identifier for settings content
    * @type {string}
@@ -130,6 +147,17 @@
        */
 
       _this.plugin = _this.psv.getPlugin('settings');
+      /**
+       * @member {HTMLElement}
+       * @private
+       * @readonly
+       */
+
+      _this.badge = document.createElement('div');
+      _this.badge.className = 'psv-settings-badge';
+      _this.badge.style.display = 'none';
+
+      _this.container.appendChild(_this.badge);
 
       if (_this.plugin) {
         _this.psv.on(photoSphereViewer.CONSTANTS.EVENTS.OPEN_PANEL, _assertThisInitialized(_this));
@@ -192,6 +220,16 @@
 
     _proto.onClick = function onClick() {
       this.plugin.toggleSettings();
+    }
+    /**
+     * @summary Changes the badge value
+     * @param {string} value
+     */
+    ;
+
+    _proto.setBadge = function setBadge(value) {
+      this.badge.innerText = value;
+      this.badge.style.display = value ? '' : 'none';
     };
 
     return SettingsButton;
@@ -205,6 +243,7 @@
    * @property {string} id - identifier of the setting
    * @property {string} label - label of the setting
    * @property {'options' | 'toggle'} type - type of the setting
+   * @property {function} [badge] - function which returns the value of the button badge
    */
 
   /**
@@ -266,7 +305,14 @@
     var _proto = SettingsPlugin.prototype;
 
     _proto.init = function init() {
-      _AbstractPlugin.prototype.init.call(this);
+      var _this2 = this;
+
+      _AbstractPlugin.prototype.init.call(this); // buttons are initialized just after plugins
+
+
+      setTimeout(function () {
+        return _this2.updateBadge();
+      });
     }
     /**
      * @package
@@ -297,11 +343,19 @@
         throw new photoSphereViewer.PSVError('Unsupported setting type');
       }
 
+      if (setting.badge && this.settings.some(function (s) {
+        return s.badge;
+      })) {
+        photoSphereViewer.utils.logWarn('More than one setting with a badge are declared, the result is unpredictable.');
+      }
+
       this.settings.push(setting);
 
       if (this.psv.panel.prop.contentId === ID_PANEL) {
         this.showSettings();
       }
+
+      this.updateBadge();
     }
     /**
      * @summary Removes a setting
@@ -327,6 +381,8 @@
         if (this.psv.panel.prop.contentId === ID_PANEL) {
           this.showSettings();
         }
+
+        this.updateBadge();
       }
     }
     /**
@@ -355,7 +411,7 @@
     ;
 
     _proto.showSettings = function showSettings() {
-      var _this2 = this;
+      var _this3 = this;
 
       this.psv.panel.show({
         id: ID_PANEL,
@@ -372,7 +428,7 @@
           var li = e.target ? photoSphereViewer.utils.getClosest(e.target, 'li') : undefined;
           var settingId = li ? li.dataset[SETTING_DATA] : undefined;
 
-          var setting = _this2.settings.find(function (s) {
+          var setting = _this3.settings.find(function (s) {
             return s.id === settingId;
           });
 
@@ -381,12 +437,16 @@
               case 'toggle':
                 setting.toggle();
 
-                _this2.showSettings();
+                _this3.trigger(EVENTS.SETTING_CHANGED, setting.id, setting.active());
+
+                _this3.showSettings();
+
+                _this3.updateBadge();
 
                 break;
 
               case 'options':
-                _this2.__showOptions(setting);
+                _this3.__showOptions(setting);
 
                 break;
 
@@ -403,7 +463,7 @@
     ;
 
     _proto.__showOptions = function __showOptions(setting) {
-      var _this3 = this;
+      var _this4 = this;
 
       var current = setting.current();
       this.psv.panel.show({
@@ -418,20 +478,38 @@
           var optionId = li ? li.dataset[SETTING_DATA] : undefined;
 
           if (optionId === '__back') {
-            _this3.showSettings();
+            _this4.showSettings();
           } else {
             setting.apply(optionId);
 
-            _this3.hideSettings();
+            _this4.trigger(EVENTS.SETTING_CHANGED, setting.id, setting.current());
+
+            _this4.hideSettings();
+
+            _this4.updateBadge();
           }
         }
       });
+    }
+    /**
+     * @summary Updates the badge in the button
+     */
+    ;
+
+    _proto.updateBadge = function updateBadge() {
+      var _this$settings$find, _this$psv$navbar$getB;
+
+      var value = (_this$settings$find = this.settings.find(function (s) {
+        return s.badge;
+      })) == null ? void 0 : _this$settings$find.badge();
+      (_this$psv$navbar$getB = this.psv.navbar.getButton(SettingsButton.id, false)) == null ? void 0 : _this$psv$navbar$getB.setBadge(value);
     };
 
     return SettingsPlugin;
   }(photoSphereViewer.AbstractPlugin);
   SettingsPlugin.id = 'settings';
 
+  exports.EVENTS = EVENTS;
   exports.SettingsPlugin = SettingsPlugin;
 
   Object.defineProperty(exports, '__esModule', { value: true });

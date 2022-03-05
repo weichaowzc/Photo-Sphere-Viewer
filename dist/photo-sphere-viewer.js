@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -15,11 +15,19 @@
    */
 
   /**
+   * @summary Default duration of the transition between panoramas
+   * @memberOf PSV.constants
+   * @type {number}
+   * @constant
+   */
+  var DEFAULT_TRANSITION = 1500;
+  /**
    * @summary Number of pixels bellow which a mouse move will be considered as a click
    * @memberOf PSV.constants
    * @type {number}
    * @constant
    */
+
   var MOVE_THRESHOLD = 4;
   /**
    * @summary Delay in milliseconds between two clicks to consider a double click
@@ -77,6 +85,14 @@
    */
 
   var VIEWER_DATA = 'photoSphereViewer';
+  /**
+   * @summary Property added the the main Mesh object
+   * @memberOf PSV.constants
+   * @type {string}
+   * @constant
+   */
+
+  var MESH_USER_DATA = 'psvSphere';
   /**
    * @summary Available actions
    * @memberOf PSV.constants
@@ -439,6 +455,7 @@
 
   var constants = /*#__PURE__*/Object.freeze({
     __proto__: null,
+    DEFAULT_TRANSITION: DEFAULT_TRANSITION,
     MOVE_THRESHOLD: MOVE_THRESHOLD,
     DBLCLICK_DELAY: DBLCLICK_DELAY,
     LONGTOUCH_DELAY: LONGTOUCH_DELAY,
@@ -447,6 +464,7 @@
     INERTIA_WINDOW: INERTIA_WINDOW,
     SPHERE_RADIUS: SPHERE_RADIUS,
     VIEWER_DATA: VIEWER_DATA,
+    MESH_USER_DATA: MESH_USER_DATA,
     ACTIONS: ACTIONS,
     EVENTS: EVENTS,
     CHANGE_EVENTS: CHANGE_EVENTS,
@@ -1521,16 +1539,20 @@
    * @summary Interpolation helper for animations
    * @memberOf PSV
    * @description
-   * Implements the Promise API with an additional "cancel" and "finally" methods.
-   * The promise is resolved when the animation is complete and rejected if the animation is cancelled.
+   * Implements the Promise API with an additional "cancel" method.
+   * The promise is resolved with `true` when the animation is completed and `false` if the animation is cancelled.
    * @example
-   * new Animation({
+   * const anim = new Animation({
    *     properties: {
    *         width: {start: 100, end: 200}
    *     },
    *     duration: 5000,
    *     onTick: (properties) => element.style.width = `${properties.width}px`;
-   * })
+   * });
+   *
+   * anim.then((completed) => ...);
+   *
+   * anim.cancel()
    */
 
   var Animation = /*#__PURE__*/function () {
@@ -1547,12 +1569,7 @@
     function Animation(options) {
       var _this = this;
 
-      this.__cancelled = false;
-      this.__resolved = false;
-      this.__promise = new Promise(function (resolve, reject) {
-        _this.__resolve = resolve;
-        _this.__reject = reject;
-      });
+      this.__callbacks = [];
 
       if (options) {
         if (!options.easing || typeof options.easing === 'string') {
@@ -1565,15 +1582,17 @@
         if (options.delay) {
           this.__delayTimeout = setTimeout(function () {
             _this.__delayTimeout = null;
-            window.requestAnimationFrame(function (t) {
+            _this.__animationFrame = window.requestAnimationFrame(function (t) {
               return _this.__run(t);
             });
           }, options.delay);
         } else {
-          window.requestAnimationFrame(function (t) {
+          this.__animationFrame = window.requestAnimationFrame(function (t) {
             return _this.__run(t);
           });
         }
+      } else {
+        this.__resolved = true;
       }
     }
     /**
@@ -1588,12 +1607,7 @@
     _proto.__run = function __run(timestamp) {
       var _this2 = this;
 
-      // the animation has been cancelled
-      if (this.__cancelled) {
-        return;
-      } // first iteration
-
-
+      // first iteration
       if (this.__start === null) {
         this.__start = timestamp;
       } // compute progress
@@ -1610,7 +1624,7 @@
           }
         });
         this.options.onTick(current, progress);
-        window.requestAnimationFrame(function (t) {
+        this.__animationFrame = window.requestAnimationFrame(function (t) {
           return _this2.__run(t);
         });
       } else {
@@ -1621,18 +1635,30 @@
           }
         });
         this.options.onTick(current, 1.0);
-        window.requestAnimationFrame(function () {
+        this.__animationFrame = window.requestAnimationFrame(function () {
           _this2.__resolved = true;
 
-          _this2.__resolve();
+          _this2.__resolve(true);
         });
       }
     }
     /**
-     * @summary Animation chaining
-     * @param {Function} [onFulfilled] - Called when the animation is complete, can return a new animation
-     * @param {Function} [onRejected] - Called when the animation is cancelled
-     * @returns {PSV.Animation}
+     * @private
+     */
+    ;
+
+    _proto.__resolve = function __resolve(value) {
+      this.__callbacks.forEach(function (cb) {
+        return cb(value);
+      });
+
+      this.__callbacks.length = 0;
+    }
+    /**
+     * @summary Promise chaining
+     * @param {Function} [onFulfilled] - Called when the animation is complete (true) or cancelled (false)
+     * @param {Function} [onRejected] - deprecated
+     * @returns {PSV.Promise}
      */
     ;
 
@@ -1647,39 +1673,17 @@
         onRejected = null;
       }
 
-      var p = new Animation(); // Allow cancellation to climb up the promise chain
+      if (onRejected) {
+        logWarn('Animation#then does not accept a rejection handler anymore');
+      }
 
-      p.__promise.then(null, function () {
-        return _this3.cancel();
-      });
+      if (this.__resolved || this.__cancelled) {
+        return Promise.resolve(this.__resolved).then(onFulfilled);
+      }
 
-      this.__promise.then(function () {
-        return p.__resolve(onFulfilled ? onFulfilled() : undefined);
-      }, function () {
-        return p.__reject(onRejected ? onRejected() : undefined);
-      });
-
-      return p;
-    }
-    /**
-     * @summary Alias to `.then(null, onRejected)`
-     * @param {Function} onRejected - Called when the animation has been cancelled
-     * @returns {PSV.Animation}
-     */
-    ;
-
-    _proto.catch = function _catch(onRejected) {
-      return this.then(undefined, onRejected);
-    }
-    /**
-     * @summary Alias to `.then(onFinally, onFinally)`
-     * @param {Function} onFinally - Called when the animation is either complete or cancelled
-     * @returns {PSV.Animation}
-     */
-    ;
-
-    _proto.finally = function _finally(onFinally) {
-      return this.then(onFinally, onFinally);
+      return new Promise(function (resolve) {
+        _this3.__callbacks.push(resolve);
+      }).then(onFulfilled);
     }
     /**
      * @summary Cancels the animation
@@ -1690,30 +1694,44 @@
       if (!this.__cancelled && !this.__resolved) {
         this.__cancelled = true;
 
-        this.__reject();
+        this.__resolve(false);
 
         if (this.__delayTimeout) {
-          window.cancelAnimationFrame(this.__delayTimeout);
+          window.clearTimeout(this.__delayTimeout);
           this.__delayTimeout = null;
+        }
+
+        if (this.__animationFrame) {
+          window.cancelAnimationFrame(this.__animationFrame);
+          this.__animationFrame = null;
         }
       }
     }
     /**
-     * @summary Returns a resolved animation promise
-     * @returns {PSV.Animation}
+     * @deprecated not supported anymore
+     */
+    ;
+
+    _proto.catch = function _catch() {
+      logWarn('Animation#catch is not supported anymore');
+      return this.then();
+    }
+    /**
+     * @deprecated not supported anymore
+     */
+    ;
+
+    _proto.finally = function _finally(onFinally) {
+      logWarn('Animation#finally is not supported anymore');
+      return this.then(onFinally);
+    }
+    /**
+     * @deprecated not supported anymore
      */
     ;
 
     Animation.resolve = function resolve() {
-      var p = Promise.resolve();
-
-      p.cancel = function () {};
-
-      p.finally = function (onFinally) {
-        return p.then(onFinally, onFinally);
-      };
-
-      return p;
+      logWarn('Animation.resolve is not supported anymore');
     };
 
     return Animation;
@@ -2375,18 +2393,26 @@
     }
     /**
      * @override
-     * @description Asks the browser to download the panorama source file
      */
 
 
     var _proto = DownloadButton.prototype;
 
+    _proto.isSupported = function isSupported() {
+      return this.psv.adapter.constructor.supportsDownload || !!this.psv.config.downloadUrl;
+    }
+    /**
+     * @override
+     * @description Asks the browser to download the panorama source file
+     */
+    ;
+
     _proto.onClick = function onClick() {
       var _this = this;
 
       var link = document.createElement('a');
-      link.href = this.psv.config.panorama;
-      link.download = this.psv.config.panorama;
+      link.href = this.psv.config.downloadUrl || this.psv.config.panorama;
+      link.download = link.href.split('/').pop();
       this.psv.container.appendChild(link);
       link.click();
       setTimeout(function () {
@@ -3639,14 +3665,7 @@
      */
 
     /**
-     * @summary Indicates if the adapter supports transitions between panoramas
-     * @member {boolean}
-     * @readonly
-     * @static
-     */
-
-    /**
-     * @summary Indicates if the adapter supports preload
+     * @summary Indicates if the adapter supports panorama download natively
      * @type {boolean}
      * @readonly
      * @static
@@ -3672,6 +3691,28 @@
 
     _proto.destroy = function destroy() {
       delete this.psv;
+    }
+    /**
+     * @summary Indicates if the adapter supports transitions between panoramas
+     * @param {*} panorama
+     * @return {boolean}
+     */
+    ;
+
+    _proto.supportsTransition = function supportsTransition(panorama) {
+      // eslint-disable-line no-unused-vars
+      return false;
+    }
+    /**
+     * @summary Indicates if the adapter supports preload of a panorama
+     * @param {*} panorama
+     * @return {boolean}
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload(panorama) {
+      // eslint-disable-line no-unused-vars
+      return false;
     }
     /**
      * @abstract
@@ -3704,10 +3745,12 @@
      * @summary Applies the texture to the mesh
      * @param {external:THREE.Mesh} mesh
      * @param {PSV.TextureData} textureData
+     * @param {boolean} [transition=false]
      */
     ;
 
-    _proto.setTexture = function setTexture(mesh, textureData) {
+    _proto.setTexture = function setTexture(mesh, textureData, transition) {
+
       // eslint-disable-line no-unused-vars
       throw new PSVError('setTexture not implemented');
     }
@@ -3722,13 +3765,23 @@
     _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
       // eslint-disable-line no-unused-vars
       throw new PSVError('setTextureOpacity not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Clear a loaded texture from memory
+     * @param {PSV.TextureData} textureData
+     */
+    ;
+
+    _proto.disposeTexture = function disposeTexture(textureData) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('disposeTexture not implemented');
     };
 
     return AbstractAdapter;
   }();
   AbstractAdapter.id = null;
-  AbstractAdapter.supportsTransition = false;
-  AbstractAdapter.supportsPreload = false;
+  AbstractAdapter.supportsDownload = false;
 
   /**
    * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
@@ -3770,13 +3823,29 @@
     }
     /**
      * @override
-     * @param {string} panorama
-     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
-     * @returns {Promise.<PSV.TextureData>}
      */
 
 
     var _proto = EquirectangularAdapter.prototype;
+
+    _proto.supportsTransition = function supportsTransition() {
+      return true;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload() {
+      return true;
+    }
+    /**
+     * @override
+     * @param {string} panorama
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    ;
 
     _proto.loadTexture = function loadTexture(panorama, newPanoData) {
       var _this2 = this;
@@ -3831,7 +3900,7 @@
           logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image.\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
         }
 
-        if (panoData.fullWidth !== panoData.fullHeight * 2) {
+        if ((newPanoData || xmpPanoData) && panoData.fullWidth !== panoData.fullHeight * 2) {
           logWarn('Invalid panoData, fullWidth should be twice fullHeight');
         }
 
@@ -3957,12 +4026,10 @@
     ;
 
     _proto.setTexture = function setTexture(mesh, textureData) {
+      var _mesh$material$map;
+
       var texture = textureData.texture;
-
-      if (mesh.material.map) {
-        mesh.material.map.dispose();
-      }
-
+      (_mesh$material$map = mesh.material.map) == null ? void 0 : _mesh$material$map.dispose();
       mesh.material.map = texture;
     }
     /**
@@ -3973,13 +4040,22 @@
     _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
       mesh.material.opacity = opacity;
       mesh.material.transparent = opacity < 1;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.disposeTexture = function disposeTexture(textureData) {
+      var _textureData$texture;
+
+      (_textureData$texture = textureData.texture) == null ? void 0 : _textureData$texture.dispose();
     };
 
     return EquirectangularAdapter;
   }(AbstractAdapter);
   EquirectangularAdapter.id = 'equirectangular';
-  EquirectangularAdapter.supportsTransition = true;
-  EquirectangularAdapter.supportsPreload = true;
+  EquirectangularAdapter.supportsDownload = true;
 
   /**
    * @namespace PSV.plugins
@@ -4054,6 +4130,7 @@
     adapter: null,
     plugins: [],
     caption: null,
+    downloadUrl: null,
     loadingImg: null,
     loadingTxt: 'Loading...',
     size: null,
@@ -4573,18 +4650,12 @@
     /**
      * @summary Sets the bar caption
      * @param {string} html
-     * @throws {PSV.PSVError} when the caption element is not present
      */
     ;
 
     _proto.setCaption = function setCaption(html) {
       var caption = this.getButton('caption', false);
-
-      if (!caption) {
-        throw new PSVError('Cannot set caption, the navbar caption container is not initialized.');
-      }
-
-      caption.setCaption(html);
+      caption == null ? void 0 : caption.setCaption(html);
     }
     /**
      * @summary Returns a button by its identifier
@@ -5709,7 +5780,7 @@
 
     _proto.viewerCoordsToVector3 = function viewerCoordsToVector3(viewerPoint) {
       var sphereIntersect = this.getIntersections(viewerPoint).filter(function (i) {
-        return i.object.userData.psvSphere;
+        return i.object.userData[MESH_USER_DATA];
       });
 
       if (sphereIntersect) {
@@ -6552,7 +6623,8 @@
         onTick: function onTick(properties) {
           _this7.__move(properties, false);
         }
-      }).finally(function () {
+      });
+      this.prop.animationPromise.then(function () {
         _this7.state.moving = false;
       });
     }
@@ -6749,6 +6821,8 @@
      * @param {PSV.Viewer} psv
      */
     function Renderer(psv) {
+      var _this$mesh$userData;
+
       var _this;
 
       _this = _AbstractService.call(this, psv) || this;
@@ -6759,10 +6833,9 @@
        */
 
       _this.renderer = new THREE.WebGLRenderer({
-        alpha: true
+        alpha: true,
+        antialias: true
       });
-
-      _this.renderer.context.disable(_this.renderer.context.DEPTH_TEST);
 
       _this.renderer.setPixelRatio(SYSTEM.pixelRatio);
 
@@ -6788,9 +6861,7 @@
        */
 
       _this.mesh = _this.psv.adapter.createMesh();
-      _this.mesh.userData = {
-        psvSphere: true
-      };
+      _this.mesh.userData = (_this$mesh$userData = {}, _this$mesh$userData[MESH_USER_DATA] = true, _this$mesh$userData);
       /**
        * @member {external:THREE.Group}
        * @readonly
@@ -7071,10 +7142,11 @@
       var _this3 = this;
 
       var positionProvided = isExtendedPosition(options);
-      var zoomProvided = ('zoom' in options);
+      var zoomProvided = ('zoom' in options); // create temp group and new mesh, half size to be in "front" of the first one
+
       var group = new THREE.Group();
       var mesh = this.psv.adapter.createMesh(0.5);
-      this.psv.adapter.setTexture(mesh, textureData);
+      this.psv.adapter.setTexture(mesh, textureData, true);
       this.psv.adapter.setTextureOpacity(mesh, 0);
       this.setPanoramaPose(textureData.panoData, mesh);
       this.setSphereCorrection(options.sphereCorrection, group); // rotate the new sphere to make the target position face the camera
@@ -7092,8 +7164,7 @@
 
       group.add(mesh);
       this.scene.add(group);
-      this.psv.needsUpdate();
-      return new Animation({
+      var animation = new Animation({
         properties: {
           opacity: {
             start: 0.0,
@@ -7117,25 +7188,32 @@
 
           _this3.psv.needsUpdate();
         }
-      }).then(function () {
-        // remove temp sphere and transfer the texture to the main sphere
-        _this3.setTexture(textureData);
+      });
+      animation.then(function (completed) {
+        if (completed) {
+          // remove temp sphere and transfer the texture to the main mesh
+          _this3.setTexture(textureData);
 
-        _this3.psv.adapter.setTextureOpacity(_this3.mesh, 1);
+          _this3.psv.adapter.setTextureOpacity(_this3.mesh, 1);
 
-        _this3.setPanoramaPose(textureData.panoData);
+          _this3.setPanoramaPose(textureData.panoData);
 
-        _this3.setSphereCorrection(options.sphereCorrection);
+          _this3.setSphereCorrection(options.sphereCorrection); // actually rotate the camera
+
+
+          if (positionProvided) {
+            _this3.psv.rotate(options);
+          }
+        } else {
+          _this3.psv.adapter.disposeTexture(textureData);
+        }
 
         _this3.scene.remove(group);
 
         mesh.geometry.dispose();
-        mesh.geometry = null; // actually rotate the camera
-
-        if (positionProvided) {
-          _this3.psv.rotate(options);
-        }
+        mesh.geometry = null;
       });
+      return animation;
     }
     /**
      * @summary Calls `dispose` on all objects and textures
@@ -7321,7 +7399,7 @@
     ;
 
     _proto.preloadPanorama = function preloadPanorama(panorama) {
-      if (this.psv.adapter.constructor.supportsPreload) {
+      if (this.psv.adapter.supportsPreload(panorama)) {
         return this.psv.adapter.loadTexture(panorama);
       } else {
         return Promise.resolve();
@@ -8579,16 +8657,15 @@
     ;
 
     _proto.setPanorama = function setPanorama(path, options) {
-      var _this3 = this;
+      var _this$prop$transition,
+          _this3 = this;
 
       if (options === void 0) {
         options = {};
       }
 
-      if (this.prop.loadingPromise !== null) {
-        this.textureLoader.abortLoading();
-      } // apply default parameters on first load
-
+      this.textureLoader.abortLoading();
+      (_this$prop$transition = this.prop.transitionAnimation) == null ? void 0 : _this$prop$transition.cancel(); // apply default parameters on first load
 
       if (!this.prop.ready) {
         if (!('sphereCorrection' in options)) {
@@ -8601,11 +8678,15 @@
       }
 
       if (options.transition === undefined || options.transition === true) {
-        options.transition = 1500;
+        options.transition = DEFAULT_TRANSITION;
       }
 
       if (options.showLoader === undefined) {
         options.showLoader = true;
+      }
+
+      if (options.caption === undefined) {
+        options.caption = this.config.caption;
       }
 
       var positionProvided = isExtendedPosition(options);
@@ -8617,26 +8698,30 @@
 
       this.hideError();
       this.config.panorama = path;
+      this.config.caption = options.caption;
 
       var done = function done(err) {
         _this3.loader.hide();
 
-        _this3.renderer.show();
-
         _this3.prop.loadingPromise = null;
 
         if (isAbortError(err)) {
-          console.warn(err);
           return false;
         } else if (err) {
+          _this3.navbar.setCaption('');
+
           _this3.showError(_this3.config.lang.loadError);
 
           console.error(err);
-          return Promise.reject(err);
+          throw err;
         } else {
+          _this3.navbar.setCaption(_this3.config.caption);
+
           return true;
         }
       };
+
+      this.navbar.setCaption("<em>" + (this.config.loadingTxt || '') + "</em>");
 
       if (options.showLoader || !this.prop.ready) {
         this.loader.show();
@@ -8645,14 +8730,18 @@
       var loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData).then(function (textureData) {
         // check if another panorama was requested
         if (textureData.panorama !== _this3.config.panorama) {
-          return Promise.reject(getAbortError());
+          _this3.adapter.disposeTexture(textureData);
+
+          throw getAbortError();
         }
 
         return textureData;
       });
 
-      if (!options.transition || !this.prop.ready || !this.adapter.constructor.supportsTransition) {
+      if (!options.transition || !this.prop.ready || !this.adapter.supportsTransition(this.config.panorama)) {
         this.prop.loadingPromise = loadingPromise.then(function (textureData) {
+          _this3.renderer.show();
+
           _this3.renderer.setTexture(textureData);
 
           _this3.renderer.setPanoramaPose(textureData.panoData);
@@ -8671,7 +8760,14 @@
         this.prop.loadingPromise = loadingPromise.then(function (textureData) {
           _this3.loader.hide();
 
-          return _this3.renderer.transition(textureData, options);
+          _this3.prop.transitionAnimation = _this3.renderer.transition(textureData, options);
+          return _this3.prop.transitionAnimation.then(function (completed) {
+            _this3.prop.transitionAnimation = null;
+
+            if (!completed) {
+              throw getAbortError();
+            }
+          });
         }).then(done, done);
       }
 
@@ -8926,7 +9022,7 @@
           this.zoom(options.zoom);
         }
 
-        return Animation.resolve();
+        return new Animation();
       }
 
       this.prop.animationPromise = new Animation({
@@ -8957,7 +9053,7 @@
 
       if (this.prop.animationPromise) {
         return new Promise(function (resolve) {
-          _this6.prop.animationPromise.finally(resolve);
+          _this6.prop.animationPromise.then(resolve);
 
           _this6.prop.animationPromise.cancel();
 

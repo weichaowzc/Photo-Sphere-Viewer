@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -92,12 +92,28 @@
     }
     /**
      * @override
-     * @param {string[] | PSV.adapters.CubemapAdapter.Cubemap} panorama
-     * @returns {Promise.<PSV.TextureData>}
      */
 
 
     var _proto = CubemapAdapter.prototype;
+
+    _proto.supportsTransition = function supportsTransition() {
+      return true;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload() {
+      return true;
+    }
+    /**
+     * @override
+     * @param {string[] | PSV.adapters.CubemapAdapter.Cubemap} panorama
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    ;
 
     _proto.loadTexture = function loadTexture(panorama) {
       var _this2 = this;
@@ -211,15 +227,14 @@
       var texture = textureData.texture;
 
       for (var i = 0; i < 6; i++) {
-        if (mesh.material[i].map) {
-          mesh.material[i].map.dispose();
-        }
+        var _mesh$material$i$map;
 
         if (this.config.flipTopBottom && (i === 2 || i === 3)) {
           texture[i].center = new THREE.Vector2(0.5, 0.5);
           texture[i].rotation = Math.PI;
         }
 
+        (_mesh$material$i$map = mesh.material[i].map) == null ? void 0 : _mesh$material$i$map.dispose();
         mesh.material[i].map = texture[i];
       }
     }
@@ -233,13 +248,24 @@
         mesh.material[i].opacity = opacity;
         mesh.material[i].transparent = opacity < 1;
       }
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.disposeTexture = function disposeTexture(textureData) {
+      var _textureData$texture;
+
+      (_textureData$texture = textureData.texture) == null ? void 0 : _textureData$texture.forEach(function (texture) {
+        return texture.dispose();
+      });
     };
 
     return CubemapAdapter;
   }(photoSphereViewer.AbstractAdapter);
   CubemapAdapter.id = 'cubemap';
-  CubemapAdapter.supportsTransition = true;
-  CubemapAdapter.supportsPreload = true;
+  CubemapAdapter.supportsDownload = false;
 
   exports.CUBE_ARRAY = CUBE_ARRAY;
   exports.CUBE_HASHMAP = CUBE_HASHMAP;

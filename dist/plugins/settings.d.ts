@@ -1,3 +1,4 @@
+import { Event } from 'uevent';
 import { AbstractPlugin, Viewer } from 'photo-sphere-viewer';
 
 /**
@@ -6,6 +7,7 @@ import { AbstractPlugin, Viewer } from 'photo-sphere-viewer';
 type BaseSetting = {
   id: string;
   label: string;
+  badge?: () => string;
 };
 
 /**
@@ -36,6 +38,10 @@ type SettingOption = {
 };
 
 type Setting = OptionsSetting | ToggleSetting;
+
+declare const EVENTS: {
+  SETTING_CHANGED: 'setting-changed',
+};
 
 /**
  * @summary Adds a button to access various settings.
@@ -70,6 +76,11 @@ declare class SettingsPlugin extends AbstractPlugin {
    */
   showSettings();
 
+  /**
+   * @summary Triggered when a setting is changed
+   */
+  on(e: 'setting-changed', cb: (e: Event, settingId: string, value: any) => void): this;
+
 }
 
-export { BaseSetting, OptionsSetting, Setting, SettingOption, SettingsPlugin, ToggleSetting };
+export { BaseSetting, EVENTS, OptionsSetting, Setting, SettingOption, SettingsPlugin, ToggleSetting };

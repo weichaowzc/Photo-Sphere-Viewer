@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.1
+* Photo Sphere Viewer 4.5.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -149,7 +149,6 @@
 
   function setMeshColor(mesh, color) {
     mesh.material.color.set(color);
-    mesh.material.emissive.set(color);
   }
   /**
    * @summary Returns the distance between two GPS points
@@ -259,9 +258,11 @@
     return ClientSideDatasource;
   }(AbstractDatasource);
 
-  var metadata={version:4.5,type:"BufferGeometry",generator:"BufferGeometry.toJSON"};var uuid="B5839B4F-7D11-4EC3-B454-059BC0185A1B";var type="BufferGeometry";var data={attributes:{position:{itemSize:3,type:"Float32Array",array:[50,0,25,50,20,25,0,10,50,50,0,25,100,10,50,50,20,25,50,10,0,0,10,50,50,20,25,100,10,50,50,10,0,50,20,25,50,0,25,0,10,50,50,10,0,50,10,0,100,10,50,50,0,25],normalized:false},normal:{itemSize:3,type:"Float32Array",array:[0.447214,0,0.894427,0.447214,0,0.894427,0.447214,0,0.894427,-0.447214,0,0.894427,-0.447214,0,0.894427,-0.447214,0,0.894427,-0.348155,0.870388,-0.348155,-0.348155,0.870388,-0.348155,-0.348155,0.870388,-0.348155,0.348155,0.870388,-0.348155,0.348155,0.870388,-0.348155,0.348155,0.870388,-0.348155,-0.348155,-0.870388,-0.348155,-0.348155,-0.870388,-0.348155,-0.348155,-0.870388,-0.348155,0.348155,-0.870388,-0.348155,0.348155,-0.870388,-0.348155,0.348155,-0.870388,-0.348155],normalized:false}},boundingSphere:{center:[50,10,25],radius:55.901699}};var arrowGeometryJson = {metadata:metadata,uuid:uuid,type:type,data:data};
+  var metadata$1={version:4.5,type:"BufferGeometry",generator:"BufferGeometry.toJSON"};var uuid$1="8B1A6E5B-A7CC-4471-9CA0-BD64D80ABB79";var type$1="BufferGeometry";var data$1={attributes:{position:{itemSize:3,type:"Float32Array",array:[-25,-15,-2.5,0,0,-2.5,0,-5,-2.5,0,-5,-2.5,0,0,-2.5,25,-15,-2.5,0,-5,-2.5,25,-15,-2.5,25,-20,-2.5,0,-5,-2.5,-25,-20,-2.5,-25,-15,-2.5,25,-15,2.5,25,-20,2.5,25,-15,-2.5,25,-15,-2.5,25,-20,2.5,25,-20,-2.5,25,-20,2.5,0,-5,2.5,25,-20,-2.5,25,-20,-2.5,0,-5,2.5,0,-5,-2.5,0,-5,2.5,-25,-20,2.5,0,-5,-2.5,0,-5,-2.5,-25,-20,2.5,-25,-20,-2.5,-25,-20,2.5,-25,-15,2.5,-25,-20,-2.5,-25,-20,-2.5,-25,-15,2.5,-25,-15,-2.5,-25,-15,2.5,0,0,2.5,-25,-15,-2.5,-25,-15,-2.5,0,0,2.5,0,0,-2.5,0,0,2.5,25,-15,2.5,0,0,-2.5,0,0,-2.5,25,-15,2.5,25,-15,-2.5,25,-20,2.5,25,-15,2.5,0,-5,2.5,0,-5,2.5,25,-15,2.5,0,0,2.5,0,-5,2.5,0,0,2.5,-25,-15,2.5,-25,-15,2.5,-25,-20,2.5,0,-5,2.5],normalized:false},normal:{itemSize:3,type:"Float32Array",array:[0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1],normalized:false}},boundingSphere:{center:[0,-10,0],radius:27.041634}};var arrowGeometryJson = {metadata:metadata$1,uuid:uuid$1,type:type$1,data:data$1};
 
   var arrowIconSvg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 210\" x=\"0px\" y=\"0px\"><path fill=\"currentColor\" transform=\"translate(0 10)\" d=\"M0 181l105 -181 105 181 -105 -61 -105 61zm105 -167l0 99 86 50 -86 -148z\"/><!-- Created by Saifurrijal from the Noun Project --></svg>\n";
+
+  var metadata={version:4.5,type:"BufferGeometry",generator:"BufferGeometry.toJSON"};var uuid="B12A1453-6E56-40AC-840B-BA7DF5DB9E2A";var type="BufferGeometry";var data={attributes:{position:{itemSize:3,type:"Float32Array",array:[-26,-21.766189,-3.5,-26,-14.433809,-3.5,0,-6.16619,-3.5,0,-6.16619,-3.5,-26,-14.433809,-3.5,0,1.16619,-3.5,0,-6.16619,-3.5,0,1.16619,-3.5,26,-14.43381,-3.5,26,-14.43381,-3.5,26,-21.766191,-3.5,0,-6.16619,-3.5,-26,-14.433809,3.5,0,1.16619,3.5,-26,-14.433809,-3.5,-26,-14.433809,-3.5,0,1.16619,3.5,0,1.16619,-3.5,0,1.16619,3.5,26,-14.43381,3.5,0,1.16619,-3.5,0,1.16619,-3.5,26,-14.43381,3.5,26,-14.43381,-3.5,26,-14.43381,3.5,26,-21.766191,3.5,26,-14.43381,-3.5,26,-14.43381,-3.5,26,-21.766191,3.5,26,-21.766191,-3.5,26,-21.766191,3.5,0,-6.16619,3.5,26,-21.766191,-3.5,26,-21.766191,-3.5,0,-6.16619,3.5,0,-6.16619,-3.5,0,-6.16619,3.5,-26,-21.766189,3.5,0,-6.16619,-3.5,0,-6.16619,-3.5,-26,-21.766189,3.5,-26,-21.766189,-3.5,-26,-21.766189,3.5,-26,-14.433809,3.5,-26,-21.766189,-3.5,-26,-21.766189,-3.5,-26,-14.433809,3.5,-26,-14.433809,-3.5,-26,-21.766189,3.5,0,-6.16619,3.5,-26,-14.433809,3.5,-26,-14.433809,3.5,0,-6.16619,3.5,0,1.16619,3.5,0,1.16619,3.5,0,-6.16619,3.5,26,-14.43381,3.5,26,-14.43381,3.5,0,-6.16619,3.5,26,-21.766191,3.5],normalized:false},normal:{itemSize:3,type:"Float32Array",array:[0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,-0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,0.514495,0.857492,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,-0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,0.514495,-0.857492,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1],normalized:false}},boundingSphere:{center:[0,-10.3,0],radius:28.630814}};var arrowOutlineGeometryJson = {metadata:metadata,uuid:uuid,type:type,data:data};
 
   var nodesList = "<svg viewBox=\"0 0 700 700\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"currentColor\" d=\"M113.2 198.6v305l-62 15.5A41.2 41.2 0 0 1 0 479v-256a41.2 41.2 0 0 1 51.2-40zm473.6 305v-305l62-15.5a41.2 41.2 0 0 1 51.2 40v256a41.2 41.2 0 0 1-51.2 40zm-349.3 43h-42c-18 0-33.3-11.6-38.9-27.8l91-97 56 56zm57 0 178.7-186 72.4 78.3v66.6a41.2 41.2 0 0 1-41.2 41.2zm251-168.4-56.8-61.6c-8-8.8-21.8-8.9-30-.3L332 448.2l-70.5-70.5c-8.2-8.2-21.6-8-29.6.5L154.4 461V196.7a41.2 41.2 0 0 1 41.2-41.2h308.8a41.2 41.2 0 0 1 41.2 41.2zm-298.4-58a61.8 61.8 0 1 0 0-123.5 61.8 61.8 0 0 0 0 123.5zm0-41.2a20.6 20.6 0 1 1 0-41.1 20.6 20.6 0 0 1 0 41.1z\"/><!-- Created by Andrejs Kirm from the Noun Project --></svg>\n";
 
@@ -372,9 +373,9 @@
    */
 
   var DEFAULT_ARROW = {
-    color: 0x0055aa,
+    color: 0xaaaaaa,
     hoverColor: 0xaa5500,
-    opacity: 0.8,
+    outlineColor: 0x000000,
     scale: [0.5, 2]
   };
   /**
@@ -383,23 +384,24 @@
    * @private
    */
 
-  var ARROW_GEOM = function () {
+  var _ref = function () {
     var loader = new THREE.ObjectLoader();
-    var geom = loader.parseGeometries([arrowGeometryJson])[arrowGeometryJson.uuid];
-    geom.scale(0.01, 0.015, 0.015);
-    geom.computeBoundingBox();
-    var b = geom.boundingBox;
-    geom.translate(-(b.max.x - b.min.y) / 2, -(b.max.y - b.min.y) / 2, -(b.max.z - b.min.z) / 2);
-    geom.rotateX(Math.PI);
-    return geom;
-  }();
-  /**
-   * @summary Panel identifier for nodes list
-   * @type {string}
-   * @constant
-   * @private
-   */
-
+    var geometries = loader.parseGeometries([arrowGeometryJson, arrowOutlineGeometryJson]);
+    var arrow = geometries[arrowGeometryJson.uuid];
+    var arrowOutline = geometries[arrowOutlineGeometryJson.uuid];
+    var scale = 0.015;
+    var rot = Math.PI / 2;
+    arrow.scale(scale, scale, scale);
+    arrow.rotateX(rot);
+    arrowOutline.scale(scale, scale, scale);
+    arrowOutline.rotateX(rot);
+    return {
+      ARROW_GEOM: arrow,
+      ARROW_OUTLINE_GEOM: arrowOutline
+    };
+  }(),
+      ARROW_GEOM = _ref.ARROW_GEOM,
+      ARROW_OUTLINE_GEOM = _ref.ARROW_OUTLINE_GEOM;
   var ID_PANEL_NODES_LIST = 'virtualTourNodesList';
   /**
    * @summary Nodes list template
@@ -466,9 +468,7 @@
     ;
 
     _proto.isSupported = function isSupported() {
-      var _this$plugin;
-
-      return (_this$plugin = this.plugin) == null ? void 0 : _this$plugin.config.listButton;
+      return !!this.plugin && !this.plugin.isServerSide();
     }
     /**
      * @summary Handles events
@@ -639,9 +639,9 @@
   /**
    * @typedef {Object} PSV.plugins.VirtualTourPlugin.ArrowStyle
    * @summary Style of the arrow in 3D mode
-   * @property {string} [color=#0055aa]
-   * @property {string} [hoverColor=#aa5500]
-   * @property {number} [opacity=0.8]
+   * @property {string} [color=0xaaaaaa]
+   * @property {string} [hoverColor=0xaa5500]
+   * @property {number} [outlineColor=0x000000]
    * @property {number[]} [scale=[0.5,2]]
    */
 
@@ -656,7 +656,7 @@
    * @property {string} [startNodeId] - id of the initial node, if not defined the first node will be used
    * @property {boolean|PSV.plugins.VirtualTourPlugin.Preload} [preload=false] - preload linked panoramas
    * @property {boolean|string|number} [rotateSpeed='20rpm'] - speed of rotation when clicking on a link, if 'false' the viewer won't rotate at all
-   * @property {boolean} [listButton] - adds a button to show the list of nodes, defaults to `true` only in client data mode
+   * @property {boolean|number} [transition=1500] - duration of the transition between nodes
    * @property {boolean} [linksOnCompass] - if the Compass plugin is enabled, displays the links on the compass, defaults to `true` on in markers render mode
    * @property {PSV.plugins.MarkersPlugin.Properties} [markerStyle] - global marker style
    * @property {PSV.plugins.VirtualTourPlugin.ArrowStyle} [arrowStyle] - global arrow style
@@ -674,7 +674,6 @@
   // add markers buttons
 
   photoSphereViewer.DEFAULTS.lang[NodesListButton.id] = 'Locations';
-  photoSphereViewer.DEFAULTS.lang.loading = 'Loading...';
   photoSphereViewer.registerButton(NodesListButton, 'caption:left');
   /**
    * @summary Create virtual tours by linking multiple panoramas
@@ -725,18 +724,27 @@
         renderMode: MODE_3D,
         preload: false,
         rotateSpeed: '20rpm',
+        transition: photoSphereViewer.CONSTANTS.DEFAULT_TRANSITION,
         markerLatOffset: -0.1,
         arrowPosition: 'bottom',
-        linksOnCompass: (options == null ? void 0 : options.renderMode) === MODE_MARKERS,
-        listButton: (options == null ? void 0 : options.dataMode) !== MODE_SERVER
+        linksOnCompass: (options == null ? void 0 : options.renderMode) === MODE_MARKERS
       }, options, {
         markerStyle: _extends({}, DEFAULT_MARKER, options == null ? void 0 : options.markerStyle),
         arrowStyle: _extends({}, DEFAULT_ARROW, options == null ? void 0 : options.arrowStyle)
       });
+
+      if ((options == null ? void 0 : options.listButton) === false) {
+        photoSphereViewer.utils.logWarn('VirtualTourPlugin: listButton option is deprecated. ' + 'Please define the global navbar options according to your needs.');
+      }
+
+      if ((options == null ? void 0 : options.listButton) === true && _this.config.dataMode === MODE_SERVER) {
+        photoSphereViewer.utils.logWarn('VirtualTourPlugin: the list button is not supported in server mode.');
+      }
       /**
        * @type {PSV.plugins.MarkersPlugin}
        * @private
        */
+
 
       _this.markers = null;
       /**
@@ -760,7 +768,7 @@
       if (_this.is3D()) {
         _this.arrowsGroup = new THREE.Group();
         var localLight = new THREE.PointLight(0xffffff, 1, 0);
-        localLight.position.set(2, 0, 0);
+        localLight.position.set(0, _this.config.arrowPosition === 'bottom' ? 2 : -2, 0);
 
         _this.arrowsGroup.add(localLight);
       }
@@ -975,16 +983,13 @@
       return Promise.all([// if this node is already preloading, wait for it
       Promise.resolve(this.preload[nodeId]).then(function () {
         if (_this3.prop.loadingNode !== nodeId) {
-          return Promise.reject(photoSphereViewer.utils.getAbortError());
+          throw photoSphereViewer.utils.getAbortError();
         }
-
-        _this3.psv.textureLoader.abortLoading();
 
         return _this3.datasource.loadNode(nodeId);
       }), Promise.resolve(fromLinkPosition ? this.config.rotateSpeed : false).then(function (speed) {
-        if (!speed) {
-          return Promise.resolve();
-        } else {
+        // eslint-disable-line consistent-return
+        if (speed) {
           return _this3.psv.animate(_extends({}, fromLinkPosition, {
             speed: speed
           }));
@@ -997,10 +1002,8 @@
         var node = _ref[0];
 
         if (_this3.prop.loadingNode !== nodeId) {
-          return Promise.reject(photoSphereViewer.utils.getAbortError());
+          throw photoSphereViewer.utils.getAbortError();
         }
-
-        _this3.psv.navbar.setCaption("<em>" + _this3.psv.config.lang.loading + "</em>");
 
         _this3.prop.currentNode = node;
 
@@ -1021,15 +1024,18 @@
         (_this3$markers = _this3.markers) == null ? void 0 : _this3$markers.clearMarkers();
         (_this3$compass = _this3.compass) == null ? void 0 : _this3$compass.clearHotspots();
         return Promise.all([_this3.psv.setPanorama(node.panorama, {
+          transition: _this3.config.transition,
+          caption: node.caption,
           panoData: node.panoData,
           sphereCorrection: node.sphereCorrection
-        }).catch(function (err) {
-          // the error is already displayed by the core
-          return Promise.reject(photoSphereViewer.utils.isAbortError(err) ? err : null);
+        }).then(function (completed) {
+          if (!completed) {
+            throw photoSphereViewer.utils.getAbortError();
+          }
         }), _this3.datasource.loadLinkedNodes(nodeId)]);
       }).then(function () {
         if (_this3.prop.loadingNode !== nodeId) {
-          return Promise.reject(photoSphereViewer.utils.getAbortError());
+          throw photoSphereViewer.utils.getAbortError();
         }
 
         var node = _this3.prop.currentNode;
@@ -1045,8 +1051,6 @@
         _this3.__renderLinks(node);
 
         _this3.__preload(node);
-
-        _this3.psv.navbar.setCaption(node.caption || _this3.psv.config.caption);
         /**
          * @event node-changed
          * @memberof PSV.plugins.VirtualTourPlugin
@@ -1066,17 +1070,17 @@
         return true;
       }).catch(function (err) {
         if (photoSphereViewer.utils.isAbortError(err)) {
-          return Promise.resolve(false);
-        } else if (err) {
-          _this3.psv.showError(_this3.psv.config.lang.loadError);
+          return false;
         }
+
+        _this3.psv.showError(_this3.psv.config.lang.loadError);
 
         _this3.psv.loader.hide();
 
         _this3.psv.navbar.setCaption('');
 
         _this3.prop.loadingNode = null;
-        return Promise.reject(err);
+        throw err;
       });
     }
     /**
@@ -1096,15 +1100,9 @@
         positions.push(position);
 
         if (_this4.is3D()) {
-          var _link$arrowStyle, _link$arrowStyle2, _mesh$userData;
+          var _mesh$userData, _link$arrowStyle, _link$arrowStyle2;
 
-          var arrow = ARROW_GEOM.clone();
-          var mat = new THREE.MeshLambertMaterial({
-            transparent: true,
-            opacity: ((_link$arrowStyle = link.arrowStyle) == null ? void 0 : _link$arrowStyle.opacity) || _this4.config.arrowStyle.opacity
-          });
-          var mesh = new THREE.Mesh(arrow, mat);
-          setMeshColor(mesh, ((_link$arrowStyle2 = link.arrowStyle) == null ? void 0 : _link$arrowStyle2.color) || _this4.config.arrowStyle.color);
+          var mesh = new THREE.Mesh(ARROW_GEOM, new THREE.MeshLambertMaterial());
           mesh.userData = (_mesh$userData = {}, _mesh$userData[LINK_DATA] = link, _mesh$userData.longitude = position.longitude, _mesh$userData);
           mesh.rotation.order = 'YXZ';
           mesh.rotateY(-position.longitude);
@@ -1114,7 +1112,17 @@
             latitude: 0
           }, mesh.position).multiplyScalar(1 / photoSphereViewer.CONSTANTS.SPHERE_RADIUS);
 
+          var outlineMesh = new THREE.Mesh(ARROW_OUTLINE_GEOM, new THREE.MeshBasicMaterial({
+            side: THREE.BackSide
+          }));
+          outlineMesh.position.copy(mesh.position);
+          outlineMesh.rotation.copy(mesh.rotation);
+          setMeshColor(mesh, ((_link$arrowStyle = link.arrowStyle) == null ? void 0 : _link$arrowStyle.color) || _this4.config.arrowStyle.color);
+          setMeshColor(outlineMesh, ((_link$arrowStyle2 = link.arrowStyle) == null ? void 0 : _link$arrowStyle2.outlineColor) || _this4.config.arrowStyle.outlineColor);
+
           _this4.arrowsGroup.add(mesh);
+
+          _this4.arrowsGroup.add(outlineMesh);
         } else {
           var _data;
 
@@ -1230,31 +1238,12 @@
     ;
 
     _proto.__positionArrows = function __positionArrows() {
-      var isBottom = this.config.arrowPosition === 'bottom';
       this.arrowsGroup.position.copy(this.psv.prop.direction).multiplyScalar(0.5);
       var s = this.config.arrowStyle.scale;
-      var f = s[1] + (s[0] - s[1]) * photoSphereViewer.CONSTANTS.EASINGS.linear(this.psv.getZoomLevel() / 100);
-      this.arrowsGroup.position.y += isBottom ? -1.5 : 1.5;
-      this.arrowsGroup.scale.set(f, f, f); // slightly rotates each arrow to make the center ones standing out
-
-      var position = this.psv.getPosition();
-
-      if (isBottom ? position.latitude < Math.PI / 8 : position.latitude > -Math.PI / 8) {
-        this.arrowsGroup.children.filter(function (o) {
-          return o.type === 'Mesh';
-        }).forEach(function (arrow) {
-          var d = Math.abs(photoSphereViewer.utils.getShortestArc(arrow.userData.longitude, position.longitude));
-          var x = photoSphereViewer.CONSTANTS.EASINGS.inOutSine(Math.max(0, Math.PI / 4 - d) / (Math.PI / 4)) / 3; // magic !
-
-          arrow.rotation.x = isBottom ? -x : x;
-        });
-      } else {
-        this.arrowsGroup.children.filter(function (o) {
-          return o.type === 'Mesh';
-        }).forEach(function (arrow) {
-          arrow.rotation.x = 0;
-        });
-      }
+      var f = s[1] + (s[0] - s[1]) * (this.psv.getZoomLevel() / 100);
+      var y = 2.5 - this.psv.getZoomLevel() / 100 * 1.5;
+      this.arrowsGroup.position.y += this.config.arrowPosition === 'bottom' ? -y : y;
+      this.arrowsGroup.scale.set(f, f, f);
     }
     /**
      * @summary Manage the preload of the linked panoramas

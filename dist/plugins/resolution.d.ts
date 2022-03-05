@@ -9,16 +9,17 @@ type Resolution = {
 
 type ResolutionPluginOptions = {
   resolutions: Resolution[];
+  showBadge?: boolean;
+};
+
+declare const EVENTS: {
+  RESOLUTION_CHANGED: 'resolution-changed',
 };
 
 /**
  * @summary Adds a setting to choose between multiple resolutions of the panorama.
  */
 declare class ResolutionPlugin extends AbstractPlugin {
-
-  static EVENTS: {
-    RESOLUTION_CHANGED: 'resolution-changed',
-  };
 
   constructor(psv: Viewer, options: ResolutionPluginOptions);
 
@@ -44,4 +45,4 @@ declare class ResolutionPlugin extends AbstractPlugin {
 
 }
 
-export { Resolution, ResolutionPlugin, ResolutionPluginOptions };
+export { EVENTS, Resolution, ResolutionPlugin, ResolutionPluginOptions };
