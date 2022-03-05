@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.2
+* Photo Sphere Viewer 4.5.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -575,9 +575,7 @@
       var _this3 = this;
 
       // eslint-disable-line no-unused-vars
-      var panorama = this.psv.config.panorama;
-
-      if (!panorama) {
+      if (!this.prop.geom) {
         return;
       }
 
@@ -585,6 +583,7 @@
       camera.updateMatrixWorld();
       projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(projScreenMatrix);
+      var panorama = this.psv.config.panorama;
       var verticesPosition = this.prop.geom.getAttribute(ATTR_POSITION);
       var tilesToLoad = [];
 
