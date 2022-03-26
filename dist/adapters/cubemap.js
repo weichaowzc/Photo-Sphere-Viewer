@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -67,6 +67,7 @@
   /**
    * @summary Adapter for cubemaps
    * @memberof PSV.adapters
+   * @extends PSV.adapters.AbstractAdapter
    */
 
   var CubemapAdapter = /*#__PURE__*/function (_AbstractAdapter) {

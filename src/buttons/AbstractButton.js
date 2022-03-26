@@ -1,7 +1,7 @@
 import { AbstractComponent } from '../components/AbstractComponent';
 import { KEY_CODES } from '../data/constants';
 import { PSVError } from '../PSVError';
-import { getEventKey, isPlainObject, toggleClass } from '../utils';
+import { isPlainObject, toggleClass } from '../utils';
 
 /**
  * @namespace PSV.buttons
@@ -22,6 +22,14 @@ export class AbstractButton extends AbstractComponent {
    * @static
    */
   static id = null;
+
+  /**
+   * @summary Identifier to declare a group of buttons
+   * @member {string}
+   * @readonly
+   * @static
+   */
+  static groupId = null;
 
   /**
    * @summary SVG icon name injected in the button
@@ -88,7 +96,7 @@ export class AbstractButton extends AbstractComponent {
     });
 
     this.container.addEventListener('keydown', (e) => {
-      if (getEventKey(e) === KEY_CODES.Enter && this.prop.enabled) {
+      if (e.key === KEY_CODES.Enter && this.prop.enabled) {
         this.onClick();
         e.stopPropagation();
       }
@@ -111,17 +119,22 @@ export class AbstractButton extends AbstractComponent {
           return; // the component has been destroyed
         }
         this.prop.supported = supported;
-        if (!supported && this.prop.visible) {
+        if (!supported) {
           this.hide();
         }
-        else if (supported && !this.prop.visible) {
+        else {
           this.show();
         }
       });
     }
-    else if (!supportedOrObject) {
-      this.hide();
-      this.prop.supported = false;
+    else {
+      this.prop.supported = supportedOrObject;
+      if (!supportedOrObject) {
+        this.hide();
+      }
+      else {
+        this.show();
+      }
     }
   }
 
@@ -217,8 +230,8 @@ export class AbstractButton extends AbstractComponent {
   __setIcon(icon, container = this.container) {
     if (icon) {
       container.innerHTML = icon;
-      // classList not supported on IE11, className is read-only !!!!
-      container.querySelector('svg').setAttribute('class', 'psv-button-svg');
+      // className is read-only on SVGElement
+      container.querySelector('svg').classList.add('psv-button-svg');
     }
     else {
       container.innerHTML = '';

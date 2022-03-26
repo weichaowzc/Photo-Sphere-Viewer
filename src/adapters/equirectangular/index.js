@@ -15,6 +15,7 @@ import { AbstractAdapter } from '../AbstractAdapter';
 /**
  * @summary Adapter for equirectangular panoramas
  * @memberof PSV.adapters
+ * @extends PSV.adapters.AbstractAdapter
  */
 export class EquirectangularAdapter extends AbstractAdapter {
 
@@ -127,7 +128,7 @@ export class EquirectangularAdapter extends AbstractAdapter {
         const b = binary.indexOf('</x:xmpmeta>');
         const data = binary.substring(a, b);
 
-        if (a !== -1 && b !== -1 && data.indexOf('GPano:') !== -1) {
+        if (a !== -1 && b !== -1 && data.includes('GPano:')) {
           return {
             fullWidth    : getXMPValue(data, 'FullPanoWidthPixels'),
             fullHeight   : getXMPValue(data, 'FullPanoHeightPixels'),
@@ -205,7 +206,12 @@ export class EquirectangularAdapter extends AbstractAdapter {
    */
   createMesh(scale = 1) {
     // The middle of the panorama is placed at longitude=0
-    const geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2)
+    const geometry = new THREE.SphereGeometry(
+      SPHERE_RADIUS * scale,
+      this.SPHERE_SEGMENTS,
+      this.SPHERE_HORIZONTAL_SEGMENTS,
+      -Math.PI / 2
+    )
       .scale(-1, 1, 1);
 
     const material = new THREE.MeshBasicMaterial();
@@ -217,10 +223,8 @@ export class EquirectangularAdapter extends AbstractAdapter {
    * @override
    */
   setTexture(mesh, textureData) {
-    const { texture } = textureData;
-
     mesh.material.map?.dispose();
-    mesh.material.map = texture;
+    mesh.material.map = textureData.texture;
   }
 
   /**

@@ -1,12 +1,12 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer'), require('uevent')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer', 'uevent'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.MarkersPlugin = {}), global.THREE, global.PhotoSphereViewer));
 })(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
 
@@ -1321,10 +1321,6 @@
 
   var MarkersPlugin = /*#__PURE__*/function (_AbstractPlugin) {
     _inheritsLoose(MarkersPlugin, _AbstractPlugin);
-
-    /**
-     * @deprecated use the EVENTS constants of the module
-     */
 
     /**
      * @param {PSV.Viewer} psv

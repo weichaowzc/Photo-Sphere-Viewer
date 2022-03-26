@@ -166,6 +166,7 @@ export const EVENTS = {
    * @event hide-notification
    * @memberof PSV
    * @summary Triggered when the notification is hidden
+   * @param {string} [id]
    */
   HIDE_NOTIFICATION : 'hide-notification',
   /**
@@ -182,6 +183,13 @@ export const EVENTS = {
    * @param {*} Data associated to this tooltip
    */
   HIDE_TOOLTIP      : 'hide-tooltip',
+  /**
+   * @event key-press
+   * @memberof PSV
+   * @summary Triggered when a key is pressed, can be cancelled
+   * @param {string} key
+   */
+  KEY_PRESS         : 'key-press',
   /**
    * @event load-progress
    * @memberof PSV
@@ -200,6 +208,7 @@ export const EVENTS = {
    * @event panorama-loaded
    * @memberof PSV
    * @summary Triggered when a panorama image has been loaded
+   * @param {PSV.TextureData} textureData
    */
   PANORAMA_LOADED   : 'panorama-loaded',
   /**
@@ -225,6 +234,7 @@ export const EVENTS = {
    * @event show-notification
    * @memberof PSV
    * @summary Triggered when the notification is shown
+   * @param {string} [id]
    */
   SHOW_NOTIFICATION : 'show-notification',
   /**
@@ -312,6 +322,7 @@ export const IDS = {
   TWO_FINGERS: 'twoFingers',
   CTRL_ZOOM  : 'ctrlZoom',
   ERROR      : 'error',
+  DESCRIPTION: 'description',
 };
 
 /* eslint-disable */

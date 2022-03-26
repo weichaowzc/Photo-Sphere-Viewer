@@ -1,14 +1,14 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
 */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('photo-sphere-viewer')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'photo-sphere-viewer'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.AutorotateKeypointsPlugin = {}), global.PhotoSphereViewer));
-})(this, (function (exports, photoSphereViewer) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three'), require('photo-sphere-viewer')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'three', 'photo-sphere-viewer'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.PhotoSphereViewer = global.PhotoSphereViewer || {}, global.PhotoSphereViewer.AutorotateKeypointsPlugin = {}), global.THREE, global.PhotoSphereViewer));
+})(this, (function (exports, THREE, photoSphereViewer) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -45,18 +45,22 @@
   }
 
   /**
-   * @typedef {PSV.ExtendedPosition|string|Object} PSV.plugins.AutorotateKeypointsPlugin.Keypoints
-   * @summary Definition of keypoints for automatic rotation, can be a position object, a marker id or an object with the following properties
-   * @property {string} [markerId]
+   * @typedef {Object} PSV.plugins.AutorotateKeypointsPlugin.KeypointObject
    * @property {PSV.ExtendedPosition} [position]
+   * @property {string} [markerId] - use the position and tooltip of a marker
+   * @property {number} [pause=0] - pause the animation when reaching this point, will display the tooltip if available
    * @property {string|{content: string, position: string}} [tooltip]
-   * @property {number} [pause=0]
+   */
+
+  /**
+   * @typedef {PSV.ExtendedPosition|string|PSV.plugins.AutorotateKeypointsPlugin.KeypointObject} PSV.plugins.AutorotateKeypointsPlugin.Keypoint
+   * @summary Definition of keypoints for automatic rotation, can be a position object, a marker id or an keypoint object
    */
 
   /**
    * @typedef {Object} PSV.plugins.AutorotateKeypointsPlugin.Options
    * @property {boolean} [startFromClosest=true] - start from the closest keypoint instead of the first keypoint
-   * @property {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
+   * @property {PSV.plugins.AutorotateKeypointsPlugin.Keypoint[]} keypoints
    */
 
   var NUM_STEPS = 16;
@@ -86,8 +90,8 @@
        * @member {Object}
        * @property {number} idx -  current index in keypoints
        * @property {number[][]} curve - curve between idx and idx + 1
-       * @property {number[]} startPt - start point of the current step
-       * @property {number[]} endPt - end point of the current step
+       * @property {number[]} startStep - start point of the current step
+       * @property {number[]} endStep - end point of the current step
        * @property {number} startTime - start time of the current step
        * @property {number} stepDuration - expected duration of the step
        * @property {number} remainingPause - time remaining for the pause
@@ -106,7 +110,7 @@
         startFromClosest: true
       }, options);
       /**
-       * @type {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
+       * @type {PSV.plugins.AutorotateKeypointsPlugin.Keypoint[]} keypoints
        */
 
       _this.keypoints = null;
@@ -165,7 +169,7 @@
     }
     /**
      * @summary Changes the keypoints
-     * @param {PSV.plugins.AutorotateKeypointsPlugin.Keypoints[]} keypoints
+     * @param {PSV.plugins.AutorotateKeypointsPlugin.Keypoint[]} keypoints
      */
     ;
 
@@ -192,7 +196,7 @@
 
           if (pt.markerId) {
             if (!_this2.markers) {
-              throw new photoSphereViewer.PSVError("Keypoint #" + i + " references a marker but markers plugin is not loaded");
+              throw new photoSphereViewer.PSVError("Keypoint #" + i + " references a marker but the markers plugin is not loaded");
             }
 
             var marker = _this2.markers.getMarker(pt.markerId);
@@ -234,8 +238,8 @@
       this.state = {
         idx: -1,
         curve: [],
-        startPt: null,
-        endPt: null,
+        startStep: null,
+        endStep: null,
         startTime: null,
         stepDuration: null,
         remainingPause: null,
@@ -264,7 +268,7 @@
       if (this.psv.isAutorotateEnabled()) {
         // initialisation
         if (!this.state.startTime) {
-          this.state.endPt = serializePt(this.psv.getPosition());
+          this.state.endStep = serializePt(this.psv.getPosition());
 
           this.__nextStep();
 
@@ -335,7 +339,7 @@
 
     _proto.__nextPoint = function __nextPoint() {
       // get the 4 points necessary to compute the current movement
-      // one point before and two points after the current
+      // the two points of the current segments and one point before and after
       var workPoints = [];
 
       if (this.state.idx === -1) {
@@ -349,7 +353,7 @@
       } // apply offsets to avoid crossing the origin
 
 
-      var workPoints2 = [workPoints[0].slice(0)];
+      var workVectors = [new THREE.Vector2(workPoints[0][0], workPoints[0][1])];
       var k = 0;
 
       for (var _i = 1; _i <= 3; _i++) {
@@ -365,18 +369,19 @@
 
         if (k !== 0 && _i === 1) {
           // do not modify first point, apply the reverse offset the the previous point instead
-          workPoints2[0][0] -= k * 2 * Math.PI;
+          workVectors[0].x -= k * 2 * Math.PI;
           k = 0;
         }
 
-        workPoints2.push([workPoints[_i][0] + k * 2 * Math.PI, workPoints[_i][1]]);
+        workVectors.push(new THREE.Vector2(workPoints[_i][0] + k * 2 * Math.PI, workPoints[_i][1]));
       }
 
-      var curve = this.__getCurvePoints(workPoints2, 0.6, NUM_STEPS); // __debugCurve(this.markers, curve);
+      var curve = new THREE.SplineCurve(workVectors).getPoints(NUM_STEPS * 3).map(function (p) {
+        return [p.x, p.y];
+      }); // debugCurve(this.markers, curve, NUM_STEPS);
       // only keep the curve for the current movement
 
-
-      this.state.curve = curve.slice(NUM_STEPS, NUM_STEPS * 2);
+      this.state.curve = curve.slice(NUM_STEPS + 1, NUM_STEPS * 2 + 1);
 
       if (this.state.idx !== -1) {
         this.state.remainingPause = this.keypoints[this.state.idx].pause;
@@ -400,14 +405,14 @@
         this.__nextPoint(); // reset transformation made to the previous point
 
 
-        this.state.endPt[0] = photoSphereViewer.utils.parseAngle(this.state.endPt[0]);
+        this.state.endStep[0] = photoSphereViewer.utils.parseAngle(this.state.endStep[0]);
       } // target next point
 
 
-      this.state.startPt = this.state.endPt;
-      this.state.endPt = this.state.curve.shift(); // compute duration from distance and speed
+      this.state.startStep = this.state.endStep;
+      this.state.endStep = this.state.curve.shift(); // compute duration from distance and speed
 
-      var distance = photoSphereViewer.utils.greatArcDistance(this.state.startPt, this.state.endPt);
+      var distance = photoSphereViewer.utils.greatArcDistance(this.state.startStep, this.state.endStep);
       this.state.stepDuration = distance * 1000 / Math.abs(this.psv.config.autorotateSpeed);
 
       if (distance === 0) {
@@ -448,67 +453,14 @@
       }
 
       this.psv.rotate({
-        longitude: this.state.startPt[0] + (this.state.endPt[0] - this.state.startPt[0]) * progress,
-        latitude: this.state.startPt[1] + (this.state.endPt[1] - this.state.startPt[1]) * progress
+        longitude: this.state.startStep[0] + (this.state.endStep[0] - this.state.startStep[0]) * progress,
+        latitude: this.state.startStep[1] + (this.state.endStep[1] - this.state.startStep[1]) * progress
       });
     }
     /**
-     * @summary Interpolate curvature points using cardinal spline
-     * {@link https://stackoverflow.com/a/15528789/1207670}
-     * @param {number[][]} pts
-     * @param {number} [tension=0.5]
-     * @param {number} [numOfSegments=16]
-     * @returns {number[][]}
      * @private
      */
     ;
-
-    _proto.__getCurvePoints = function __getCurvePoints(pts, tension, numOfSegments) {
-      if (tension === void 0) {
-        tension = 0.5;
-      }
-
-      if (numOfSegments === void 0) {
-        numOfSegments = 16;
-      }
-
-      var res = []; // The algorithm require a previous and next point to the actual point array.
-
-      var _pts = pts.slice(0);
-
-      _pts.unshift(pts[0]);
-
-      _pts.push(pts[pts.length - 1]); // 1. loop through each point
-      // 2. loop through each segment
-
-
-      for (var i = 1; i < _pts.length - 2; i++) {
-        // calc tension vectors
-        var t1x = (_pts[i + 1][0] - _pts[i - 1][0]) * tension;
-        var t2x = (_pts[i + 2][0] - _pts[i][0]) * tension;
-        var t1y = (_pts[i + 1][1] - _pts[i - 1][1]) * tension;
-        var t2y = (_pts[i + 2][1] - _pts[i][1]) * tension;
-
-        for (var t = 1; t <= numOfSegments; t++) {
-          // calc step
-          var st = t / numOfSegments;
-          var st3 = Math.pow(st, 3);
-          var st2 = Math.pow(st, 2); // calc cardinals
-
-          var c1 = 2 * st3 - 3 * st2 + 1;
-          var c2 = -2 * st3 + 3 * st2;
-          var c3 = st3 - 2 * st2 + st;
-          var c4 = st3 - st2; // calc x and y cords with common control vectors
-
-          var x = c1 * _pts[i][0] + c2 * _pts[i + 1][0] + c3 * t1x + c4 * t2x;
-          var y = c1 * _pts[i][1] + c2 * _pts[i + 1][1] + c3 * t1y + c4 * t2y; // store points in array
-
-          res.push([x, y]);
-        }
-      }
-
-      return res;
-    };
 
     _proto.__findMinIndex = function __findMinIndex(array, mapper) {
       var idx = 0;

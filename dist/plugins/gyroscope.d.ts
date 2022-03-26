@@ -15,6 +15,8 @@ declare const EVENTS: {
  */
 declare class GyroscopePlugin extends AbstractPlugin {
 
+  static EVENTS: typeof EVENTS;
+
   constructor(psv: Viewer, options: GyroscopePluginOptions);
 
   /**

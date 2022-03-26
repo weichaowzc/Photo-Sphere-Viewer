@@ -1,6 +1,5 @@
 import { KEY_CODES } from '../data/constants';
 import { SYSTEM } from '../data/system';
-import { getEventKey } from '../utils';
 import { PressHandler } from '../utils/PressHandler';
 import { AbstractButton } from './AbstractButton';
 
@@ -10,6 +9,8 @@ import { AbstractButton } from './AbstractButton';
  * @memberof PSV.buttons
  */
 export class AbstractZoomButton extends AbstractButton {
+
+  static groupId = 'zoom';
 
   /**
    * @param {PSV.components.Navbar} navbar
@@ -60,8 +61,8 @@ export class AbstractZoomButton extends AbstractButton {
       case 'mousedown': this.__onMouseDown(); break;
       case 'mouseup':   this.__onMouseUp(); break;
       case 'touchend':  this.__onMouseUp(); break;
-      case 'keydown':   getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown(); break;
-      case 'keyup':     getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp(); break;
+      case 'keydown':   e.key === KEY_CODES.Enter && this.__onMouseDown(); break;
+      case 'keyup':     e.key === KEY_CODES.Enter && this.__onMouseUp(); break;
       // @formatter:on
     }
     /* eslint-enable */

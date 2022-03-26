@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -54,7 +54,7 @@
 
   /**
    * @memberOf PSV.plugins.VirtualTourPlugin
-   * @package
+   * @private
    */
 
   var AbstractDatasource = /*#__PURE__*/function () {
@@ -182,7 +182,7 @@
 
   /**
    * @memberOf PSV.plugins.VirtualTourPlugin
-   * @package
+   * @private
    */
 
   var ClientSideDatasource = /*#__PURE__*/function (_AbstractDatasource) {
@@ -510,7 +510,7 @@
 
   /**
    * @memberOf PSV.plugins.VirtualTourPlugin
-   * @package
+   * @private
    */
 
   var ServerSideDatasource = /*#__PURE__*/function (_AbstractDatasource) {
@@ -622,6 +622,7 @@
    * @property {PSV.SphereCorrection} [sphereCorrection] - sphere correction to apply to this panorama
    * @property {string} [name] - short name of the node
    * @property {string} [caption] - caption visible in the navbar
+   * @property {string} [description] - description visible in the side panel
    * @property {string} [thumbnail] - thumbnail for the nodes list in the side panel
    * @property {PSV.plugins.MarkersPlugin.Properties[]} [markers] - additional markers to use on this node
    */
@@ -1026,6 +1027,7 @@
         return Promise.all([_this3.psv.setPanorama(node.panorama, {
           transition: _this3.config.transition,
           caption: node.caption,
+          description: node.description,
           panoData: node.panoData,
           sphereCorrection: node.sphereCorrection
         }).then(function (completed) {
@@ -1328,6 +1330,13 @@
     return VirtualTourPlugin;
   }(photoSphereViewer.AbstractPlugin);
   VirtualTourPlugin.id = 'virtual-tour';
+  VirtualTourPlugin.EVENTS = EVENTS;
+  VirtualTourPlugin.MODE_CLIENT = MODE_CLIENT;
+  VirtualTourPlugin.MODE_SERVER = MODE_SERVER;
+  VirtualTourPlugin.MODE_3D = MODE_3D;
+  VirtualTourPlugin.MODE_MARKERS = MODE_MARKERS;
+  VirtualTourPlugin.MODE_MANUAL = MODE_MANUAL;
+  VirtualTourPlugin.MODE_GPS = MODE_GPS;
 
   exports.EVENTS = EVENTS;
   exports.MODE_3D = MODE_3D;

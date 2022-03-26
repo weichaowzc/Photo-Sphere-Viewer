@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Animation } from '../Animation';
+import { Animation } from '../utils/Animation';
 import { EVENTS, MESH_USER_DATA, SPHERE_RADIUS } from '../data/constants';
 import { SYSTEM } from '../data/system';
 import { each, isExtendedPosition } from '../utils';
@@ -134,10 +134,10 @@ export class Renderer extends AbstractService {
       case EVENTS.ZOOM_UPDATED:     this.__onZoomUpdated(); break;
       case EVENTS.POSITION_UPDATED: this.__onPositionUpdated(); break;
       case EVENTS.CONFIG_CHANGED:
-        if (evt.args[0].indexOf('fisheye') !== -1) {
+        if (evt.args[0].includes('fisheye')) {
           this.__onPositionUpdated();
         }
-        if (evt.args[0].indexOf('mousemove') !== -1) {
+        if (evt.args[0].includes('mousemove')) {
           this.canvasContainer.style.cursor = this.psv.config.mousemove ? 'move' : 'default';
         }
         break;
@@ -242,7 +242,7 @@ export class Renderer extends AbstractService {
 
     this.psv.needsUpdate();
 
-    this.psv.trigger(EVENTS.PANORAMA_LOADED);
+    this.psv.trigger(EVENTS.PANORAMA_LOADED, textureData);
   }
 
   /**

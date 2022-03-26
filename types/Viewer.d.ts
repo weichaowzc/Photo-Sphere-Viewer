@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { Event, EventEmitter } from 'uevent';
 import { AdapterConstructor } from './adapters/AbstractAdapter';
-import { Animation } from './Animation';
+import { Animation } from './utils/Animation';
 import { Loader } from './components/Loader';
 import { Navbar } from './components/Navbar';
 import { Notification } from './components/Notification';
@@ -18,7 +18,8 @@ import {
   PanoDataProvider,
   PanoramaOptions,
   Position,
-  Size
+  Size,
+  TextureData
 } from './models';
 import { AbstractPlugin, PluginConstructor } from './plugins/AbstractPlugin';
 import { DataHelper } from './services/DataHelper';
@@ -33,6 +34,7 @@ export type ViewerOptions = {
   panorama?: any;
   adapter?: AdapterConstructor<any> | [AdapterConstructor<any>, any];
   caption?: string;
+  description?: string;
   downloadUrl?: string;
   loadingImg?: string;
   loadingTxt?: string;
@@ -339,7 +341,7 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Triggered when the notification is hidden
    */
-  on(e: 'hide-notification', cb: (e: Event) => void): this;
+  on(e: 'hide-notification', cb: (e: Event, id: string | undefined) => void): this;
   /**
    * @summary Triggered when the overlay is hidden
    */
@@ -348,6 +350,10 @@ export class Viewer extends EventEmitter {
    * @summary Triggered when the tooltip is hidden
    */
   on(e: 'hide-tooltip', cb: (e: Event, data: any) => void): this;
+  /**
+   * @summary Triggered when a key is pressed, can be cancelled
+   */
+  on(e: 'key-press', cb: (e: Event, key: string) => void): this;
   /**
    * @summary Triggered when the loader value changes
    */
@@ -359,7 +365,7 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Triggered when a panorama image has been loaded
    */
-  on(e: 'panorama-loaded', cb: (e: Event) => void): this;
+  on(e: 'panorama-loaded', cb: (e: Event, textureData: TextureData) => void): this;
   /**
    * @summary Triggered when the view longitude and/or latitude changes
    */
@@ -371,7 +377,7 @@ export class Viewer extends EventEmitter {
   /**
    * @summary Trigered when the notification is shown
    */
-  on(e: 'show-notification', cb: (e: Event) => void): this;
+  on(e: 'show-notification', cb: (e: Event, id: string | undefined) => void): this;
   /**
    * @summary Trigered when the overlay is shown
    */

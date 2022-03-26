@@ -48,6 +48,8 @@ declare const EVENTS: {
  */
 declare class SettingsPlugin extends AbstractPlugin {
 
+  static EVENTS: typeof EVENTS;
+
   constructor(psv: Viewer);
 
   /**

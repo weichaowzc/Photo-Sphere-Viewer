@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -317,6 +317,7 @@
   /**
    * @summary Adapter for tiled panoramas
    * @memberof PSV.adapters
+   * @extends PSV.adapters.AbstractAdapter
    */
 
   var EquirectangularTilesAdapter = /*#__PURE__*/function (_EquirectangularAdapt) {
@@ -506,7 +507,10 @@
         croppedWidth: panorama.width,
         croppedHeight: panorama.width / 2,
         croppedX: 0,
-        croppedY: 0
+        croppedY: 0,
+        poseHeading: 0,
+        posePitch: 0,
+        poseRoll: 0
       };
 
       if (panorama.baseUrl) {

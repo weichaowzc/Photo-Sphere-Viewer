@@ -1,5 +1,7 @@
-import { Animation } from './Animation';
+import { AbstractAdapter } from './adapters/AbstractAdapter';
+import { EquirectangularAdapter } from './adapters/equirectangular';
 import { AbstractButton } from './buttons/AbstractButton';
+import { AbstractComponent } from './components/AbstractComponent';
 import { registerButton } from './components/Navbar';
 import { DEFAULTS } from './data/config';
 import * as CONSTANTS from './data/constants';
@@ -7,16 +9,19 @@ import './data/constants'; // for jsdoc
 import { SYSTEM } from './data/system';
 import { AbstractPlugin } from './plugins/AbstractPlugin';
 import { PSVError } from './PSVError';
-import { AbstractAdapter } from './adapters/AbstractAdapter';
-import { EquirectangularAdapter } from './adapters/equirectangular';
-import './styles/index.scss';
 import * as utils from './utils';
+import { Animation } from './utils/Animation';
 import { Viewer } from './Viewer';
+import './styles/index.scss';
 
 export {
-  AbstractButton,
-  AbstractPlugin,
   AbstractAdapter,
+  AbstractButton,
+  AbstractComponent,
+  AbstractPlugin,
+  /**
+   * @deprecated use `utils.Animation`
+   */
   Animation,
   CONSTANTS,
   DEFAULTS,
@@ -24,8 +29,8 @@ export {
   PSVError,
   registerButton,
   SYSTEM,
-  Viewer,
-  utils
+  utils,
+  Viewer
 };
 
 
@@ -108,6 +113,7 @@ export {
  * @typedef {PSV.ExtendedPosition} PSV.PanoramaOptions
  * @summary Object defining panorama and animation options
  * @property {string} [caption] - new navbar caption
+ * @property {string} [description] - new panel description
  * @property {boolean|number} [transition=1500] - duration of the transition between all and new panorama
  * @property {boolean} [showLoader=true] - show the loader while loading the new panorama
  * @property {number} [zoom] - new zoom level between 0 and 100

@@ -135,6 +135,8 @@ declare const EVENTS: {
  */
 declare class MarkersPlugin extends AbstractPlugin {
 
+  static EVENTS: typeof EVENTS;
+
   constructor(psv: Viewer, options: MarkersPluginOptions);
 
   /**

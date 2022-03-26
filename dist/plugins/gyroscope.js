@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -279,10 +279,6 @@
     _inheritsLoose(GyroscopePlugin, _AbstractPlugin);
 
     /**
-     * @deprecated use the EVENTS constants of the module
-     */
-
-    /**
      * @param {PSV.Viewer} psv
      * @param {PSV.plugins.GyroscopePlugin.Options} options
      */
@@ -468,26 +464,28 @@
 
       if (!this.controls.deviceOrientation) {
         return;
-      } // on first run compute the offset depending on the current viewer position and device orientation
+      }
 
+      var position = this.psv.getPosition(); // on first run compute the offset depending on the current viewer position and device orientation
 
       if (this.prop.alphaOffset === null) {
         this.controls.update();
         this.controls.object.getWorldDirection(direction);
         var sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
-        this.prop.alphaOffset = sphericalCoords.longitude - this.psv.getPosition().longitude;
+        this.prop.alphaOffset = sphericalCoords.longitude - position.longitude;
       } else {
         this.controls.alphaOffset = this.prop.alphaOffset;
         this.controls.update();
         this.controls.object.getWorldDirection(direction);
 
-        var _sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction); // TODO use dynamic goto for smooth movement
+        var _sphericalCoords = this.psv.dataHelper.vector3ToSphericalCoords(direction);
 
-
-        this.psv.dynamics.position.setValue({
+        var target = {
           longitude: _sphericalCoords.longitude,
           latitude: -_sphericalCoords.latitude
-        });
+        }; // having a slow speed on smalls movements allows to absorb the device/hand vibrations
+
+        this.psv.dynamics.position.goto(target, photoSphereViewer.utils.getAngle(position, target) < 0.01 ? 1 : 3);
       }
     }
     /**

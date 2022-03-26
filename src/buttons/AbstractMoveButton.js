@@ -1,7 +1,6 @@
 import { KEY_CODES } from '../data/constants';
 import { SYSTEM } from '../data/system';
 import arrow from '../icons/arrow.svg';
-import { getEventKey } from '../utils';
 import { PressHandler } from '../utils/PressHandler';
 import { AbstractButton } from './AbstractButton';
 
@@ -25,6 +24,8 @@ export function getOrientedArrow(direction) {
  * @memberof PSV.buttons
  */
 export class AbstractMoveButton extends AbstractButton {
+
+  static groupId = 'move';
 
   /**
    * @param {PSV.components.Navbar} navbar
@@ -77,8 +78,8 @@ export class AbstractMoveButton extends AbstractButton {
       case 'mousedown': this.__onMouseDown(); break;
       case 'mouseup':   this.__onMouseUp(); break;
       case 'touchend':  this.__onMouseUp(); break;
-      case 'keydown':   getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown(); break;
-      case 'keyup':     getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp(); break;
+      case 'keydown':   e.key === KEY_CODES.Enter && this.__onMouseDown(); break;
+      case 'keyup':     e.key === KEY_CODES.Enter && this.__onMouseUp(); break;
       // @formatter:on
     }
     /* eslint-enable */

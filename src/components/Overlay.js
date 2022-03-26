@@ -1,7 +1,6 @@
 import { EVENTS, KEY_CODES } from '../data/constants';
-import { getEventKey } from '../utils';
-import { AbstractComponent } from './AbstractComponent';
 import { PSVError } from '../PSVError';
+import { AbstractComponent } from './AbstractComponent';
 
 /**
  * @summary Overlay component
@@ -57,9 +56,8 @@ export class Overlay extends AbstractComponent {
     this.subtext.className = 'psv-overlay-subtext';
     this.container.appendChild(this.subtext);
 
-    this.container.addEventListener('mouseup', this);
-
-    document.addEventListener('keydown', this);
+    this.psv.on(EVENTS.CLICK, this);
+    this.psv.on(EVENTS.KEY_PRESS, this);
 
     super.hide();
   }
@@ -68,7 +66,8 @@ export class Overlay extends AbstractComponent {
    * @override
    */
   destroy() {
-    document.removeEventListener('keydown', this);
+    this.psv.off(EVENTS.CLICK, this);
+    this.psv.off(EVENTS.KEY_PRESS, this);
 
     delete this.image;
     delete this.text;
@@ -85,10 +84,18 @@ export class Overlay extends AbstractComponent {
   handleEvent(e) {
     /* eslint-disable */
     switch (e.type) {
-      // @formatter:off
-      case 'mouseup':  this.prop.dissmisable && this.hide(); break;
-      case 'keydown':  getEventKey(e) === KEY_CODES.Escape && this.prop.dissmisable && this.hide(); break;
-      // @formatter:on
+      case EVENTS.CLICK:
+        if (this.isVisible() && this.prop.dissmisable) {
+          this.hide();
+          e.stopPropagation();
+        }
+        break;
+      case EVENTS.KEY_PRESS:
+        if (this.isVisible() && this.prop.dissmisable && e.args[0] === KEY_CODES.Escape) {
+          this.hide();
+          e.preventDefault();
+        }
+        break;
     }
     /* eslint-enable */
   }
@@ -142,7 +149,7 @@ export class Overlay extends AbstractComponent {
    * @fires PSV.hide-overlay
    */
   hide(id) {
-    if (this.isVisible() && (!id || !this.prop.contentId || this.prop.contentId === id)) {
+    if (this.isVisible(id)) {
       const contentId = this.prop.contentId;
 
       super.hide();

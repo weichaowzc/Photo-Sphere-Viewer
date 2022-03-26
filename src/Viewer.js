@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { EventEmitter } from 'uevent';
-import { Animation } from './Animation';
 import { Loader } from './components/Loader';
 import { Navbar } from './components/Navbar';
 import { Notification } from './components/Notification';
@@ -18,6 +17,8 @@ import { Renderer } from './services/Renderer';
 import { TextureLoader } from './services/TextureLoader';
 import { TooltipRenderer } from './services/TooltipRenderer';
 import {
+  Animation,
+  Dynamic,
   each,
   exitFullscreen,
   getAbortError,
@@ -27,13 +28,12 @@ import {
   isExtendedPosition,
   isFullscreenEnabled,
   logWarn,
+  MultiDynamic,
   pluginInterop,
   requestFullscreen,
   throttle,
   toggleClass
 } from './utils';
-import { Dynamic } from './utils/Dynamic';
-import { MultiDynamic } from './utils/MultiDynamic';
 
 THREE.Cache.enabled = true;
 
@@ -223,7 +223,7 @@ export class Viewer extends EventEmitter {
     this.overlay = new Overlay(this);
 
     /**
-     * @member {Record<string, PSV.Dynamic>}
+     * @member {Record<string, PSV.utils.Dynamic>}
      * @package
      */
     this.dynamics = {
@@ -234,11 +234,11 @@ export class Viewer extends EventEmitter {
       }, this.config.defaultZoomLvl, 0, 100),
 
       position: new MultiDynamic({
-        longitude: new Dynamic(null, this.config.defaultLong),
+        longitude: new Dynamic(null, this.config.defaultLong, 0, 2 * Math.PI, true),
         latitude : new Dynamic(null, this.config.defaultLat, -Math.PI / 2, Math.PI / 2),
       }, (position) => {
         this.dataHelper.sphericalCoordsToVector3(position, this.prop.direction);
-        this.trigger(EVENTS.POSITION_UPDATED, this.dataHelper.cleanPosition(position));
+        this.trigger(EVENTS.POSITION_UPDATED, position);
       }),
     };
 
@@ -473,6 +473,9 @@ export class Viewer extends EventEmitter {
     if (options.caption === undefined) {
       options.caption = this.config.caption;
     }
+    if (options.description === undefined) {
+      options.description = this.config.description;
+    }
 
     const positionProvided = isExtendedPosition(options);
     const zoomProvided = 'zoom' in options;
@@ -485,6 +488,7 @@ export class Viewer extends EventEmitter {
 
     this.config.panorama = path;
     this.config.caption = options.caption;
+    this.config.description = options.description;
 
     const done = (err) => {
       this.loader.hide();
@@ -588,7 +592,8 @@ export class Viewer extends EventEmitter {
 
       switch (key) {
         case 'caption':
-          this.navbar.setCaption(value);
+        case 'description':
+          this.navbar.setCaption(this.config.caption);
           break;
 
         case 'size':

@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -202,10 +202,6 @@
 
   var StereoPlugin = /*#__PURE__*/function (_AbstractPlugin) {
     _inheritsLoose(StereoPlugin, _AbstractPlugin);
-
-    /**
-     * @deprecated use the EVENTS constants of the module
-     */
 
     /**
      * @param {PSV.Viewer} psv
@@ -442,7 +438,7 @@
       var displayRotateMessageTimeout;
 
       var displayRotateMessage = function displayRotateMessage() {
-        if (_this4.isEnabled() && window.innerHeight > window.innerWidth) {
+        if (window.innerHeight > window.innerWidth) {
           _this4.psv.overlay.show({
             id: ID_OVERLAY_PLEASE_ROTATE,
             image: mobileRotateIcon,

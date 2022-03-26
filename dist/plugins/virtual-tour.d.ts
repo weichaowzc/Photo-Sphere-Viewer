@@ -14,6 +14,7 @@ type VirtualTourNode = {
   sphereCorrection?: ViewerOptions['sphereCorrection'];
   name?: string;
   caption?: string;
+  description?: string;
   markers?: Marker[];
 };
 
@@ -76,10 +77,25 @@ declare const EVENTS: {
   RENDER_NODES_LIST: 'render-nodes-list',
 };
 
+declare const MODE_CLIENT = 'client';
+declare const MODE_SERVER = 'server';
+declare const MODE_MANUAL = 'manual';
+declare const MODE_GPS = 'gps';
+declare const MODE_MARKERS = 'markers';
+declare const MODE_3D = '3d';
+
 /**
  * @summary Replaces the standard autorotate animation by a smooth transition between multiple points
  */
 declare class VirtualTourPlugin extends AbstractPlugin {
+
+  static EVENTS: typeof EVENTS;
+  static MODE_CLIENT: typeof MODE_CLIENT;
+  static MODE_SERVER: typeof MODE_SERVER;
+  static MODE_3D: typeof MODE_3D;
+  static MODE_MARKERS: typeof MODE_MARKERS;
+  static MODE_MANUAL: typeof MODE_MANUAL;
+  static MODE_GPS: typeof MODE_GPS;
 
   constructor(psv: Viewer, options: VirtualTourPluginPluginOptions);
 
@@ -121,4 +137,4 @@ declare class VirtualTourPlugin extends AbstractPlugin {
 
 }
 
-export { EVENTS, VirtualTourArrowStyle, VirtualTourNode, VirtualTourNodeChangedData, VirtualTourNodeLink, VirtualTourPlugin, VirtualTourPluginPluginOptions };
+export { EVENTS, MODE_3D, MODE_CLIENT, MODE_GPS, MODE_MANUAL, MODE_MARKERS, MODE_SERVER, VirtualTourArrowStyle, VirtualTourNode, VirtualTourNodeChangedData, VirtualTourNodeLink, VirtualTourPlugin, VirtualTourPluginPluginOptions };

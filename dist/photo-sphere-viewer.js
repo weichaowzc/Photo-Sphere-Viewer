@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.5.3
+* Photo Sphere Viewer 4.6.0
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -9,6 +9,224 @@
   typeof define === 'function' && define.amd ? define(['exports', 'three', 'uevent'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.PhotoSphereViewer = {}, global.THREE, global.uEvent));
 })(this, (function (exports, THREE, uevent) { 'use strict';
+
+  /**
+   * @summary Custom error used in the lib
+   * @param {string} message
+   * @constructor
+   * @memberOf PSV
+   */
+  function PSVError(message) {
+    this.message = message; // Use V8's native method if available, otherwise fallback
+
+    if ('captureStackTrace' in Error) {
+      Error.captureStackTrace(this, PSVError);
+    } else {
+      this.stack = new Error().stack;
+    }
+  }
+
+  PSVError.prototype = Object.create(Error.prototype);
+  PSVError.prototype.name = 'PSVError';
+  PSVError.prototype.constructor = PSVError;
+
+  /**
+   * @namespace PSV.adapters
+   */
+
+  /**
+   * @summary Base adapters class
+   * @memberof PSV.adapters
+   * @abstract
+   */
+
+  var AbstractAdapter = /*#__PURE__*/function () {
+    /**
+     * @summary Unique identifier of the adapter
+     * @member {string}
+     * @readonly
+     * @static
+     */
+
+    /**
+     * @summary Indicates if the adapter supports panorama download natively
+     * @type {boolean}
+     * @readonly
+     * @static
+     */
+
+    /**
+     * @param {PSV.Viewer} psv
+     */
+    function AbstractAdapter(psv) {
+      /**
+       * @summary Reference to main controller
+       * @type {PSV.Viewer}
+       * @readonly
+       */
+      this.psv = psv;
+    }
+    /**
+     * @summary Destroys the adapter
+     */
+
+
+    var _proto = AbstractAdapter.prototype;
+
+    _proto.destroy = function destroy() {
+      delete this.psv;
+    }
+    /**
+     * @summary Indicates if the adapter supports transitions between panoramas
+     * @param {*} panorama
+     * @return {boolean}
+     */
+    ;
+
+    _proto.supportsTransition = function supportsTransition(panorama) {
+      // eslint-disable-line no-unused-vars
+      return false;
+    }
+    /**
+     * @summary Indicates if the adapter supports preload of a panorama
+     * @param {*} panorama
+     * @return {boolean}
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload(panorama) {
+      // eslint-disable-line no-unused-vars
+      return false;
+    }
+    /**
+     * @abstract
+     * @summary Loads the panorama texture(s)
+     * @param {*} panorama
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    ;
+
+    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('loadTexture not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Creates the cube mesh
+     * @param {number} [scale=1]
+     * @returns {external:THREE.Mesh}
+     */
+    ;
+
+    _proto.createMesh = function createMesh(scale) {
+
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('createMesh not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Applies the texture to the mesh
+     * @param {external:THREE.Mesh} mesh
+     * @param {PSV.TextureData} textureData
+     * @param {boolean} [transition=false]
+     */
+    ;
+
+    _proto.setTexture = function setTexture(mesh, textureData, transition) {
+
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('setTexture not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Changes the opacity of the mesh
+     * @param {external:THREE.Mesh} mesh
+     * @param {number} opacity
+     */
+    ;
+
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('setTextureOpacity not implemented');
+    }
+    /**
+     * @abstract
+     * @summary Clear a loaded texture from memory
+     * @param {PSV.TextureData} textureData
+     */
+    ;
+
+    _proto.disposeTexture = function disposeTexture(textureData) {
+      // eslint-disable-line no-unused-vars
+      throw new PSVError('disposeTexture not implemented');
+    };
+
+    return AbstractAdapter;
+  }();
+  AbstractAdapter.id = null;
+  AbstractAdapter.supportsDownload = false;
+
+  function _defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  function _createClass(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", {
+      writable: false
+    });
+    return Constructor;
+  }
+
+  function _extends() {
+    _extends = Object.assign || function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+
+      return target;
+    };
+
+    return _extends.apply(this, arguments);
+  }
+
+  function _inheritsLoose(subClass, superClass) {
+    subClass.prototype = Object.create(superClass.prototype);
+    subClass.prototype.constructor = subClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
+  }
+
+  function _assertThisInitialized(self) {
+    if (self === void 0) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return self;
+  }
 
   /**
    * @namespace PSV.constants
@@ -186,6 +404,7 @@
      * @event hide-notification
      * @memberof PSV
      * @summary Triggered when the notification is hidden
+     * @param {string} [id]
      */
     HIDE_NOTIFICATION: 'hide-notification',
 
@@ -204,6 +423,14 @@
      * @param {*} Data associated to this tooltip
      */
     HIDE_TOOLTIP: 'hide-tooltip',
+
+    /**
+     * @event key-press
+     * @memberof PSV
+     * @summary Triggered when a key is pressed, can be cancelled
+     * @param {string} key
+     */
+    KEY_PRESS: 'key-press',
 
     /**
      * @event load-progress
@@ -225,6 +452,7 @@
      * @event panorama-loaded
      * @memberof PSV
      * @summary Triggered when a panorama image has been loaded
+     * @param {PSV.TextureData} textureData
      */
     PANORAMA_LOADED: 'panorama-loaded',
 
@@ -254,6 +482,7 @@
      * @event show-notification
      * @memberof PSV
      * @summary Triggered when the notification is shown
+     * @param {string} [id]
      */
     SHOW_NOTIFICATION: 'show-notification',
 
@@ -346,7 +575,8 @@
     MENU: 'menu',
     TWO_FINGERS: 'twoFingers',
     CTRL_ZOOM: 'ctrlZoom',
-    ERROR: 'error'
+    ERROR: 'error',
+    DESCRIPTION: 'description'
   };
   /* eslint-disable */
   // @formatter:off
@@ -475,6 +705,206 @@
   });
 
   /**
+   * @summary General information about the system
+   * @constant
+   * @memberOf PSV
+   * @property {boolean} loaded - Indicates if the system data has been loaded
+   * @property {Function} load - Loads the system if not already loaded
+   * @property {number} pixelRatio
+   * @property {boolean} isWebGLSupported
+   * @property {number} maxCanvasWidth
+   * @property {string} mouseWheelEvent
+   * @property {string} fullscreenEvent
+   * @property {Function} getMaxCanvasWidth - Returns the max width of a canvas allowed by the browser
+   * @property {Promise<boolean>} isTouchEnabled
+   */
+
+  var SYSTEM = {
+    loaded: false,
+    pixelRatio: 1,
+    isWebGLSupported: false,
+    isTouchEnabled: null,
+    maxTextureWidth: 0,
+    mouseWheelEvent: null,
+    fullscreenEvent: null
+  };
+  /**
+   * @summary Loads the system if not already loaded
+   */
+
+  SYSTEM.load = function () {
+    if (!SYSTEM.loaded) {
+      var ctx = getWebGLCtx();
+      SYSTEM.loaded = true;
+      SYSTEM.pixelRatio = window.devicePixelRatio || 1;
+      SYSTEM.isWebGLSupported = ctx != null;
+      SYSTEM.isTouchEnabled = isTouchEnabled();
+      SYSTEM.maxTextureWidth = getMaxTextureWidth(ctx);
+      SYSTEM.mouseWheelEvent = getMouseWheelEvent();
+      SYSTEM.fullscreenEvent = getFullscreenEvent();
+    }
+  };
+
+  var maxCanvasWidth = null;
+
+  SYSTEM.getMaxCanvasWidth = function () {
+    if (maxCanvasWidth === null) {
+      maxCanvasWidth = getMaxCanvasWidth(SYSTEM.maxTextureWidth);
+    }
+
+    return maxCanvasWidth;
+  };
+  /**
+   * @summary Tries to return a canvas webgl context
+   * @returns {WebGLRenderingContext}
+   * @private
+   */
+
+
+  function getWebGLCtx() {
+    var canvas = document.createElement('canvas');
+    var names = ['webgl', 'experimental-webgl', 'moz-webgl', 'webkit-3d'];
+    var context = null;
+
+    if (!canvas.getContext) {
+      return null;
+    }
+
+    if (names.some(function (name) {
+      try {
+        context = canvas.getContext(name);
+        return context !== null;
+      } catch (e) {
+        return false;
+      }
+    })) {
+      return context;
+    } else {
+      return null;
+    }
+  }
+  /**
+   * @summary Detects if the user is using a touch screen
+   * @returns {Promise<boolean>}
+   * @private
+   */
+
+
+  function isTouchEnabled() {
+    return new Promise(function (resolve) {
+      var listener = function listener(e) {
+        if (e) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+
+        window.removeEventListener('touchstart', listener);
+      };
+
+      window.addEventListener('touchstart', listener, false); // after 10 secs auto-reject the promise
+
+      setTimeout(listener, 10000);
+    });
+  }
+  /**
+   * @summary Gets max texture width in WebGL context
+   * @returns {number}
+   * @private
+   */
+
+
+  function getMaxTextureWidth(ctx) {
+    if (ctx !== null) {
+      return ctx.getParameter(ctx.MAX_TEXTURE_SIZE);
+    } else {
+      return 0;
+    }
+  }
+  /**
+   * @summary Gets max canvas width supported by the browser.
+   * We only test powers of 2 and height = width / 2 because that's what we need to generate WebGL textures
+   * @param maxWidth
+   * @return {number}
+   * @private
+   */
+
+
+  function getMaxCanvasWidth(maxWidth) {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = maxWidth;
+    canvas.height = maxWidth / 2;
+
+    while (canvas.width > 1024) {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 1, 1);
+
+      try {
+        if (ctx.getImageData(0, 0, 1, 1).data[0] === 255) {
+          return canvas.width;
+        }
+      } catch (e) {// continue
+      }
+
+      canvas.width /= 2;
+      canvas.height /= 2;
+    }
+
+    throw new PSVError('Unable to detect system capabilities');
+  }
+  /**
+   * @summary Gets the event name for mouse wheel
+   * @returns {string}
+   * @private
+   */
+
+
+  function getMouseWheelEvent() {
+    if ('onwheel' in document.createElement('div')) {
+      // Modern browsers support "wheel"
+      return 'wheel';
+    } else if (document.onmousewheel !== undefined) {
+      // Webkit and IE support at least "mousewheel"
+      return 'mousewheel';
+    } else {
+      // let's assume that remaining browsers are older Firefox
+      return 'DOMMouseScroll';
+    }
+  }
+  /**
+   * @summary Map between fullsceen method and fullscreen event name
+   * @type {Object<string, string>}
+   * @readonly
+   * @private
+   */
+
+
+  var FULLSCREEN_EVT_MAP = {
+    exitFullscreen: 'fullscreenchange',
+    webkitExitFullscreen: 'webkitfullscreenchange',
+    mozCancelFullScreen: 'mozfullscreenchange',
+    msExitFullscreen: 'MSFullscreenChange'
+  };
+  /**
+   * @summary  Gets the event name for fullscreen
+   * @returns {string}
+   * @private
+   */
+
+  function getFullscreenEvent() {
+    var validExits = Object.keys(FULLSCREEN_EVT_MAP).filter(function (exit) {
+      return exit in document;
+    });
+
+    if (validExits.length) {
+      return FULLSCREEN_EVT_MAP[validExits[0]];
+    } else {
+      return null;
+    }
+  }
+
+  /**
    * @summary Toggles a CSS class
    * @memberOf PSV.utils
    * @param {HTMLElement|SVGElement} element
@@ -482,20 +912,7 @@
    * @param {boolean} [active] - forced state
    */
   function toggleClass(element, className, active) {
-    // manual implementation for IE11 and SVGElement
-    if (!element.classList) {
-      var currentClassName = element.getAttribute('class') || '';
-      var currentActive = currentClassName.indexOf(className) !== -1;
-      var regex = new RegExp('(?:^|\\s)' + className + '(?:\\s|$)');
-
-      if ((active === undefined || active) && !currentActive) {
-        currentClassName += currentClassName.length > 0 ? ' ' + className : className;
-      } else if (!active) {
-        currentClassName = currentClassName.replace(regex, ' ');
-      }
-
-      element.setAttribute('class', currentClassName);
-    } else if (active === undefined) {
+    if (active === undefined) {
       element.classList.toggle(className);
     } else if (active && !element.classList.contains(className)) {
       element.classList.add(className);
@@ -561,15 +978,15 @@
    */
 
   function getClosest(el, selector) {
-    var matches = el.matches || el.msMatchesSelector;
-    var test = el; // When el is document or window, the matches does not exist
-
-    if (!matches) {
+    // When el is document or window, the matches does not exist
+    if (!el.matches) {
       return null;
     }
 
+    var test = el;
+
     do {
-      if (matches.bind(test)(selector)) {
+      if (test.matches(selector)) {
         return test;
       }
 
@@ -603,64 +1020,6 @@
     };
   }
   /**
-   * @summary Map between keyboard events `keyCode|which` and `key`
-   * @memberOf PSV.utils
-   * @type {Object<int, string>}
-   * @readonly
-   * @private
-   */
-
-  var KEYMAP = {
-    13: 'Enter',
-    17: 'Control',
-    27: 'Escape',
-    32: ' ',
-    33: 'PageUp',
-    34: 'PageDown',
-    37: 'ArrowLeft',
-    38: 'ArrowUp',
-    39: 'ArrowRight',
-    40: 'ArrowDown',
-    46: 'Delete',
-    107: '+',
-    109: '-'
-  };
-  /**
-   * @summary Map for non standard keyboard events `key` for IE and Edge
-   * @see https://github.com/shvaikalesh/shim-keyboard-event-key
-   * @type {Object<string, string>}
-   * @readonly
-   * @private
-   */
-
-  var MS_KEYMAP = {
-    Add: '+',
-    Del: 'Delete',
-    Down: 'ArrowDown',
-    Esc: 'Escape',
-    Left: 'ArrowLeft',
-    Right: 'ArrowRight',
-    Spacebar: ' ',
-    Subtract: '-',
-    Up: 'ArrowUp'
-  };
-  /**
-   * @summary Returns the key name of a KeyboardEvent
-   * @memberOf PSV.utils
-   * @param {KeyboardEvent} evt
-   * @returns {string}
-   */
-
-  function getEventKey(evt) {
-    var key = evt.key || KEYMAP[evt.keyCode || evt.which];
-
-    if (key && MS_KEYMAP[key]) {
-      key = MS_KEYMAP[key];
-    }
-
-    return key;
-  }
-  /**
    * @summary Detects if fullscreen is enabled
    * @memberOf PSV.utils
    * @param {HTMLElement} elt
@@ -668,8 +1027,7 @@
    */
 
   function isFullscreenEnabled(elt) {
-    /* eslint-disable-next-line max-len */
-    return (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement) === elt;
+    return (document.fullscreenElement || document.webkitFullscreenElement) === elt;
   }
   /**
    * @summary Enters fullscreen mode
@@ -678,8 +1036,7 @@
    */
 
   function requestFullscreen(elt) {
-    /* eslint-disable-next-line max-len */
-    (elt.requestFullscreen || elt.mozRequestFullScreen || elt.webkitRequestFullscreen || elt.msRequestFullscreen).call(elt);
+    (elt.requestFullscreen || elt.webkitRequestFullscreen).call(elt);
   }
   /**
    * @summary Exits fullscreen mode
@@ -687,8 +1044,7 @@
    */
 
   function exitFullscreen() {
-    /* eslint-disable-next-line max-len */
-    (document.exitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
   }
   /**
    * @summary Gets an element style
@@ -792,6 +1148,22 @@
    */
   function bound(x, min, max) {
     return Math.max(min, Math.min(max, x));
+  }
+  /**
+   * @summary Ensure a value is within 0 and `max`
+   * @param {number} value
+   * @param {number} max
+   * @return {number}
+   */
+
+  function loop(value, max) {
+    var result = value % max;
+
+    if (result < 0) {
+      result += max;
+    }
+
+    return result;
   }
   /**
    * @summary Checks if a value is an integer
@@ -1096,26 +1468,6 @@
 
     return undefined;
   }
-
-  /**
-   * @summary Custom error used in the lib
-   * @param {string} message
-   * @constructor
-   * @memberOf PSV
-   */
-  function PSVError(message) {
-    this.message = message; // Use V8's native method if available, otherwise fallback
-
-    if ('captureStackTrace' in Error) {
-      Error.captureStackTrace(this, PSVError);
-    } else {
-      this.stack = new Error().stack;
-    }
-  }
-
-  PSVError.prototype = Object.create(Error.prototype);
-  PSVError.prototype.name = 'PSVError';
-  PSVError.prototype.constructor = PSVError;
 
   /**
    * @summary Returns the plugin constructor from the imported object
@@ -1443,12 +1795,7 @@
       throw new PSVError('Unknown angle "' + angle + '"');
     }
 
-    parsed = (zeroCenter ? parsed + Math.PI : parsed) % (Math.PI * 2);
-
-    if (parsed < 0) {
-      parsed += Math.PI * 2;
-    }
-
+    parsed = loop(zeroCenter ? parsed + Math.PI : parsed, Math.PI * 2);
     return zeroCenter ? bound(parsed - Math.PI, -Math.PI / (halfCircle ? 2 : 1), Math.PI / (halfCircle ? 2 : 1)) : parsed;
   }
   /**
@@ -1479,65 +1826,16 @@
   }
 
   /**
-   * @namespace PSV.utils
-   */
-
-  var index = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    toggleClass: toggleClass,
-    addClasses: addClasses,
-    removeClasses: removeClasses,
-    hasParent: hasParent,
-    getClosest: getClosest,
-    getPosition: getPosition,
-    getEventKey: getEventKey,
-    isFullscreenEnabled: isFullscreenEnabled,
-    requestFullscreen: requestFullscreen,
-    exitFullscreen: exitFullscreen,
-    getStyle: getStyle,
-    normalizeWheel: normalizeWheel,
-    bound: bound,
-    isInteger: isInteger,
-    isPowerOfTwo: isPowerOfTwo,
-    sum: sum,
-    distance: distance,
-    getShortestArc: getShortestArc,
-    getAngle: getAngle,
-    greatArcDistance: greatArcDistance,
-    dasherize: dasherize,
-    throttle: throttle,
-    isPlainObject: isPlainObject,
-    deepmerge: deepmerge,
-    clone: clone,
-    isEmpty: isEmpty,
-    each: each,
-    isNil: isNil,
-    firstNonNull: firstNonNull,
-    pluginInterop: pluginInterop,
-    getAbortError: getAbortError,
-    isAbortError: isAbortError,
-    logWarn: logWarn,
-    isExtendedPosition: isExtendedPosition,
-    getXMPValue: getXMPValue,
-    parsePosition: parsePosition,
-    cleanPosition: cleanPosition,
-    parseSpeed: parseSpeed,
-    parseAngle: parseAngle,
-    createTexture: createTexture,
-    applyEulerInverse: applyEulerInverse
-  });
-
-  /**
    * @callback OnTick
    * @summary Function called for each animation frame with computed properties
-   * @memberOf PSV.Animation
+   * @memberOf PSV.utils.Animation
    * @param {Object.<string, number>} properties - current values
    * @param {float} progress - 0 to 1
    */
 
   /**
    * @summary Interpolation helper for animations
-   * @memberOf PSV
+   * @memberOf PSV.utils
    * @description
    * Implements the Promise API with an additional "cancel" method.
    * The promise is resolved with `true` when the animation is completed and `false` if the animation is cancelled.
@@ -1564,7 +1862,7 @@
      * @param {number} options.duration
      * @param {number} [options.delay=0]
      * @param {string} [options.easing='linear']
-     * @param {PSV.Animation.OnTick} options.onTick - called on each frame
+     * @param {PSV.utils.Animation.OnTick} options.onTick - called on each frame
      */
     function Animation(options) {
       var _this = this;
@@ -1658,7 +1956,7 @@
      * @summary Promise chaining
      * @param {Function} [onFulfilled] - Called when the animation is complete (true) or cancelled (false)
      * @param {Function} [onRejected] - deprecated
-     * @returns {PSV.Promise}
+     * @returns {Promise}
      */
     ;
 
@@ -1737,66 +2035,1016 @@
     return Animation;
   }();
 
-  function _defineProperties(target, props) {
-    for (var i = 0; i < props.length; i++) {
-      var descriptor = props[i];
-      descriptor.enumerable = descriptor.enumerable || false;
-      descriptor.configurable = true;
-      if ("value" in descriptor) descriptor.writable = true;
-      Object.defineProperty(target, descriptor.key, descriptor);
+  /**
+   * @summary Represents a variable that can dynamically change with time (using requestAnimationFrame)
+   * @memberOf PSV.utils
+   */
+
+  var Dynamic = /*#__PURE__*/function () {
+    /**
+     * @param {Function} [fn] Callback function
+     * @param {number} [defaultValue] Default position
+     * @param {number} [min] Minimum position
+     * @param {number} [max] Maximum position
+     * @param {boolean} [loopValue] Loop value between min and max
+     */
+    function Dynamic(fn, defaultValue, min, max, loopValue) {
+      if (defaultValue === void 0) {
+        defaultValue = 0;
+      }
+
+      if (min === void 0) {
+        min = -Infinity;
+      }
+
+      if (max === void 0) {
+        max = Infinity;
+      }
+
+      if (loopValue === void 0) {
+        loopValue = false;
+      }
+
+      /**
+       * @type {Function}
+       * @private
+       * @readonly
+       */
+      this.fn = fn;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.mode = Dynamic.STOP;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.speed = 0;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.speedMult = 1;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.currentSpeed = 0;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.target = 0;
+      /**
+       * @type {number}
+       * @readonly
+       */
+
+      this.current = defaultValue;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.min = min;
+      /**
+       * @type {number}
+       * @private
+       */
+
+      this.max = max;
+      /**
+       * @type {boolean}
+       * @private
+       */
+
+      this.loopValue = loopValue;
+
+      if (loopValue && min !== 0) {
+        throw new PSVError('invalid config');
+      }
+
+      if (this.fn) {
+        this.fn(defaultValue);
+      }
     }
-  }
+    /**
+     * Changes base speed
+     * @param {number} speed
+     */
 
-  function _createClass(Constructor, protoProps, staticProps) {
-    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-    if (staticProps) _defineProperties(Constructor, staticProps);
-    Object.defineProperty(Constructor, "prototype", {
-      writable: false
-    });
-    return Constructor;
-  }
 
-  function _extends() {
-    _extends = Object.assign || function (target) {
-      for (var i = 1; i < arguments.length; i++) {
-        var source = arguments[i];
+    var _proto = Dynamic.prototype;
 
-        for (var key in source) {
-          if (Object.prototype.hasOwnProperty.call(source, key)) {
-            target[key] = source[key];
+    _proto.setSpeed = function setSpeed(speed) {
+      this.speed = speed;
+    }
+    /**
+     * Defines the target position
+     * @param {number} position
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.goto = function goto(position, speedMult) {
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      this.mode = Dynamic.POSITION;
+      this.target = this.loopValue ? loop(position, this.max) : bound(position, this.min, this.max);
+      this.speedMult = speedMult;
+    }
+    /**
+     * Increase/decrease the target position
+     * @param {number} step
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.step = function step(_step, speedMult) {
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      if (this.mode !== Dynamic.POSITION) {
+        this.target = this.current;
+      }
+
+      this.goto(this.target + _step, speedMult);
+    }
+    /**
+     * Starts infinite movement
+     * @param {boolean} [invert=false]
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.roll = function roll(invert, speedMult) {
+      if (invert === void 0) {
+        invert = false;
+      }
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      this.mode = Dynamic.INFINITE;
+      this.target = invert ? -Infinity : Infinity;
+      this.speedMult = speedMult;
+    }
+    /**
+     * Stops movement
+     */
+    ;
+
+    _proto.stop = function stop() {
+      this.mode = Dynamic.STOP;
+    }
+    /**
+     * Defines the current position and immediately stops movement
+     * @param {number} value
+     */
+    ;
+
+    _proto.setValue = function setValue(value) {
+      this.target = this.loopValue ? loop(value, this.max) : bound(value, this.min, this.max);
+      this.mode = Dynamic.STOP;
+
+      if (this.target !== this.current) {
+        this.current = this.target;
+
+        if (this.fn) {
+          this.fn(this.current);
+        }
+
+        return true;
+      }
+
+      return false;
+    }
+    /**
+     * @package
+     */
+    ;
+
+    _proto.update = function update(elapsed) {
+      // in position mode switch to stop mode when in the decceleration window
+      if (this.mode === Dynamic.POSITION) {
+        // in loop mode, alter "current" to avoid crossing the origin
+        if (this.loopValue && Math.abs(this.target - this.current) > this.max / 2) {
+          this.current = this.current < this.target ? this.current + this.max : this.current - this.max;
+        }
+
+        var dstStop = this.currentSpeed * this.currentSpeed / (this.speed * this.speedMult * 4);
+
+        if (Math.abs(this.target - this.current) <= dstStop) {
+          this.mode = Dynamic.STOP;
+        }
+      } // compute speed
+
+
+      var targetSpeed = this.mode === Dynamic.STOP ? 0 : this.speed * this.speedMult;
+
+      if (this.target < this.current) {
+        targetSpeed = -targetSpeed;
+      }
+
+      if (this.currentSpeed < targetSpeed) {
+        this.currentSpeed = Math.min(targetSpeed, this.currentSpeed + elapsed / 1000 * this.speed * this.speedMult * 2);
+      } else if (this.currentSpeed > targetSpeed) {
+        this.currentSpeed = Math.max(targetSpeed, this.currentSpeed - elapsed / 1000 * this.speed * this.speedMult * 2);
+      } // compute new position
+
+
+      var next = null;
+
+      if (this.current > this.target && this.currentSpeed) {
+        next = Math.max(this.target, this.current + this.currentSpeed * elapsed / 1000);
+      } else if (this.current < this.target && this.currentSpeed) {
+        next = Math.min(this.target, this.current + this.currentSpeed * elapsed / 1000);
+      } // apply value
+
+
+      if (next !== null) {
+        next = this.loopValue ? loop(next, this.max) : bound(next, this.min, this.max);
+
+        if (next !== this.current) {
+          this.current = next;
+
+          if (this.fn) {
+            this.fn(this.current);
           }
+
+          return true;
         }
       }
 
-      return target;
+      return false;
     };
 
-    return _extends.apply(this, arguments);
-  }
+    return Dynamic;
+  }();
+  Dynamic.STOP = 0;
+  Dynamic.INFINITE = 1;
+  Dynamic.POSITION = 2;
 
-  function _inheritsLoose(subClass, superClass) {
-    subClass.prototype = Object.create(superClass.prototype);
-    subClass.prototype.constructor = subClass;
+  /**
+   * @summary Wrapper for multiple {@link PSV.utils.Dynamic} evolving together
+   * @memberOf PSV.utils
+   */
 
-    _setPrototypeOf(subClass, superClass);
-  }
+  var MultiDynamic = /*#__PURE__*/function () {
+    /**
+     * @param {Record<string, PSV.utils.Dynamic>} dynamics
+     * @param {Function} [fn] Callback function
+     */
+    function MultiDynamic(dynamics, fn) {
+      /**
+       * @type {Function}
+       * @private
+       * @readonly
+       */
+      this.fn = fn;
+      /**
+       * @type {Record<string, PSV.utils.Dynamic>}
+       * @private
+       * @readonly
+       */
 
-  function _setPrototypeOf(o, p) {
-    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-      o.__proto__ = p;
-      return o;
-    };
+      this.dynamics = dynamics;
 
-    return _setPrototypeOf(o, p);
-  }
-
-  function _assertThisInitialized(self) {
-    if (self === void 0) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+      if (this.fn) {
+        this.fn(this.current);
+      }
     }
+    /**
+     * Changes base speed
+     * @param {number} speed
+     */
 
-    return self;
-  }
+
+    var _proto = MultiDynamic.prototype;
+
+    _proto.setSpeed = function setSpeed(speed) {
+      each(this.dynamics, function (d) {
+        d.setSpeed(speed);
+      });
+    }
+    /**
+     * Defines the target positions
+     * @param {Record<string, number>} positions
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.goto = function goto(positions, speedMult) {
+      var _this = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(positions, function (position, name) {
+        _this.dynamics[name].goto(position, speedMult);
+      });
+    }
+    /**
+     * Increase/decrease the target positions
+     * @param {Record<string, number>} steps
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.step = function step(steps, speedMult) {
+      var _this2 = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(steps, function (step, name) {
+        _this2.dynamics[name].step(step, speedMult);
+      });
+    }
+    /**
+     * Starts infinite movements
+     * @param {Record<string, boolean>} rolls
+     * @param {number} [speedMult=1]
+     */
+    ;
+
+    _proto.roll = function roll(rolls, speedMult) {
+      var _this3 = this;
+
+      if (speedMult === void 0) {
+        speedMult = 1;
+      }
+
+      each(rolls, function (roll, name) {
+        _this3.dynamics[name].roll(roll, speedMult);
+      });
+    }
+    /**
+     * Stops movements
+     */
+    ;
+
+    _proto.stop = function stop() {
+      each(this.dynamics, function (d) {
+        return d.stop();
+      });
+    }
+    /**
+     * Defines the current positions and immediately stops movements
+     * @param {Record<string, number>} values
+     */
+    ;
+
+    _proto.setValue = function setValue(values) {
+      var _this4 = this;
+
+      var hasUpdates = false;
+      each(values, function (value, name) {
+        hasUpdates |= _this4.dynamics[name].setValue(value);
+      });
+
+      if (hasUpdates && this.fn) {
+        this.fn(this.current);
+      }
+
+      return hasUpdates;
+    }
+    /**
+     * @package
+     */
+    ;
+
+    _proto.update = function update(elapsed) {
+      var hasUpdates = false;
+      each(this.dynamics, function (dynamic) {
+        hasUpdates |= dynamic.update(elapsed);
+      });
+
+      if (hasUpdates && this.fn) {
+        this.fn(this.current);
+      }
+
+      return hasUpdates;
+    };
+
+    _createClass(MultiDynamic, [{
+      key: "current",
+      get:
+      /**
+       * @type {Object<string, number>}
+       * @readonly
+       */
+      function get() {
+        var values = {};
+        each(this.dynamics, function (dynamic, name) {
+          values[name] = dynamic.current;
+        });
+        return values;
+      }
+    }]);
+
+    return MultiDynamic;
+  }();
+
+  /**
+   * @summary Helper to make sliders elements
+   * @memberOf PSV.utils
+   */
+
+  var Slider = /*#__PURE__*/function (_EventEmitter) {
+    _inheritsLoose(Slider, _EventEmitter);
+
+    function Slider(_ref) {
+      var _this;
+
+      var psv = _ref.psv,
+          container = _ref.container,
+          direction = _ref.direction,
+          onUpdate = _ref.onUpdate;
+      _this = _EventEmitter.call(this) || this;
+      /**
+       * @summary Reference to main controller
+       * @type {PSV.Viewer}
+       * @readonly
+       */
+
+      _this.psv = psv;
+      /**
+       * @member {HTMLElement}
+       * @readonly
+       */
+
+      _this.container = container;
+      /**
+       * @summary Internal properties
+       * @member {Object}
+       * @protected
+       * @property {boolean} mousedown
+       * @property {number} mediaMinWidth
+       */
+
+      _this.prop = {
+        onUpdate: onUpdate,
+        direction: direction,
+        mousedown: false,
+        mouseover: false
+      };
+
+      _this.container.addEventListener('click', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('mousedown', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('mouseenter', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('mouseleave', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('touchstart', _assertThisInitialized(_this));
+
+      _this.container.addEventListener('mousemove', _assertThisInitialized(_this), true);
+
+      _this.container.addEventListener('touchmove', _assertThisInitialized(_this), true);
+
+      window.addEventListener('mouseup', _assertThisInitialized(_this));
+      window.addEventListener('touchend', _assertThisInitialized(_this));
+      return _this;
+    }
+    /**
+     * @protected
+     */
+
+
+    var _proto = Slider.prototype;
+
+    _proto.destroy = function destroy() {
+      window.removeEventListener('mouseup', this);
+      window.removeEventListener('touchend', this);
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} e
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(e) {
+      /* eslint-disable */
+      switch (e.type) {
+        // @formatter:off
+        case 'click':
+          e.stopPropagation();
+          break;
+
+        case 'mousedown':
+          this.__onMouseDown(e);
+
+          break;
+
+        case 'mouseenter':
+          this.__onMouseEnter(e);
+
+          break;
+
+        case 'mouseleave':
+          this.__onMouseLeave(e);
+
+          break;
+
+        case 'touchstart':
+          this.__onTouchStart(e);
+
+          break;
+
+        case 'mousemove':
+          this.__onMouseMove(e);
+
+          break;
+
+        case 'touchmove':
+          this.__onTouchMove(e);
+
+          break;
+
+        case 'mouseup':
+          this.__onMouseUp(e);
+
+          break;
+
+        case 'touchend':
+          this.__onTouchEnd(e);
+
+          break;
+        // @formatter:on
+      }
+      /* eslint-enable */
+
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseDown = function __onMouseDown(evt) {
+      this.prop.mousedown = true;
+
+      this.__update(evt, true);
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseEnter = function __onMouseEnter(evt) {
+      this.prop.mouseover = true;
+
+      this.__update(evt, true);
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onTouchStart = function __onTouchStart(evt) {
+      this.prop.mouseover = true;
+      this.prop.mousedown = true;
+
+      this.__update(evt.changedTouches[0], true);
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseMove = function __onMouseMove(evt) {
+      if (this.prop.mousedown || this.prop.mouseover) {
+        evt.stopPropagation();
+
+        this.__update(evt, true);
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onTouchMove = function __onTouchMove(evt) {
+      if (this.prop.mousedown || this.prop.mouseover) {
+        evt.stopPropagation();
+
+        this.__update(evt.changedTouches[0], true);
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseUp = function __onMouseUp(evt) {
+      if (this.prop.mousedown) {
+        this.prop.mousedown = false;
+
+        this.__update(evt, false);
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onMouseLeave = function __onMouseLeave(evt) {
+      if (this.prop.mouseover) {
+        this.prop.mouseover = false;
+
+        this.__update(evt, true);
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__onTouchEnd = function __onTouchEnd(evt) {
+      if (this.prop.mousedown) {
+        this.prop.mouseover = false;
+        this.prop.mousedown = false;
+
+        this.__update(evt.changedTouches[0], false);
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__update = function __update(evt, moving) {
+      var boundingClientRect = this.container.getBoundingClientRect();
+      var cursor = evt[this.vertical ? 'clientY' : 'clientX'];
+      var pos = boundingClientRect[this.vertical ? 'bottom' : 'left'];
+      var size = boundingClientRect[this.vertical ? 'height' : 'width'];
+      var val = Math.abs((pos - cursor) / size);
+      this.prop.onUpdate({
+        value: val,
+        click: !moving,
+        mousedown: this.prop.mousedown,
+        mouseover: this.prop.mouseover,
+        cursor: evt
+      });
+    };
+
+    _createClass(Slider, [{
+      key: "vertical",
+      get:
+      /**
+       * @type {boolean}
+       * @readonly
+       */
+      function get() {
+        return this.prop.direction === Slider.VERTICAL;
+      }
+    }]);
+
+    return Slider;
+  }(uevent.EventEmitter);
+  Slider.VERTICAL = 1;
+  Slider.HORIZONTAL = 2;
+
+  /**
+   * @namespace PSV.utils
+   */
+
+  var index = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    toggleClass: toggleClass,
+    addClasses: addClasses,
+    removeClasses: removeClasses,
+    hasParent: hasParent,
+    getClosest: getClosest,
+    getPosition: getPosition,
+    isFullscreenEnabled: isFullscreenEnabled,
+    requestFullscreen: requestFullscreen,
+    exitFullscreen: exitFullscreen,
+    getStyle: getStyle,
+    normalizeWheel: normalizeWheel,
+    bound: bound,
+    loop: loop,
+    isInteger: isInteger,
+    isPowerOfTwo: isPowerOfTwo,
+    sum: sum,
+    distance: distance,
+    getShortestArc: getShortestArc,
+    getAngle: getAngle,
+    greatArcDistance: greatArcDistance,
+    dasherize: dasherize,
+    throttle: throttle,
+    isPlainObject: isPlainObject,
+    deepmerge: deepmerge,
+    clone: clone,
+    isEmpty: isEmpty,
+    each: each,
+    isNil: isNil,
+    firstNonNull: firstNonNull,
+    pluginInterop: pluginInterop,
+    getAbortError: getAbortError,
+    isAbortError: isAbortError,
+    logWarn: logWarn,
+    isExtendedPosition: isExtendedPosition,
+    getXMPValue: getXMPValue,
+    parsePosition: parsePosition,
+    cleanPosition: cleanPosition,
+    parseSpeed: parseSpeed,
+    parseAngle: parseAngle,
+    createTexture: createTexture,
+    applyEulerInverse: applyEulerInverse,
+    Animation: Animation,
+    Dynamic: Dynamic,
+    MultiDynamic: MultiDynamic,
+    Slider: Slider
+  });
+
+  /**
+   * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
+   * @property {number} [resolution=64] - number of faces of the sphere geometry, higher values may decrease performances
+   */
+
+  /**
+   * @summary Adapter for equirectangular panoramas
+   * @memberof PSV.adapters
+   * @extends PSV.adapters.AbstractAdapter
+   */
+
+  var EquirectangularAdapter = /*#__PURE__*/function (_AbstractAdapter) {
+    _inheritsLoose(EquirectangularAdapter, _AbstractAdapter);
+
+    /**
+     * @param {PSV.Viewer} psv
+     * @param {PSV.adapters.EquirectangularAdapter.Options} options
+     */
+    function EquirectangularAdapter(psv, options) {
+      var _this;
+
+      _this = _AbstractAdapter.call(this, psv) || this;
+      /**
+       * @member {PSV.adapters.EquirectangularAdapter.Options}
+       * @private
+       */
+
+      _this.config = _extends({
+        resolution: 64
+      }, options);
+
+      if (!isPowerOfTwo(_this.config.resolution)) {
+        throw new PSVError('EquirectangularAdapter resolution must be power of two');
+      }
+
+      _this.SPHERE_SEGMENTS = _this.config.resolution;
+      _this.SPHERE_HORIZONTAL_SEGMENTS = _this.SPHERE_SEGMENTS / 2;
+      return _this;
+    }
+    /**
+     * @override
+     */
+
+
+    var _proto = EquirectangularAdapter.prototype;
+
+    _proto.supportsTransition = function supportsTransition() {
+      return true;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.supportsPreload = function supportsPreload() {
+      return true;
+    }
+    /**
+     * @override
+     * @param {string} panorama
+     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
+     * @returns {Promise.<PSV.TextureData>}
+     */
+    ;
+
+    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
+      var _this2 = this;
+
+      if (typeof panorama !== 'string') {
+        if (Array.isArray(panorama) || typeof panorama === 'object' && !!panorama.left) {
+          logWarn('Cubemap support now requires an additional adapter, see https://photo-sphere-viewer.js.org/guide/adapters');
+        }
+
+        return Promise.reject(new PSVError('Invalid panorama url, are you using the right adapter?'));
+      }
+
+      return (!this.psv.config.useXmpData ? this.psv.textureLoader.loadImage(panorama, function (p) {
+        return _this2.psv.loader.setProgress(p);
+      }).then(function (img) {
+        return {
+          img: img,
+          xmpPanoData: null
+        };
+      }) : this.__loadXMP(panorama, function (p) {
+        return _this2.psv.loader.setProgress(p);
+      }).then(function (xmpPanoData) {
+        return _this2.psv.textureLoader.loadImage(panorama).then(function (img) {
+          return {
+            img: img,
+            xmpPanoData: xmpPanoData
+          };
+        });
+      })).then(function (_ref) {
+        var _newPanoData, _newPanoData2, _newPanoData3, _newPanoData4, _newPanoData5, _newPanoData6, _newPanoData7, _newPanoData8, _newPanoData9;
+
+        var img = _ref.img,
+            xmpPanoData = _ref.xmpPanoData;
+
+        if (typeof newPanoData === 'function') {
+          newPanoData = newPanoData(img);
+        }
+
+        var panoData = {
+          fullWidth: firstNonNull((_newPanoData = newPanoData) == null ? void 0 : _newPanoData.fullWidth, xmpPanoData == null ? void 0 : xmpPanoData.fullWidth, img.width),
+          fullHeight: firstNonNull((_newPanoData2 = newPanoData) == null ? void 0 : _newPanoData2.fullHeight, xmpPanoData == null ? void 0 : xmpPanoData.fullHeight, img.height),
+          croppedWidth: firstNonNull((_newPanoData3 = newPanoData) == null ? void 0 : _newPanoData3.croppedWidth, xmpPanoData == null ? void 0 : xmpPanoData.croppedWidth, img.width),
+          croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
+          croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
+          croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
+          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading, 0),
+          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch, 0),
+          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll, 0)
+        };
+
+        if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
+          logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image.\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
+        }
+
+        if ((newPanoData || xmpPanoData) && panoData.fullWidth !== panoData.fullHeight * 2) {
+          logWarn('Invalid panoData, fullWidth should be twice fullHeight');
+        }
+
+        var texture = _this2.__createEquirectangularTexture(img, panoData);
+
+        return {
+          panorama: panorama,
+          texture: texture,
+          panoData: panoData
+        };
+      });
+    }
+    /**
+     * @summary Loads the XMP data of an image
+     * @param {string} panorama
+     * @param {function(number)} [onProgress]
+     * @returns {Promise<PSV.PanoData>}
+     * @throws {PSV.PSVError} when the image cannot be loaded
+     * @private
+     */
+    ;
+
+    _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
+      var _this3 = this;
+
+      return this.psv.textureLoader.loadFile(panorama, onProgress).then(function (blob) {
+        return _this3.__loadBlobAsString(blob);
+      }).then(function (binary) {
+        var a = binary.indexOf('<x:xmpmeta');
+        var b = binary.indexOf('</x:xmpmeta>');
+        var data = binary.substring(a, b);
+
+        if (a !== -1 && b !== -1 && data.includes('GPano:')) {
+          return {
+            fullWidth: getXMPValue(data, 'FullPanoWidthPixels'),
+            fullHeight: getXMPValue(data, 'FullPanoHeightPixels'),
+            croppedWidth: getXMPValue(data, 'CroppedAreaImageWidthPixels'),
+            croppedHeight: getXMPValue(data, 'CroppedAreaImageHeightPixels'),
+            croppedX: getXMPValue(data, 'CroppedAreaLeftPixels'),
+            croppedY: getXMPValue(data, 'CroppedAreaTopPixels'),
+            poseHeading: getXMPValue(data, 'PoseHeadingDegrees'),
+            posePitch: getXMPValue(data, 'PosePitchDegrees'),
+            poseRoll: getXMPValue(data, 'PoseRollDegrees')
+          };
+        }
+
+        return null;
+      });
+    }
+    /**
+     * @summmary read a Blob as string
+     * @param {Blob} blob
+     * @returns {Promise<string>}
+     * @private
+     */
+    ;
+
+    _proto.__loadBlobAsString = function __loadBlobAsString(blob) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+
+        reader.onload = function () {
+          return resolve(reader.result);
+        };
+
+        reader.onerror = reject;
+        reader.readAsText(blob);
+      });
+    }
+    /**
+     * @summary Creates the final texture from image and panorama data
+     * @param {Image} img
+     * @param {PSV.PanoData} panoData
+     * @returns {external:THREE.Texture}
+     * @private
+     */
+    ;
+
+    _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
+      // resize image / fill cropped parts with black
+      if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
+        var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
+
+        var resizedPanoData = _extends({}, panoData);
+
+        if (ratio < 1) {
+          resizedPanoData.fullWidth *= ratio;
+          resizedPanoData.fullHeight *= ratio;
+          resizedPanoData.croppedWidth *= ratio;
+          resizedPanoData.croppedHeight *= ratio;
+          resizedPanoData.croppedX *= ratio;
+          resizedPanoData.croppedY *= ratio;
+        }
+
+        var buffer = document.createElement('canvas');
+        buffer.width = resizedPanoData.fullWidth;
+        buffer.height = resizedPanoData.fullHeight;
+        var ctx = buffer.getContext('2d');
+        ctx.drawImage(img, resizedPanoData.croppedX, resizedPanoData.croppedY, resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
+        return createTexture(buffer);
+      }
+
+      return createTexture(img);
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.createMesh = function createMesh(scale) {
+      if (scale === void 0) {
+        scale = 1;
+      }
+
+      // The middle of the panorama is placed at longitude=0
+      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2).scale(-1, 1, 1);
+      var material = new THREE.MeshBasicMaterial();
+      return new THREE.Mesh(geometry, material);
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.setTexture = function setTexture(mesh, textureData) {
+      var _mesh$material$map;
+
+      (_mesh$material$map = mesh.material.map) == null ? void 0 : _mesh$material$map.dispose();
+      mesh.material.map = textureData.texture;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
+      mesh.material.opacity = opacity;
+      mesh.material.transparent = opacity < 1;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.disposeTexture = function disposeTexture(textureData) {
+      var _textureData$texture;
+
+      (_textureData$texture = textureData.texture) == null ? void 0 : _textureData$texture.dispose();
+    };
+
+    return EquirectangularAdapter;
+  }(AbstractAdapter);
+  EquirectangularAdapter.id = 'equirectangular';
+  EquirectangularAdapter.supportsDownload = true;
 
   /**
    * @namespace PSV.components
@@ -1958,6 +3206,13 @@
      */
 
     /**
+     * @summary Identifier to declare a group of buttons
+     * @member {string}
+     * @readonly
+     * @static
+     */
+
+    /**
      * @summary SVG icon name injected in the button
      * @member {string}
      * @readonly
@@ -2034,7 +3289,7 @@
       });
 
       _this.container.addEventListener('keydown', function (e) {
-        if (getEventKey(e) === KEY_CODES.Enter && _this.prop.enabled) {
+        if (e.key === KEY_CODES.Enter && _this.prop.enabled) {
           _this.onClick();
 
           e.stopPropagation();
@@ -2068,15 +3323,20 @@
 
           _this2.prop.supported = supported;
 
-          if (!supported && _this2.prop.visible) {
+          if (!supported) {
             _this2.hide();
-          } else if (supported && !_this2.prop.visible) {
+          } else {
             _this2.show();
           }
         });
-      } else if (!supportedOrObject) {
-        this.hide();
-        this.prop.supported = false;
+      } else {
+        this.prop.supported = supportedOrObject;
+
+        if (!supportedOrObject) {
+          this.hide();
+        } else {
+          this.show();
+        }
       }
     }
     /**
@@ -2196,9 +3456,9 @@
       }
 
       if (icon) {
-        container.innerHTML = icon; // classList not supported on IE11, className is read-only !!!!
+        container.innerHTML = icon; // className is read-only on SVGElement
 
-        container.querySelector('svg').setAttribute('class', 'psv-button-svg');
+        container.querySelector('svg').classList.add('psv-button-svg');
       } else {
         container.innerHTML = '';
       }
@@ -2217,6 +3477,7 @@
     return AbstractButton;
   }(AbstractComponent);
   AbstractButton.id = null;
+  AbstractButton.groupId = null;
   AbstractButton.icon = null;
   AbstractButton.iconActive = null;
 
@@ -2373,6 +3634,304 @@
 
     return CustomButton;
   }(AbstractButton);
+
+  /**
+   * @summary Navbar caption class
+   * @extends PSV.components.AbstractComponent
+   * @memberof PSV.components
+   */
+
+  var NavbarCaption = /*#__PURE__*/function (_AbstractComponent) {
+    _inheritsLoose(NavbarCaption, _AbstractComponent);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     * @param {string} caption
+     */
+    function NavbarCaption(navbar, caption) {
+      var _this;
+
+      _this = _AbstractComponent.call(this, navbar, 'psv-caption') || this;
+      /**
+       * @override
+       * @property {string} id
+       * @property {boolean} collapsable
+       * @property {number} width
+       * @property {string} caption
+       * @property {boolean} contentVisible - if the content is visible in the navbar
+       * @property {number} contentWidth - with of the caption content
+       */
+
+      _this.prop = _extends({}, _this.prop, {
+        id: _this.constructor.id,
+        collapsable: false,
+        width: 0,
+        caption: '',
+        contentVisible: true,
+        contentWidth: 0
+      });
+      /**
+       * @member {HTMLElement}
+       * @readonly
+       * @private
+       */
+
+      _this.content = document.createElement('div');
+      _this.content.className = 'psv-caption-content';
+
+      _this.container.appendChild(_this.content);
+
+      _this.setCaption(caption);
+
+      return _this;
+    }
+    /**
+     * @override
+     */
+
+
+    var _proto = NavbarCaption.prototype;
+
+    _proto.destroy = function destroy() {
+      delete this.content;
+
+      _AbstractComponent.prototype.destroy.call(this);
+    }
+    /**
+     * @summary Sets the bar caption
+     * @param {string} html
+     */
+    ;
+
+    _proto.setCaption = function setCaption(html) {
+      this.prop.caption = html || '';
+      this.content.innerHTML = this.prop.caption;
+
+      if (html) {
+        this.prop.contentWidth = this.content.offsetWidth;
+        this.refreshUi('caption change');
+      } else if (!this.prop.contentVisible) {
+        this.prop.contentVisible = true;
+
+        this.__refreshButton();
+      }
+    }
+    /**
+     * @summary Toggles content and icon depending on available space
+     * @private
+     */
+    ;
+
+    _proto.refreshUi = function refreshUi() {
+      var availableWidth = this.container.offsetWidth;
+
+      if (availableWidth >= this.prop.contentWidth && !this.prop.contentVisible) {
+        this.content.style.display = '';
+        this.prop.contentVisible = true;
+      } else if (availableWidth < this.prop.contentWidth && this.prop.contentVisible) {
+        this.content.style.display = 'none';
+        this.prop.contentVisible = false;
+      }
+
+      this.__refreshButton();
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__refreshButton = function __refreshButton() {
+      var _this$psv$navbar$getB;
+
+      (_this$psv$navbar$getB = this.psv.navbar.getButton(DescriptionButton.id, false)) == null ? void 0 : _this$psv$navbar$getB.refreshUi(true);
+    };
+
+    return NavbarCaption;
+  }(AbstractComponent);
+  NavbarCaption.id = 'caption';
+
+  var info = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><path fill=\"currentColor\" d=\"M28.3 26.1c-1 2.6-1.9 4.8-2.6 7-2.5 7.4-5 14.7-7.2 22-1.3 4.4.5 7.2 4.3 7.8 1.3.2 2.8.2 4.2-.1 8.2-2 11.9-8.6 15.7-15.2l-2.2 2a18.8 18.8 0 0 1-7.4 5.2 2 2 0 0 1-1.6-.2c-.2-.1 0-1 0-1.4l.8-1.8L41.9 28c.5-1.4.9-3 .7-4.4-.2-2.6-3-4.4-6.3-4.4-8.8.2-15 4.5-19.5 11.8-.2.3-.2.6-.3 1.3 3.7-2.8 6.8-6.1 11.8-6.2z\"/><circle fill=\"currentColor\" cx=\"39.3\" cy=\"9.2\" r=\"8.2\"/><!--Created by Arafat Uddin from the Noun Project--></svg>\n";
+
+  var MODE_NOTIF = 1;
+  var MODE_PANEL = 2;
+  /**
+   * @summary Navigation bar description button class
+   * @extends PSV.buttons.AbstractButton
+   * @memberof PSV.buttons
+   */
+
+  var DescriptionButton = /*#__PURE__*/function (_AbstractButton) {
+    _inheritsLoose(DescriptionButton, _AbstractButton);
+
+    /**
+     * @param {PSV.components.Navbar} navbar
+     */
+    function DescriptionButton(navbar) {
+      var _this;
+
+      _this = _AbstractButton.call(this, navbar, 'psv-button--hover-scale psv-description-button') || this;
+      /**
+       * @override
+       * @property {string} mode - notification or panel
+       */
+
+      _this.prop = _extends({}, _this.prop, {
+        mode: null
+      });
+
+      _this.psv.on(EVENTS.HIDE_NOTIFICATION, _assertThisInitialized(_this));
+
+      _this.psv.on(EVENTS.SHOW_NOTIFICATION, _assertThisInitialized(_this));
+
+      _this.psv.on(EVENTS.CLOSE_PANEL, _assertThisInitialized(_this));
+
+      _this.psv.on(EVENTS.OPEN_PANEL, _assertThisInitialized(_this));
+
+      return _this;
+    }
+    /**
+     * @override
+     */
+
+
+    var _proto = DescriptionButton.prototype;
+
+    _proto.destroy = function destroy() {
+      this.psv.off(EVENTS.HIDE_NOTIFICATION, this);
+      this.psv.off(EVENTS.SHOW_NOTIFICATION, this);
+      this.psv.off(EVENTS.CLOSE_PANEL, this);
+      this.psv.off(EVENTS.OPEN_PANEL, this);
+
+      _AbstractButton.prototype.destroy.call(this);
+    }
+    /**
+     * @summary Handles events
+     * @param {Event} e
+     * @private
+     */
+    ;
+
+    _proto.handleEvent = function handleEvent(e) {
+      if (!this.prop.mode) {
+        return;
+      }
+
+      var closed = false;
+
+      switch (e.type) {
+        case EVENTS.HIDE_NOTIFICATION:
+          closed = this.prop.mode === MODE_NOTIF;
+          break;
+
+        case EVENTS.SHOW_NOTIFICATION:
+          closed = this.prop.mode === MODE_NOTIF && e.args[0] !== IDS.DESCRIPTION;
+          break;
+
+        case EVENTS.CLOSE_PANEL:
+          closed = this.prop.mode === MODE_PANEL;
+          break;
+
+        case EVENTS.OPEN_PANEL:
+          closed = this.prop.mode === MODE_PANEL && e.args[0] !== IDS.DESCRIPTION;
+          break;
+      }
+
+      if (closed) {
+        this.toggleActive(false);
+        this.prop.mode = null;
+      }
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.hide = function hide(refresh) {
+      _AbstractButton.prototype.hide.call(this, refresh);
+
+      if (this.prop.mode) {
+        this.__close();
+      }
+    }
+    /**
+     * This button can only be refresh from NavbarCaption
+     * @override
+     */
+    ;
+
+    _proto.refreshUi = function refreshUi(refresh) {
+      if (refresh === void 0) {
+        refresh = false;
+      }
+
+      if (refresh) {
+        var caption = this.psv.navbar.getButton(NavbarCaption.id, false);
+        var captionHidden = caption && !caption.prop.contentVisible;
+        var hasDescription = !!this.psv.config.description;
+
+        if (captionHidden || hasDescription) {
+          this.show(false);
+        } else {
+          this.hide(false);
+        }
+      }
+    }
+    /**
+     * @override
+     * @description Toggles caption
+     */
+    ;
+
+    _proto.onClick = function onClick() {
+      if (this.prop.mode) {
+        this.__close();
+      } else {
+        this.__open();
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__close = function __close() {
+      switch (this.prop.mode) {
+        case MODE_NOTIF:
+          this.psv.notification.hide(IDS.DESCRIPTION);
+          break;
+
+        case MODE_PANEL:
+          this.psv.panel.hide(IDS.DESCRIPTION);
+          break;
+      }
+    }
+    /**
+     * @private
+     */
+    ;
+
+    _proto.__open = function __open() {
+      this.toggleActive(true);
+
+      if (this.psv.config.description) {
+        this.prop.mode = MODE_PANEL;
+        this.psv.panel.show({
+          id: IDS.DESCRIPTION,
+          content: "" + (this.psv.config.caption ? "<p>" + this.psv.config.caption + "</p>" : '') + this.psv.config.description
+        });
+      } else {
+        this.prop.mode = MODE_NOTIF;
+        this.psv.notification.show({
+          id: IDS.DESCRIPTION,
+          content: this.psv.config.caption
+        });
+      }
+    };
+
+    return DescriptionButton;
+  }(AbstractButton);
+  DescriptionButton.id = 'description';
+  DescriptionButton.icon = info;
 
   var download = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"currentColor\" d=\"M83.3 35.6h-17V3H32.2v32.6H16.6l33.6 32.7 33-32.7z\"/><path fill=\"currentColor\" d=\"M83.3 64.2v16.3H16.6V64.2H-.1v32.6H100V64.2H83.3z\"/><!--Created by Michael Zenaty from the Noun Project--></svg>\n";
 
@@ -2648,213 +4207,12 @@
     }).join('') + "\n  </ul>\n</div>\n";
   };
 
-  /**
-   * @summary General information about the system
-   * @constant
-   * @memberOf PSV
-   * @property {boolean} loaded - Indicates if the system data has been loaded
-   * @property {Function} load - Loads the system if not already loaded
-   * @property {number} pixelRatio
-   * @property {boolean} isWebGLSupported
-   * @property {number} maxCanvasWidth
-   * @property {string} mouseWheelEvent
-   * @property {string} fullscreenEvent
-   * @property {Function} getMaxCanvasWidth - Returns the max width of a canvas allowed by the browser
-   * @property {Promise<boolean>} isTouchEnabled
-   */
-
-  var SYSTEM = {
-    loaded: false,
-    pixelRatio: 1,
-    isWebGLSupported: false,
-    isTouchEnabled: null,
-    maxTextureWidth: 0,
-    mouseWheelEvent: null,
-    fullscreenEvent: null
-  };
-  /**
-   * @summary Loads the system if not already loaded
-   */
-
-  SYSTEM.load = function () {
-    if (!SYSTEM.loaded) {
-      var ctx = getWebGLCtx();
-      SYSTEM.loaded = true;
-      SYSTEM.pixelRatio = window.devicePixelRatio || 1;
-      SYSTEM.isWebGLSupported = ctx != null;
-      SYSTEM.isTouchEnabled = isTouchEnabled();
-      SYSTEM.maxTextureWidth = getMaxTextureWidth(ctx);
-      SYSTEM.mouseWheelEvent = getMouseWheelEvent();
-      SYSTEM.fullscreenEvent = getFullscreenEvent();
-    }
-  };
-
-  var maxCanvasWidth = null;
-
-  SYSTEM.getMaxCanvasWidth = function () {
-    if (maxCanvasWidth === null) {
-      maxCanvasWidth = getMaxCanvasWidth(SYSTEM.maxTextureWidth);
-    }
-
-    return maxCanvasWidth;
-  };
-  /**
-   * @summary Tries to return a canvas webgl context
-   * @returns {WebGLRenderingContext}
-   * @private
-   */
-
-
-  function getWebGLCtx() {
-    var canvas = document.createElement('canvas');
-    var names = ['webgl', 'experimental-webgl', 'moz-webgl', 'webkit-3d'];
-    var context = null;
-
-    if (!canvas.getContext) {
-      return null;
-    }
-
-    if (names.some(function (name) {
-      try {
-        context = canvas.getContext(name);
-        return context !== null;
-      } catch (e) {
-        return false;
-      }
-    })) {
-      return context;
-    } else {
-      return null;
-    }
-  }
-  /**
-   * @summary Detects if the user is using a touch screen
-   * @returns {Promise<boolean>}
-   * @private
-   */
-
-
-  function isTouchEnabled() {
-    return new Promise(function (resolve) {
-      var listener = function listener(e) {
-        if (e) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-
-        window.removeEventListener('touchstart', listener);
-      };
-
-      window.addEventListener('touchstart', listener, false); // after 10 secs auto-reject the promise
-
-      setTimeout(listener, 10000);
-    });
-  }
-  /**
-   * @summary Gets max texture width in WebGL context
-   * @returns {number}
-   * @private
-   */
-
-
-  function getMaxTextureWidth(ctx) {
-    if (ctx !== null) {
-      return ctx.getParameter(ctx.MAX_TEXTURE_SIZE);
-    } else {
-      return 0;
-    }
-  }
-  /**
-   * @summary Gets max canvas width supported by the browser.
-   * We only test powers of 2 and height = width / 2 because that's what we need to generate WebGL textures
-   * @param maxWidth
-   * @return {number}
-   * @private
-   */
-
-
-  function getMaxCanvasWidth(maxWidth) {
-    var canvas = document.createElement('canvas');
-    var ctx = canvas.getContext('2d');
-    canvas.width = maxWidth;
-    canvas.height = maxWidth / 2;
-
-    while (canvas.width > 1024) {
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, 1, 1);
-
-      try {
-        if (ctx.getImageData(0, 0, 1, 1).data[0] === 255) {
-          return canvas.width;
-        }
-      } catch (e) {// continue
-      }
-
-      canvas.width /= 2;
-      canvas.height /= 2;
-    }
-
-    throw new PSVError('Unable to detect system capabilities');
-  }
-  /**
-   * @summary Gets the event name for mouse wheel
-   * @returns {string}
-   * @private
-   */
-
-
-  function getMouseWheelEvent() {
-    if ('onwheel' in document.createElement('div')) {
-      // Modern browsers support "wheel"
-      return 'wheel';
-    } else if (document.onmousewheel !== undefined) {
-      // Webkit and IE support at least "mousewheel"
-      return 'mousewheel';
-    } else {
-      // let's assume that remaining browsers are older Firefox
-      return 'DOMMouseScroll';
-    }
-  }
-  /**
-   * @summary Map between fullsceen method and fullscreen event name
-   * @type {Object<string, string>}
-   * @readonly
-   * @private
-   */
-
-
-  var FULLSCREEN_EVT_MAP = {
-    exitFullscreen: 'fullscreenchange',
-    webkitExitFullscreen: 'webkitfullscreenchange',
-    mozCancelFullScreen: 'mozfullscreenchange',
-    msExitFullscreen: 'MSFullscreenChange'
-  };
-  /**
-   * @summary  Gets the event name for fullscreen
-   * @returns {string}
-   * @private
-   */
-
-  function getFullscreenEvent() {
-    var validExits = Object.keys(FULLSCREEN_EVT_MAP).filter(function (exit) {
-      return exit in document;
-    });
-
-    if (validExits.length) {
-      return FULLSCREEN_EVT_MAP[validExits[0]];
-    } else {
-      return null;
-    }
-  }
-
   var arrow = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"40 40 432 432\"><g transform=\"rotate(0, 256, 256)\"><path fill=\"currentColor\" d=\"M425.23 210.55H227.39a5 5 0 01-3.53-8.53l56.56-56.57a45.5 45.5 0 000-64.28 45.15 45.15 0 00-32.13-13.3 45.15 45.15 0 00-32.14 13.3L41.32 256l174.83 174.83a45.15 45.15 0 0032.14 13.3 45.15 45.15 0 0032.13-13.3 45.5 45.5 0 000-64.28l-56.57-56.57a5 5 0 013.54-8.53h197.84c25.06 0 45.45-20.39 45.45-45.45s-20.4-45.45-45.45-45.45z\"/></g><!-- Created by Flatart from the Noun Project --></svg>\n";
 
   /**
    * @summary Helper for pressable things (buttons, keyboard)
    * @description When the pressed thing goes up and was not pressed long enough, wait a bit more before execution
-   * @package
-   * @package
+   * @private
    */
   var PressHandler = /*#__PURE__*/function () {
     function PressHandler(delay) {
@@ -3010,11 +4368,11 @@
           break;
 
         case 'keydown':
-          getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown();
+          e.key === KEY_CODES.Enter && this.__onMouseDown();
           break;
 
         case 'keyup':
-          getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp();
+          e.key === KEY_CODES.Enter && this.__onMouseUp();
           break;
         // @formatter:on
       }
@@ -3075,6 +4433,7 @@
 
     return AbstractMoveButton;
   }(AbstractButton);
+  AbstractMoveButton.groupId = 'move';
 
   /**
    * @summary Navigation bar move down button class
@@ -3250,11 +4609,11 @@
           break;
 
         case 'keydown':
-          getEventKey(e) === KEY_CODES.Enter && this.__onMouseDown();
+          e.key === KEY_CODES.Enter && this.__onMouseDown();
           break;
 
         case 'keyup':
-          getEventKey(e) === KEY_CODES.Enter && this.__onMouseUp();
+          e.key === KEY_CODES.Enter && this.__onMouseUp();
           break;
         // @formatter:on
       }
@@ -3313,6 +4672,7 @@
 
     return AbstractZoomButton;
   }(AbstractButton);
+  AbstractZoomButton.groupId = 'zoom';
 
   var zoomIn = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><path fill=\"currentColor\" d=\"M14.043 12.22a7.738 7.738 0 1 0-1.823 1.822l4.985 4.985c.503.504 1.32.504 1.822 0a1.285 1.285 0 0 0 0-1.822l-4.984-4.985zm-6.305 1.043a5.527 5.527 0 1 1 0-11.053 5.527 5.527 0 0 1 0 11.053z\"/><path fill=\"currentColor\" d=\"M8.728 4.009H6.744v2.737H4.006V8.73h2.738v2.736h1.984V8.73h2.737V6.746H8.728z\"/><!--Created by Ryan Canning from the Noun Project--></svg>\n";
 
@@ -3378,12 +4738,10 @@
       _this = _AbstractButton.call(this, navbar, 'psv-zoom-range', false, false) || this;
       /**
        * @override
-       * @property {boolean} mousedown
        * @property {number} mediaMinWidth
        */
 
       _this.prop = _extends({}, _this.prop, {
-        mousedown: false,
         mediaMinWidth: 0
       });
       /**
@@ -3407,20 +4765,21 @@
       _this.zoomValue.className = 'psv-zoom-range-handle';
 
       _this.zoomRange.appendChild(_this.zoomValue);
+      /**
+       * @member {PSV.Slider}
+       * @readonly
+       * @private
+       */
 
+
+      _this.slider = new Slider({
+        container: _this.container,
+        direction: Slider.HORIZONTAL,
+        onUpdate: function onUpdate(e) {
+          return _this.__onSliderUpdate(e);
+        }
+      });
       _this.prop.mediaMinWidth = parseInt(getStyle(_this.container, 'maxWidth'), 10);
-
-      _this.container.addEventListener('mousedown', _assertThisInitialized(_this));
-
-      _this.container.addEventListener('touchstart', _assertThisInitialized(_this));
-
-      _this.psv.container.addEventListener('mousemove', _assertThisInitialized(_this));
-
-      _this.psv.container.addEventListener('touchmove', _assertThisInitialized(_this));
-
-      _this.psv.container.addEventListener('mouseup', _assertThisInitialized(_this));
-
-      _this.psv.container.addEventListener('touchend', _assertThisInitialized(_this));
 
       _this.psv.on(EVENTS.ZOOM_UPDATED, _assertThisInitialized(_this));
 
@@ -3442,12 +4801,7 @@
     var _proto = ZoomRangeButton.prototype;
 
     _proto.destroy = function destroy() {
-      this.__stopZoomChange();
-
-      this.psv.container.removeEventListener('mousemove', this);
-      this.psv.container.removeEventListener('touchmove', this);
-      this.psv.container.removeEventListener('mouseup', this);
-      this.psv.container.removeEventListener('touchend', this);
+      this.slider.destroy();
       delete this.zoomRange;
       delete this.zoomValue;
       this.psv.off(EVENTS.ZOOM_UPDATED, this);
@@ -3465,36 +4819,6 @@
       /* eslint-disable */
       switch (e.type) {
         // @formatter:off
-        case 'mousedown':
-          this.__initZoomChangeWithMouse(e);
-
-          break;
-
-        case 'touchstart':
-          this.__initZoomChangeByTouch(e);
-
-          break;
-
-        case 'mousemove':
-          this.__changeZoomWithMouse(e);
-
-          break;
-
-        case 'touchmove':
-          this.__changeZoomByTouch(e);
-
-          break;
-
-        case 'mouseup':
-          this.__stopZoomChange(e);
-
-          break;
-
-        case 'touchend':
-          this.__stopZoomChange(e);
-
-          break;
-
         case EVENTS.ZOOM_UPDATED:
           this.__moveZoomValue(e.args[0]);
 
@@ -3554,508 +4878,21 @@
       this.zoomValue.style.left = level / 100 * this.zoomRange.offsetWidth - this.zoomValue.offsetWidth / 2 + 'px';
     }
     /**
-     * @summary Handles mouse down events
-     * @param {MouseEvent} evt
-     * @private
-     */
-    ;
-
-    _proto.__initZoomChangeWithMouse = function __initZoomChangeWithMouse(evt) {
-      if (!this.prop.enabled) {
-        return;
-      }
-
-      this.prop.mousedown = true;
-
-      this.__changeZoom(evt.clientX);
-    }
-    /**
-     * @summary Handles touch events
-     * @param {TouchEvent} evt
-     * @private
-     */
-    ;
-
-    _proto.__initZoomChangeByTouch = function __initZoomChangeByTouch(evt) {
-      if (!this.prop.enabled) {
-        return;
-      }
-
-      this.prop.mousedown = true;
-
-      this.__changeZoom(evt.changedTouches[0].clientX);
-    }
-    /**
-     * @summary Handles mouse up events
-     * @private
-     */
-    ;
-
-    _proto.__stopZoomChange = function __stopZoomChange() {
-      if (!this.prop.enabled) {
-        return;
-      }
-
-      this.prop.mousedown = false;
-      this.prop.buttondown = false;
-    }
-    /**
-     * @summary Handles mouse move events
-     * @param {MouseEvent} evt
-     * @private
-     */
-    ;
-
-    _proto.__changeZoomWithMouse = function __changeZoomWithMouse(evt) {
-      if (!this.prop.enabled || !this.prop.mousedown) {
-        return;
-      }
-
-      evt.preventDefault();
-
-      this.__changeZoom(evt.clientX);
-    }
-    /**
-     * @summary Handles touch move events
-     * @param {TouchEvent} evt
-     * @private
-     */
-    ;
-
-    _proto.__changeZoomByTouch = function __changeZoomByTouch(evt) {
-      if (!this.prop.enabled || !this.prop.mousedown) {
-        return;
-      }
-
-      this.__changeZoom(evt.changedTouches[0].clientX);
-    }
-    /**
      * @summary Zoom change
-     * @param {number} x - mouse/touch position
      * @private
      */
     ;
 
-    _proto.__changeZoom = function __changeZoom(x) {
-      var userInput = x - this.zoomRange.getBoundingClientRect().left;
-      var zoomLevel = userInput / this.zoomRange.offsetWidth * 100;
-      this.psv.zoom(zoomLevel);
+    _proto.__onSliderUpdate = function __onSliderUpdate(e) {
+      if (e.mousedown) {
+        this.psv.zoom(e.value * 100);
+      }
     };
 
     return ZoomRangeButton;
   }(AbstractButton);
   ZoomRangeButton.id = 'zoomRange';
-
-  /**
-   * @namespace PSV.adapters
-   */
-
-  /**
-   * @summary Base adapters class
-   * @memberof PSV.adapters
-   * @abstract
-   */
-
-  var AbstractAdapter = /*#__PURE__*/function () {
-    /**
-     * @summary Unique identifier of the adapter
-     * @member {string}
-     * @readonly
-     * @static
-     */
-
-    /**
-     * @summary Indicates if the adapter supports panorama download natively
-     * @type {boolean}
-     * @readonly
-     * @static
-     */
-
-    /**
-     * @param {PSV.Viewer} psv
-     */
-    function AbstractAdapter(psv) {
-      /**
-       * @summary Reference to main controller
-       * @type {PSV.Viewer}
-       * @readonly
-       */
-      this.psv = psv;
-    }
-    /**
-     * @summary Destroys the adapter
-     */
-
-
-    var _proto = AbstractAdapter.prototype;
-
-    _proto.destroy = function destroy() {
-      delete this.psv;
-    }
-    /**
-     * @summary Indicates if the adapter supports transitions between panoramas
-     * @param {*} panorama
-     * @return {boolean}
-     */
-    ;
-
-    _proto.supportsTransition = function supportsTransition(panorama) {
-      // eslint-disable-line no-unused-vars
-      return false;
-    }
-    /**
-     * @summary Indicates if the adapter supports preload of a panorama
-     * @param {*} panorama
-     * @return {boolean}
-     */
-    ;
-
-    _proto.supportsPreload = function supportsPreload(panorama) {
-      // eslint-disable-line no-unused-vars
-      return false;
-    }
-    /**
-     * @abstract
-     * @summary Loads the panorama texture(s)
-     * @param {*} panorama
-     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
-     * @returns {Promise.<PSV.TextureData>}
-     */
-    ;
-
-    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
-      // eslint-disable-line no-unused-vars
-      throw new PSVError('loadTexture not implemented');
-    }
-    /**
-     * @abstract
-     * @summary Creates the cube mesh
-     * @param {number} [scale=1]
-     * @returns {external:THREE.Mesh}
-     */
-    ;
-
-    _proto.createMesh = function createMesh(scale) {
-
-      // eslint-disable-line no-unused-vars
-      throw new PSVError('createMesh not implemented');
-    }
-    /**
-     * @abstract
-     * @summary Applies the texture to the mesh
-     * @param {external:THREE.Mesh} mesh
-     * @param {PSV.TextureData} textureData
-     * @param {boolean} [transition=false]
-     */
-    ;
-
-    _proto.setTexture = function setTexture(mesh, textureData, transition) {
-
-      // eslint-disable-line no-unused-vars
-      throw new PSVError('setTexture not implemented');
-    }
-    /**
-     * @abstract
-     * @summary Changes the opacity of the mesh
-     * @param {external:THREE.Mesh} mesh
-     * @param {number} opacity
-     */
-    ;
-
-    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
-      // eslint-disable-line no-unused-vars
-      throw new PSVError('setTextureOpacity not implemented');
-    }
-    /**
-     * @abstract
-     * @summary Clear a loaded texture from memory
-     * @param {PSV.TextureData} textureData
-     */
-    ;
-
-    _proto.disposeTexture = function disposeTexture(textureData) {
-      // eslint-disable-line no-unused-vars
-      throw new PSVError('disposeTexture not implemented');
-    };
-
-    return AbstractAdapter;
-  }();
-  AbstractAdapter.id = null;
-  AbstractAdapter.supportsDownload = false;
-
-  /**
-   * @typedef {Object} PSV.adapters.EquirectangularAdapter.Options
-   * @property {number} [resolution=64] - number of faces of the sphere geometry, higher values may decrease performances
-   */
-
-  /**
-   * @summary Adapter for equirectangular panoramas
-   * @memberof PSV.adapters
-   */
-
-  var EquirectangularAdapter = /*#__PURE__*/function (_AbstractAdapter) {
-    _inheritsLoose(EquirectangularAdapter, _AbstractAdapter);
-
-    /**
-     * @param {PSV.Viewer} psv
-     * @param {PSV.adapters.EquirectangularAdapter.Options} options
-     */
-    function EquirectangularAdapter(psv, options) {
-      var _this;
-
-      _this = _AbstractAdapter.call(this, psv) || this;
-      /**
-       * @member {PSV.adapters.EquirectangularAdapter.Options}
-       * @private
-       */
-
-      _this.config = _extends({
-        resolution: 64
-      }, options);
-
-      if (!isPowerOfTwo(_this.config.resolution)) {
-        throw new PSVError('EquirectangularAdapter resolution must be power of two');
-      }
-
-      _this.SPHERE_SEGMENTS = _this.config.resolution;
-      _this.SPHERE_HORIZONTAL_SEGMENTS = _this.SPHERE_SEGMENTS / 2;
-      return _this;
-    }
-    /**
-     * @override
-     */
-
-
-    var _proto = EquirectangularAdapter.prototype;
-
-    _proto.supportsTransition = function supportsTransition() {
-      return true;
-    }
-    /**
-     * @override
-     */
-    ;
-
-    _proto.supportsPreload = function supportsPreload() {
-      return true;
-    }
-    /**
-     * @override
-     * @param {string} panorama
-     * @param {PSV.PanoData | PSV.PanoDataProvider} [newPanoData]
-     * @returns {Promise.<PSV.TextureData>}
-     */
-    ;
-
-    _proto.loadTexture = function loadTexture(panorama, newPanoData) {
-      var _this2 = this;
-
-      if (typeof panorama !== 'string') {
-        if (Array.isArray(panorama) || typeof panorama === 'object' && !!panorama.left) {
-          logWarn('Cubemap support now requires an additional adapter, see https://photo-sphere-viewer.js.org/guide/adapters');
-        }
-
-        return Promise.reject(new PSVError('Invalid panorama url, are you using the right adapter?'));
-      }
-
-      return (!this.psv.config.useXmpData ? this.psv.textureLoader.loadImage(panorama, function (p) {
-        return _this2.psv.loader.setProgress(p);
-      }).then(function (img) {
-        return {
-          img: img,
-          xmpPanoData: null
-        };
-      }) : this.__loadXMP(panorama, function (p) {
-        return _this2.psv.loader.setProgress(p);
-      }).then(function (xmpPanoData) {
-        return _this2.psv.textureLoader.loadImage(panorama).then(function (img) {
-          return {
-            img: img,
-            xmpPanoData: xmpPanoData
-          };
-        });
-      })).then(function (_ref) {
-        var _newPanoData, _newPanoData2, _newPanoData3, _newPanoData4, _newPanoData5, _newPanoData6, _newPanoData7, _newPanoData8, _newPanoData9;
-
-        var img = _ref.img,
-            xmpPanoData = _ref.xmpPanoData;
-
-        if (typeof newPanoData === 'function') {
-          newPanoData = newPanoData(img);
-        }
-
-        var panoData = {
-          fullWidth: firstNonNull((_newPanoData = newPanoData) == null ? void 0 : _newPanoData.fullWidth, xmpPanoData == null ? void 0 : xmpPanoData.fullWidth, img.width),
-          fullHeight: firstNonNull((_newPanoData2 = newPanoData) == null ? void 0 : _newPanoData2.fullHeight, xmpPanoData == null ? void 0 : xmpPanoData.fullHeight, img.height),
-          croppedWidth: firstNonNull((_newPanoData3 = newPanoData) == null ? void 0 : _newPanoData3.croppedWidth, xmpPanoData == null ? void 0 : xmpPanoData.croppedWidth, img.width),
-          croppedHeight: firstNonNull((_newPanoData4 = newPanoData) == null ? void 0 : _newPanoData4.croppedHeight, xmpPanoData == null ? void 0 : xmpPanoData.croppedHeight, img.height),
-          croppedX: firstNonNull((_newPanoData5 = newPanoData) == null ? void 0 : _newPanoData5.croppedX, xmpPanoData == null ? void 0 : xmpPanoData.croppedX, 0),
-          croppedY: firstNonNull((_newPanoData6 = newPanoData) == null ? void 0 : _newPanoData6.croppedY, xmpPanoData == null ? void 0 : xmpPanoData.croppedY, 0),
-          poseHeading: firstNonNull((_newPanoData7 = newPanoData) == null ? void 0 : _newPanoData7.poseHeading, xmpPanoData == null ? void 0 : xmpPanoData.poseHeading, 0),
-          posePitch: firstNonNull((_newPanoData8 = newPanoData) == null ? void 0 : _newPanoData8.posePitch, xmpPanoData == null ? void 0 : xmpPanoData.posePitch, 0),
-          poseRoll: firstNonNull((_newPanoData9 = newPanoData) == null ? void 0 : _newPanoData9.poseRoll, xmpPanoData == null ? void 0 : xmpPanoData.poseRoll, 0)
-        };
-
-        if (panoData.croppedWidth !== img.width || panoData.croppedHeight !== img.height) {
-          logWarn("Invalid panoData, croppedWidth and/or croppedHeight is not coherent with loaded image.\n    panoData: " + panoData.croppedWidth + "x" + panoData.croppedHeight + ", image: " + img.width + "x" + img.height);
-        }
-
-        if ((newPanoData || xmpPanoData) && panoData.fullWidth !== panoData.fullHeight * 2) {
-          logWarn('Invalid panoData, fullWidth should be twice fullHeight');
-        }
-
-        var texture = _this2.__createEquirectangularTexture(img, panoData);
-
-        return {
-          panorama: panorama,
-          texture: texture,
-          panoData: panoData
-        };
-      });
-    }
-    /**
-     * @summary Loads the XMP data of an image
-     * @param {string} panorama
-     * @param {function(number)} [onProgress]
-     * @returns {Promise<PSV.PanoData>}
-     * @throws {PSV.PSVError} when the image cannot be loaded
-     * @private
-     */
-    ;
-
-    _proto.__loadXMP = function __loadXMP(panorama, onProgress) {
-      var _this3 = this;
-
-      return this.psv.textureLoader.loadFile(panorama, onProgress).then(function (blob) {
-        return _this3.__loadBlobAsString(blob);
-      }).then(function (binary) {
-        var a = binary.indexOf('<x:xmpmeta');
-        var b = binary.indexOf('</x:xmpmeta>');
-        var data = binary.substring(a, b);
-
-        if (a !== -1 && b !== -1 && data.indexOf('GPano:') !== -1) {
-          return {
-            fullWidth: getXMPValue(data, 'FullPanoWidthPixels'),
-            fullHeight: getXMPValue(data, 'FullPanoHeightPixels'),
-            croppedWidth: getXMPValue(data, 'CroppedAreaImageWidthPixels'),
-            croppedHeight: getXMPValue(data, 'CroppedAreaImageHeightPixels'),
-            croppedX: getXMPValue(data, 'CroppedAreaLeftPixels'),
-            croppedY: getXMPValue(data, 'CroppedAreaTopPixels'),
-            poseHeading: getXMPValue(data, 'PoseHeadingDegrees'),
-            posePitch: getXMPValue(data, 'PosePitchDegrees'),
-            poseRoll: getXMPValue(data, 'PoseRollDegrees')
-          };
-        }
-
-        return null;
-      });
-    }
-    /**
-     * @summmary read a Blob as string
-     * @param {Blob} blob
-     * @returns {Promise<string>}
-     * @private
-     */
-    ;
-
-    _proto.__loadBlobAsString = function __loadBlobAsString(blob) {
-      return new Promise(function (resolve, reject) {
-        var reader = new FileReader();
-
-        reader.onload = function () {
-          return resolve(reader.result);
-        };
-
-        reader.onerror = reject;
-        reader.readAsText(blob);
-      });
-    }
-    /**
-     * @summary Creates the final texture from image and panorama data
-     * @param {Image} img
-     * @param {PSV.PanoData} panoData
-     * @returns {external:THREE.Texture}
-     * @private
-     */
-    ;
-
-    _proto.__createEquirectangularTexture = function __createEquirectangularTexture(img, panoData) {
-      // resize image / fill cropped parts with black
-      if (panoData.fullWidth > SYSTEM.maxTextureWidth || panoData.croppedWidth !== panoData.fullWidth || panoData.croppedHeight !== panoData.fullHeight) {
-        var ratio = SYSTEM.getMaxCanvasWidth() / panoData.fullWidth;
-
-        var resizedPanoData = _extends({}, panoData);
-
-        if (ratio < 1) {
-          resizedPanoData.fullWidth *= ratio;
-          resizedPanoData.fullHeight *= ratio;
-          resizedPanoData.croppedWidth *= ratio;
-          resizedPanoData.croppedHeight *= ratio;
-          resizedPanoData.croppedX *= ratio;
-          resizedPanoData.croppedY *= ratio;
-        }
-
-        var buffer = document.createElement('canvas');
-        buffer.width = resizedPanoData.fullWidth;
-        buffer.height = resizedPanoData.fullHeight;
-        var ctx = buffer.getContext('2d');
-        ctx.drawImage(img, resizedPanoData.croppedX, resizedPanoData.croppedY, resizedPanoData.croppedWidth, resizedPanoData.croppedHeight);
-        return createTexture(buffer);
-      }
-
-      return createTexture(img);
-    }
-    /**
-     * @override
-     */
-    ;
-
-    _proto.createMesh = function createMesh(scale) {
-      if (scale === void 0) {
-        scale = 1;
-      }
-
-      // The middle of the panorama is placed at longitude=0
-      var geometry = new THREE.SphereGeometry(SPHERE_RADIUS * scale, this.SPHERE_SEGMENTS, this.SPHERE_HORIZONTAL_SEGMENTS, -Math.PI / 2).scale(-1, 1, 1);
-      var material = new THREE.MeshBasicMaterial();
-      return new THREE.Mesh(geometry, material);
-    }
-    /**
-     * @override
-     */
-    ;
-
-    _proto.setTexture = function setTexture(mesh, textureData) {
-      var _mesh$material$map;
-
-      var texture = textureData.texture;
-      (_mesh$material$map = mesh.material.map) == null ? void 0 : _mesh$material$map.dispose();
-      mesh.material.map = texture;
-    }
-    /**
-     * @override
-     */
-    ;
-
-    _proto.setTextureOpacity = function setTextureOpacity(mesh, opacity) {
-      mesh.material.opacity = opacity;
-      mesh.material.transparent = opacity < 1;
-    }
-    /**
-     * @override
-     */
-    ;
-
-    _proto.disposeTexture = function disposeTexture(textureData) {
-      var _textureData$texture;
-
-      (_textureData$texture = textureData.texture) == null ? void 0 : _textureData$texture.dispose();
-    };
-
-    return EquirectangularAdapter;
-  }(AbstractAdapter);
-  EquirectangularAdapter.id = 'equirectangular';
-  EquirectangularAdapter.supportsDownload = true;
+  ZoomRangeButton.groupId = 'zoom';
 
   /**
    * @namespace PSV.plugins
@@ -4130,6 +4967,7 @@
     adapter: null,
     plugins: [],
     caption: null,
+    description: null,
     downloadUrl: null,
     loadingImg: null,
     loadingTxt: 'Loading...',
@@ -4157,7 +4995,7 @@
     requestHeaders: null,
     canvasBackground: '#000',
     withCredentials: false,
-    navbar: ['autorotate', 'zoom', 'move', 'download', 'caption', 'fullscreen'],
+    navbar: ['autorotate', 'zoom', 'move', 'download', 'description', 'caption', 'fullscreen'],
     lang: {
       autorotate: 'Automatic rotation',
       zoom: 'Zoom',
@@ -4335,196 +5173,6 @@
     return config;
   }
 
-  var info = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><path fill=\"currentColor\" d=\"M28.3 26.1c-1 2.6-1.9 4.8-2.6 7-2.5 7.4-5 14.7-7.2 22-1.3 4.4.5 7.2 4.3 7.8 1.3.2 2.8.2 4.2-.1 8.2-2 11.9-8.6 15.7-15.2l-2.2 2a18.8 18.8 0 0 1-7.4 5.2 2 2 0 0 1-1.6-.2c-.2-.1 0-1 0-1.4l.8-1.8L41.9 28c.5-1.4.9-3 .7-4.4-.2-2.6-3-4.4-6.3-4.4-8.8.2-15 4.5-19.5 11.8-.2.3-.2.6-.3 1.3 3.7-2.8 6.8-6.1 11.8-6.2z\"/><circle fill=\"currentColor\" cx=\"39.3\" cy=\"9.2\" r=\"8.2\"/><!--Created by Arafat Uddin from the Noun Project--></svg>\n";
-
-  /**
-   * @summary Navigation bar caption button class
-   * @extends PSV.buttons.AbstractButton
-   * @memberof PSV.buttons
-   */
-
-  var CaptionButton = /*#__PURE__*/function (_AbstractButton) {
-    _inheritsLoose(CaptionButton, _AbstractButton);
-
-    /**
-     * @param {PSV.components.NavbarCaption} caption
-     */
-    function CaptionButton(caption) {
-      var _this;
-
-      _this = _AbstractButton.call(this, caption, 'psv-button--hover-scale psv-caption-button') || this;
-
-      _this.psv.on(EVENTS.HIDE_NOTIFICATION, _assertThisInitialized(_this));
-
-      return _this;
-    }
-    /**
-     * @override
-     */
-
-
-    var _proto = CaptionButton.prototype;
-
-    _proto.destroy = function destroy() {
-      this.psv.off(EVENTS.HIDE_NOTIFICATION, this);
-
-      _AbstractButton.prototype.destroy.call(this);
-    }
-    /**
-     * @summary Handles events
-     * @param {Event} e
-     * @private
-     */
-    ;
-
-    _proto.handleEvent = function handleEvent(e) {
-      /* eslint-disable */
-      switch (e.type) {
-        // @formatter:off
-        case EVENTS.HIDE_NOTIFICATION:
-          this.toggleActive(false);
-          break;
-        // @formatter:on
-      }
-      /* eslint-enable */
-
-    }
-    /**
-     * @override
-     * @description Toggles caption
-     */
-    ;
-
-    _proto.onClick = function onClick() {
-      if (this.psv.notification.prop.visible) {
-        this.psv.notification.hide();
-      } else {
-        this.psv.notification.show(this.parent.prop.caption);
-        this.toggleActive(true);
-      }
-    };
-
-    return CaptionButton;
-  }(AbstractButton);
-  CaptionButton.id = 'caption';
-  CaptionButton.icon = info;
-
-  /**
-   * @summary Navbar caption class
-   * @extends PSV.components.AbstractComponent
-   * @memberof PSV.components
-   */
-
-  var NavbarCaption = /*#__PURE__*/function (_AbstractComponent) {
-    _inheritsLoose(NavbarCaption, _AbstractComponent);
-
-    /**
-     * @param {PSV.components.Navbar} navbar
-     * @param {string} caption
-     */
-    function NavbarCaption(navbar, caption) {
-      var _this;
-
-      _this = _AbstractComponent.call(this, navbar, 'psv-caption') || this;
-      /**
-       * @member {PSV.buttons.CaptionButton}
-       * @readonly
-       * @private
-       */
-
-      _this.button = new CaptionButton(_assertThisInitialized(_this));
-
-      _this.button.hide();
-      /**
-       * @override
-       * @property {string} id
-       * @property {boolean} collapsable
-       * @property {number} width
-       * @property {string} caption
-       * @property {boolean} contentVisible - if the content is visible in the navbar
-       * @property {number} contentWidth - with of the caption content
-       */
-
-
-      _this.prop = _extends({}, _this.prop, {
-        id: _this.constructor.id,
-        collapsable: false,
-        width: _this.button.prop.width,
-        caption: '',
-        contentVisible: true,
-        contentWidth: 0
-      });
-      /**
-       * @member {HTMLElement}
-       * @readonly
-       * @private
-       */
-
-      _this.content = document.createElement('div');
-      _this.content.className = 'psv-caption-content';
-
-      _this.container.appendChild(_this.content);
-
-      _this.setCaption(caption);
-
-      return _this;
-    }
-    /**
-     * @override
-     */
-
-
-    var _proto = NavbarCaption.prototype;
-
-    _proto.destroy = function destroy() {
-      delete this.button;
-      delete this.content;
-
-      _AbstractComponent.prototype.destroy.call(this);
-    }
-    /**
-     * @summary Sets the bar caption
-     * @param {string} html
-     */
-    ;
-
-    _proto.setCaption = function setCaption(html) {
-      this.prop.caption = html || '';
-      this.content.innerHTML = this.prop.caption;
-
-      if (html) {
-        this.show(false);
-        this.content.style.display = '';
-        this.prop.contentWidth = this.content.offsetWidth;
-        this.refreshUi();
-      } else {
-        this.hide();
-      }
-    }
-    /**
-     * @summary Toggles content and icon depending on available space
-     * @private
-     */
-    ;
-
-    _proto.refreshUi = function refreshUi() {
-      var availableWidth = this.container.offsetWidth;
-
-      if (availableWidth >= this.prop.contentWidth && !this.prop.contentVisible) {
-        this.content.style.display = '';
-        this.prop.contentVisible = true;
-        this.button.hide(false);
-      } else if (availableWidth < this.prop.contentWidth && this.prop.contentVisible) {
-        this.content.style.display = 'none';
-        this.prop.contentVisible = false;
-        this.button.show(false);
-      }
-    };
-
-    return NavbarCaption;
-  }(AbstractComponent);
-  NavbarCaption.id = 'caption';
-
   /**
    * @summary List of available buttons
    * @type {Object<string, Class<PSV.buttons.AbstractButton>>}
@@ -4532,6 +5180,13 @@
    */
 
   var AVAILABLE_BUTTONS = {};
+  /**
+   * @summary List of available buttons
+   * @type {Object<string, Array<Class<PSV.buttons.AbstractButton>>>}
+   * @private
+   */
+
+  var AVAILABLE_GROUPS = {};
   /**
    * @summary Register a new button available for all viewers
    * @param {Class<PSV.buttons.AbstractButton>} button
@@ -4546,6 +5201,11 @@
     }
 
     AVAILABLE_BUTTONS[button.id] = button;
+
+    if (button.groupId) {
+      AVAILABLE_GROUPS[button.groupId] = AVAILABLE_GROUPS[button.groupId] || [];
+      AVAILABLE_GROUPS[button.groupId].push(button);
+    }
 
     if (typeof defaultPosition === 'string') {
       switch (defaultPosition) {
@@ -4566,7 +5226,7 @@
       }
     }
   }
-  [AutorotateButton, ZoomInButton, ZoomRangeButton, ZoomOutButton, DownloadButton, FullscreenButton, MoveRightButton, MoveLeftButton, MoveUpButton, MoveDownButton].forEach(registerButton);
+  [AutorotateButton, ZoomOutButton, ZoomRangeButton, ZoomInButton, DescriptionButton, DownloadButton, FullscreenButton, MoveLeftButton, MoveRightButton, MoveUpButton, MoveDownButton].forEach(registerButton);
   /**
    * @summary Navigation bar component
    * @extends PSV.components.AbstractComponent
@@ -4615,29 +5275,31 @@
         return item.destroy();
       });
       this.children.length = 0;
+
+      var cleanedButtons = this.__cleanButtons(buttons); // force description button if caption is present (used on narrow screens)
+
+
+      if (cleanedButtons.indexOf(NavbarCaption.id) !== -1 && cleanedButtons.indexOf(DescriptionButton.id) === -1) {
+        cleanedButtons.splice(cleanedButtons.indexOf(NavbarCaption.id), 0, DescriptionButton.id);
+      }
       /* eslint-disable no-new */
 
-      this.__cleanButtons(buttons).forEach(function (button) {
+
+      cleanedButtons.forEach(function (button) {
         if (typeof button === 'object') {
           new CustomButton(_this2, button);
         } else if (AVAILABLE_BUTTONS[button]) {
           new AVAILABLE_BUTTONS[button](_this2);
-        } else if (button === 'caption') {
+        } else if (AVAILABLE_GROUPS[button]) {
+          AVAILABLE_GROUPS[button].forEach(function (buttonCtor) {
+            return new buttonCtor(_this2);
+          }); // eslint-disable-line new-cap
+        } else if (button === NavbarCaption.id) {
           new NavbarCaption(_this2, _this2.psv.config.caption);
-        } else if (button === 'zoom') {
-          new ZoomOutButton(_this2);
-          new ZoomRangeButton(_this2);
-          new ZoomInButton(_this2);
-        } else if (button === 'move') {
-          new MoveLeftButton(_this2);
-          new MoveRightButton(_this2);
-          new MoveUpButton(_this2);
-          new MoveDownButton(_this2);
         } else {
           throw new PSVError('Unknown button ' + button);
         }
       });
-
       new MenuButton(this);
       /* eslint-enable no-new */
 
@@ -4654,7 +5316,7 @@
     ;
 
     _proto.setCaption = function setCaption(html) {
-      var caption = this.getButton('caption', false);
+      var caption = this.getButton(NavbarCaption.id, false);
       caption == null ? void 0 : caption.setCaption(html);
     }
     /**
@@ -4922,6 +5584,7 @@
 
       _this.prop = _extends({}, _this.prop, {
         visible: false,
+        contentId: undefined,
         timeout: null
       });
       /**
@@ -4955,8 +5618,28 @@
       _AbstractComponent.prototype.destroy.call(this);
     }
     /**
+     * @override
+     * @param {string} [id]
+     */
+    ;
+
+    _proto.isVisible = function isVisible(id) {
+      return this.prop.visible && (!id || !this.prop.contentId || this.prop.contentId === id);
+    }
+    /**
+     * @override
+     * @summary This method is not supported
+     * @throws {PSV.PSVError} always
+     */
+    ;
+
+    _proto.toggle = function toggle() {
+      throw new PSVError('Notification cannot be toggled');
+    }
+    /**
      * @summary Displays a notification on the viewer
      * @param {Object|string} config
+     * @param {string} [config.id] - unique identifier to use with "hide"
      * @param {string} config.content
      * @param {number} [config.timeout]
      * @fires PSV.show-notification
@@ -4982,28 +5665,32 @@
         };
       }
 
+      this.prop.contentId = config.id;
       this.content.innerHTML = config.content;
-      this.prop.visible = true;
       this.container.classList.add('psv-notification--visible');
-      this.psv.trigger(EVENTS.SHOW_NOTIFICATION);
+      this.prop.visible = true;
+      this.psv.trigger(EVENTS.SHOW_NOTIFICATION, config.id);
 
       if (config.timeout) {
         this.prop.timeout = setTimeout(function () {
-          return _this2.hide();
+          return _this2.hide(config.id);
         }, config.timeout);
       }
     }
     /**
      * @summary Hides the notification
+     * @param {string} [id]
      * @fires PSV.hide-notification
      */
     ;
 
-    _proto.hide = function hide() {
-      if (this.prop.visible) {
+    _proto.hide = function hide(id) {
+      if (this.isVisible(id)) {
+        var contentId = this.prop.contentId;
         this.container.classList.remove('psv-notification--visible');
         this.prop.visible = false;
-        this.psv.trigger(EVENTS.HIDE_NOTIFICATION);
+        this.prop.contentId = undefined;
+        this.psv.trigger(EVENTS.HIDE_NOTIFICATION, contentId);
       }
     };
 
@@ -5072,9 +5759,9 @@
 
       _this.container.appendChild(_this.subtext);
 
-      _this.container.addEventListener('mouseup', _assertThisInitialized(_this));
+      _this.psv.on(EVENTS.CLICK, _assertThisInitialized(_this));
 
-      document.addEventListener('keydown', _assertThisInitialized(_this));
+      _this.psv.on(EVENTS.KEY_PRESS, _assertThisInitialized(_this));
 
       _AbstractComponent.prototype.hide.call(_assertThisInitialized(_this));
 
@@ -5088,7 +5775,8 @@
     var _proto = Overlay.prototype;
 
     _proto.destroy = function destroy() {
-      document.removeEventListener('keydown', this);
+      this.psv.off(EVENTS.CLICK, this);
+      this.psv.off(EVENTS.KEY_PRESS, this);
       delete this.image;
       delete this.text;
       delete this.subtext;
@@ -5105,15 +5793,21 @@
     _proto.handleEvent = function handleEvent(e) {
       /* eslint-disable */
       switch (e.type) {
-        // @formatter:off
-        case 'mouseup':
-          this.prop.dissmisable && this.hide();
+        case EVENTS.CLICK:
+          if (this.isVisible() && this.prop.dissmisable) {
+            this.hide();
+            e.stopPropagation();
+          }
+
           break;
 
-        case 'keydown':
-          getEventKey(e) === KEY_CODES.Escape && this.prop.dissmisable && this.hide();
+        case EVENTS.KEY_PRESS:
+          if (this.isVisible() && this.prop.dissmisable && e.args[0] === KEY_CODES.Escape) {
+            this.hide();
+            e.preventDefault();
+          }
+
           break;
-        // @formatter:on
       }
       /* eslint-enable */
 
@@ -5174,7 +5868,7 @@
     ;
 
     _proto.hide = function hide(id) {
-      if (this.isVisible() && (!id || !this.prop.contentId || this.prop.contentId === id)) {
+      if (this.isVisible(id)) {
         var contentId = this.prop.contentId;
 
         _AbstractComponent.prototype.hide.call(this);
@@ -5273,7 +5967,8 @@
 
       _this.psv.container.addEventListener('touchmove', _assertThisInitialized(_this));
 
-      document.addEventListener('keydown', _assertThisInitialized(_this));
+      _this.psv.on(EVENTS.KEY_PRESS, _assertThisInitialized(_this));
+
       return _this;
     }
     /**
@@ -5284,11 +5979,11 @@
     var _proto = Panel.prototype;
 
     _proto.destroy = function destroy() {
+      this.psv.off(EVENTS.KEY_PRESS, this);
       this.psv.container.removeEventListener('mousemove', this);
       this.psv.container.removeEventListener('touchmove', this);
       this.psv.container.removeEventListener('mouseup', this);
       this.psv.container.removeEventListener('touchend', this);
-      document.removeEventListener('keydown', this);
       delete this.prop;
       delete this.content;
 
@@ -5335,8 +6030,12 @@
 
           break;
 
-        case 'keydown':
-          getEventKey(e) === KEY_CODES.Escape && this.hide();
+        case EVENTS.KEY_PRESS:
+          if (this.isVisible() && e.args[0] === KEY_CODES.Escape) {
+            this.hide();
+            e.preventDefault();
+          }
+
           break;
         // @formatter:on
       }
@@ -5412,7 +6111,7 @@
         this.prop.clickHandler = config.clickHandler;
 
         this.prop.keyHandler = function (e) {
-          if (getEventKey(e) === KEY_CODES.Enter) {
+          if (e.key === KEY_CODES.Enter) {
             config.clickHandler(e);
           }
         };
@@ -6115,16 +6814,14 @@
     }
     /**
      * @summary Handles keyboard events
-     * @param {KeyboardEvent} evt
+     * @param {KeyboardEvent} e
      * @private
      */
     ;
 
-    _proto.__onKeyDown = function __onKeyDown(evt) {
-      var key = getEventKey(evt);
-
+    _proto.__onKeyDown = function __onKeyDown(e) {
       if (this.config.mousewheelCtrlKey) {
-        this.state.ctrlKeyDown = key === KEY_CODES.Control;
+        this.state.ctrlKeyDown = e.key === KEY_CODES.Control;
 
         if (this.state.ctrlKeyDown) {
           clearTimeout(this.state.ctrlZoomTimeout);
@@ -6132,15 +6829,21 @@
         }
       }
 
+      var e2 = this.psv.trigger(EVENTS.KEY_PRESS, e.key);
+
+      if (e2.isDefaultPrevented()) {
+        return;
+      }
+
       if (!this.state.keyboardEnabled) {
         return;
       }
 
-      if (this.config.keyboard[key] === ACTIONS.TOGGLE_AUTOROTATE) {
+      if (this.config.keyboard[e.key] === ACTIONS.TOGGLE_AUTOROTATE) {
         this.psv.toggleAutorotate();
-      } else if (this.config.keyboard[key] && !this.state.keyHandler.time) {
+      } else if (this.config.keyboard[e.key] && !this.state.keyHandler.time) {
         /* eslint-disable */
-        switch (this.config.keyboard[key]) {
+        switch (this.config.keyboard[e.key]) {
           // @formatter:off
           case ACTIONS.ROTATE_LAT_UP:
             this.psv.dynamics.position.roll({
@@ -6969,11 +7672,11 @@
           break;
 
         case EVENTS.CONFIG_CHANGED:
-          if (evt.args[0].indexOf('fisheye') !== -1) {
+          if (evt.args[0].includes('fisheye')) {
             this.__onPositionUpdated();
           }
 
-          if (evt.args[0].indexOf('mousemove') !== -1) {
+          if (evt.args[0].includes('mousemove')) {
             this.canvasContainer.style.cursor = this.psv.config.mousemove ? 'move' : 'default';
           }
 
@@ -7093,7 +7796,7 @@
       }
 
       this.psv.needsUpdate();
-      this.psv.trigger(EVENTS.PANORAMA_LOADED);
+      this.psv.trigger(EVENTS.PANORAMA_LOADED, textureData);
     }
     /**
      * @summary Apply a panorama data pose to a Mesh
@@ -7811,412 +8514,6 @@
     return TooltipRenderer;
   }(AbstractService);
 
-  /**
-   * @summary Represents a variable that can dynamically change with time (using requestAnimationFrame)
-   * @memberOf PSV
-   * @package
-   */
-
-  var Dynamic = /*#__PURE__*/function () {
-    /**
-     * @param {Function} [fn] Callback function
-     * @param {number} [defaultValue] Default position
-     * @param {number} [min] Minimum position
-     * @param {number} [max] Maximum position
-     */
-    function Dynamic(fn, defaultValue, min, max) {
-      if (defaultValue === void 0) {
-        defaultValue = 0;
-      }
-
-      if (min === void 0) {
-        min = -Infinity;
-      }
-
-      if (max === void 0) {
-        max = Infinity;
-      }
-
-      /**
-       * @type {Function}
-       * @private
-       * @readonly
-       */
-      this.fn = fn;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.mode = Dynamic.STOP;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.speed = 0;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.speedMult = 1;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.currentSpeed = 0;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.target = 0;
-      /**
-       * @type {number}
-       * @readonly
-       */
-
-      this.current = defaultValue;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.min = min;
-      /**
-       * @type {number}
-       * @private
-       */
-
-      this.max = max;
-
-      if (this.fn) {
-        this.fn(defaultValue);
-      }
-    }
-    /**
-     * Changes base speed
-     * @param {number} speed
-     */
-
-
-    var _proto = Dynamic.prototype;
-
-    _proto.setSpeed = function setSpeed(speed) {
-      this.speed = speed;
-    }
-    /**
-     * Defines the target position
-     * @param {number} position
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.goto = function goto(position, speedMult) {
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      this.mode = Dynamic.POSITION;
-      this.target = bound(position, this.min, this.max);
-      this.speedMult = speedMult;
-    }
-    /**
-     * Increase/decrease the target position
-     * @param {number} step
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.step = function step(_step, speedMult) {
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      if (this.mode !== Dynamic.POSITION) {
-        this.target = this.current;
-      }
-
-      this.goto(this.target + _step, speedMult);
-    }
-    /**
-     * Starts infinite movement
-     * @param {boolean} [invert=false]
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.roll = function roll(invert, speedMult) {
-      if (invert === void 0) {
-        invert = false;
-      }
-
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      this.mode = Dynamic.INFINITE;
-      this.target = invert ? -Infinity : Infinity;
-      this.speedMult = speedMult;
-    }
-    /**
-     * Stops movement
-     */
-    ;
-
-    _proto.stop = function stop() {
-      this.mode = Dynamic.STOP;
-    }
-    /**
-     * Defines the current position and immediately stops movement
-     * @param {number} values
-     */
-    ;
-
-    _proto.setValue = function setValue(values) {
-      var next = bound(values, this.min, this.max);
-      this.target = next;
-      this.mode = Dynamic.STOP;
-
-      if (next !== this.current) {
-        this.current = next;
-
-        if (this.fn) {
-          this.fn(this.current);
-        }
-
-        return true;
-      }
-
-      return false;
-    }
-    /**
-     * @package
-     */
-    ;
-
-    _proto.update = function update(elapsed) {
-      // in position mode switch to stop mode when in the decceleration window
-      if (this.mode === Dynamic.POSITION) {
-        var dstStop = this.currentSpeed * this.currentSpeed / (this.speed * this.speedMult * 4);
-
-        if (Math.abs(this.target - this.current) <= dstStop) {
-          this.mode = Dynamic.STOP;
-        }
-      } // compute speed
-
-
-      var targetSpeed = this.mode === Dynamic.STOP ? 0 : this.speed * this.speedMult;
-
-      if (this.target < this.current) {
-        targetSpeed = -targetSpeed;
-      }
-
-      if (this.currentSpeed < targetSpeed) {
-        this.currentSpeed = Math.min(targetSpeed, this.currentSpeed + elapsed / 1000 * this.speed * this.speedMult * 2);
-      } else if (this.currentSpeed > targetSpeed) {
-        this.currentSpeed = Math.max(targetSpeed, this.currentSpeed - elapsed / 1000 * this.speed * this.speedMult * 2);
-      } // compute new position
-
-
-      var next = null;
-
-      if (this.current > this.target && this.currentSpeed) {
-        next = Math.max(this.target, this.current + this.currentSpeed * elapsed / 1000);
-      } else if (this.current < this.target && this.currentSpeed) {
-        next = Math.min(this.target, this.current + this.currentSpeed * elapsed / 1000);
-      } // apply value
-
-
-      if (next !== null) {
-        next = bound(next, this.min, this.max);
-
-        if (next !== this.current) {
-          this.current = next;
-
-          if (this.fn) {
-            this.fn(this.current);
-          }
-
-          return true;
-        }
-      }
-
-      return false;
-    };
-
-    return Dynamic;
-  }();
-  Dynamic.STOP = 0;
-  Dynamic.INFINITE = 1;
-  Dynamic.POSITION = 2;
-
-  /**
-   * @summary Wrapper for multiple {@link PSV.Dynamic} evolving together
-   * @memberOf PSV
-   * @package
-   */
-
-  var MultiDynamic = /*#__PURE__*/function () {
-    /**
-     * @param {Record<string, PSV.Dynamic>} dynamics
-     * @param {Function} [fn] Callback function
-     */
-    function MultiDynamic(dynamics, fn) {
-      /**
-       * @type {Function}
-       * @private
-       * @readonly
-       */
-      this.fn = fn;
-      /**
-       * @type {Record<string, PSV.Dynamic>}
-       * @private
-       * @readonly
-       */
-
-      this.dynamics = dynamics;
-
-      if (this.fn) {
-        this.fn(this.current);
-      }
-    }
-    /**
-     * Changes base speed
-     * @param {number} speed
-     */
-
-
-    var _proto = MultiDynamic.prototype;
-
-    _proto.setSpeed = function setSpeed(speed) {
-      each(this.dynamics, function (d) {
-        d.setSpeed(speed);
-      });
-    }
-    /**
-     * Defines the target positions
-     * @param {Record<string, number>} positions
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.goto = function goto(positions, speedMult) {
-      var _this = this;
-
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      each(positions, function (position, name) {
-        _this.dynamics[name].goto(position, speedMult);
-      });
-    }
-    /**
-     * Increase/decrease the target positions
-     * @param {Record<string, number>} steps
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.step = function step(steps, speedMult) {
-      var _this2 = this;
-
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      each(steps, function (step, name) {
-        _this2.dynamics[name].step(step, speedMult);
-      });
-    }
-    /**
-     * Starts infinite movements
-     * @param {Record<string, boolean>} rolls
-     * @param {number} [speedMult=1]
-     */
-    ;
-
-    _proto.roll = function roll(rolls, speedMult) {
-      var _this3 = this;
-
-      if (speedMult === void 0) {
-        speedMult = 1;
-      }
-
-      each(rolls, function (roll, name) {
-        _this3.dynamics[name].roll(roll, speedMult);
-      });
-    }
-    /**
-     * Stops movements
-     */
-    ;
-
-    _proto.stop = function stop() {
-      each(this.dynamics, function (d) {
-        return d.stop();
-      });
-    }
-    /**
-     * Defines the current positions and immediately stops movements
-     * @param {Record<string, number>} values
-     */
-    ;
-
-    _proto.setValue = function setValue(values) {
-      var _this4 = this;
-
-      var hasUpdates = false;
-      each(values, function (value, name) {
-        hasUpdates |= _this4.dynamics[name].setValue(value);
-      });
-
-      if (hasUpdates && this.fn) {
-        this.fn(this.current);
-      }
-
-      return hasUpdates;
-    }
-    /**
-     * @package
-     */
-    ;
-
-    _proto.update = function update(elapsed) {
-      var hasUpdates = false;
-      each(this.dynamics, function (dynamic) {
-        hasUpdates |= dynamic.update(elapsed);
-      });
-
-      if (hasUpdates && this.fn) {
-        this.fn(this.current);
-      }
-
-      return hasUpdates;
-    };
-
-    _createClass(MultiDynamic, [{
-      key: "current",
-      get:
-      /**
-       * @type {Object<string, number>}
-       * @readonly
-       */
-      function get() {
-        var values = {};
-        each(this.dynamics, function (dynamic, name) {
-          values[name] = dynamic.current;
-        });
-        return values;
-      }
-    }]);
-
-    return MultiDynamic;
-  }();
-
   THREE.Cache.enabled = true;
   /**
    * @summary Main class
@@ -8410,7 +8707,7 @@
 
       _this.overlay = new Overlay(_assertThisInitialized(_this));
       /**
-       * @member {Record<string, PSV.Dynamic>}
+       * @member {Record<string, PSV.utils.Dynamic>}
        * @package
        */
 
@@ -8422,12 +8719,12 @@
           _this.trigger(EVENTS.ZOOM_UPDATED, value);
         }, _this.config.defaultZoomLvl, 0, 100),
         position: new MultiDynamic({
-          longitude: new Dynamic(null, _this.config.defaultLong),
+          longitude: new Dynamic(null, _this.config.defaultLong, 0, 2 * Math.PI, true),
           latitude: new Dynamic(null, _this.config.defaultLat, -Math.PI / 2, Math.PI / 2)
         }, function (position) {
           _this.dataHelper.sphericalCoordsToVector3(position, _this.prop.direction);
 
-          _this.trigger(EVENTS.POSITION_UPDATED, _this.dataHelper.cleanPosition(position));
+          _this.trigger(EVENTS.POSITION_UPDATED, position);
         })
       };
 
@@ -8689,6 +8986,10 @@
         options.caption = this.config.caption;
       }
 
+      if (options.description === undefined) {
+        options.description = this.config.description;
+      }
+
       var positionProvided = isExtendedPosition(options);
       var zoomProvided = ('zoom' in options);
 
@@ -8699,6 +9000,7 @@
       this.hideError();
       this.config.panorama = path;
       this.config.caption = options.caption;
+      this.config.description = options.description;
 
       var done = function done(err) {
         _this3.loader.hide();
@@ -8806,7 +9108,8 @@
 
         switch (key) {
           case 'caption':
-            _this4.navbar.setCaption(value);
+          case 'description':
+            _this4.navbar.setCaption(_this4.config.caption);
 
             break;
 
@@ -9228,6 +9531,7 @@
 
   exports.AbstractAdapter = AbstractAdapter;
   exports.AbstractButton = AbstractButton;
+  exports.AbstractComponent = AbstractComponent;
   exports.AbstractPlugin = AbstractPlugin;
   exports.Animation = Animation;
   exports.CONSTANTS = constants;

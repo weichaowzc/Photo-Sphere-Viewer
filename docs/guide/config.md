@@ -23,15 +23,15 @@ container: document.querySelector('.viewer')
 container: 'viewer' // will target [id="viewer"]
 ```
 
-#### `adapter`
-- default: `equirectangular`
-
-Which [adapter](./adapters) used to load the panorama.
-
 #### `panorama` (required)
 - type: `*`
 
 Path to the panorama. Must be a single URL for the default equirectangular adapter. Other adapters support other values.
+
+#### `adapter`
+- default: `equirectangular`
+
+Which [adapter](./adapters) used to load the panorama.
 
 #### `plugins`
 - type: `array`
@@ -41,7 +41,12 @@ List of enabled [plugins](../plugins/README.md).
 #### `caption`
 - type: `string`
 
-A text displayed in the navbar. If the navbar is disabled it will be shown anyway but with no button. HTML is allowed.
+A text displayed in the navbar. If the navbar is disabled, the caption won't be visible. HTML is allowed.
+
+#### `description`
+- type: `string`
+
+A text displayed in the side panel when the user clicks the "i" button. HTML is allowed.
 
 #### `downloadUrl`
 - type: `string`
@@ -189,7 +194,7 @@ Allows to rotate the panorama sphere. Angles are in radians.
 
 **Note** : if the XMP data and/or `panoData` contains heading/pitch/roll data, they will be applied before `sphereCorrection`.
 
-![pan-tilt-toll](/assets//pan-tilt-roll.png)
+![pan-tilt-toll](/assets/pan-tilt-roll.png)
 
 #### `moveSpeed`
 - type: `double`
@@ -243,6 +248,10 @@ panoData: (image) => ({
 ```
 
 **Note** : if the XMP data and/or `panoData` contains heading/pitch/roll data, they will be applied before `sphereCorrection`.
+
+::: warning
+Only the default `equirectangular` adapter supports `panoData`, for other adapters you can only use [`sphereCorrection`](#spherecorrection) if the tilt/roll/pan needs to be corrected.
+:::
 
 #### `requestHeaders`
 - type: `object | function<string, object>`

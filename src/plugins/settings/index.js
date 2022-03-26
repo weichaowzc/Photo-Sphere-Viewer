@@ -62,6 +62,8 @@ export class SettingsPlugin extends AbstractPlugin {
 
   static id = 'settings';
 
+  static EVENTS = EVENTS;
+
   /**
    * @param {PSV.Viewer} psv
    */
@@ -89,7 +91,7 @@ export class SettingsPlugin extends AbstractPlugin {
    * @package
    */
   destroy() {
-    delete this.settings;
+    this.settings.length = 0;
 
     super.destroy();
   }
@@ -127,15 +129,7 @@ export class SettingsPlugin extends AbstractPlugin {
    * @param {string} id
    */
   removeSetting(id) {
-    let idx = -1;
-    // FIXME use findIndex, one day, when IE11 is totally dead
-    this.settings.some((setting, i) => {
-      if (setting.id === id) {
-        idx = i;
-        return true;
-      }
-      return false;
-    });
+    const idx = this.settings.findIndex(setting => setting.id === id);
     if (idx !== -1) {
       this.settings.splice(idx, 1);
 
@@ -174,7 +168,6 @@ export class SettingsPlugin extends AbstractPlugin {
       id          : ID_PANEL,
       content     : SETTINGS_TEMPLATE(
         this.settings,
-        this.psv.config.lang[SettingsButton.id],
         utils.dasherize(SETTING_DATA),
         (setting) => { // retrocompatibility with "current" returning a label
           const current = setting.current();
@@ -221,7 +214,6 @@ export class SettingsPlugin extends AbstractPlugin {
       id          : ID_PANEL,
       content     : SETTING_OPTIONS_TEMPLATE(
         setting,
-        this.psv.config.lang[SettingsButton.id],
         utils.dasherize(SETTING_DATA),
         (option) => { // retrocompatibility with options having an "active" flag
           return 'active' in option ? option.active : option.id === current;

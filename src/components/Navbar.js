@@ -1,5 +1,6 @@
 import { AutorotateButton } from '../buttons/AutorotateButton';
 import { CustomButton } from '../buttons/CustomButton';
+import { DescriptionButton } from '../buttons/DescriptionButton';
 import { DownloadButton } from '../buttons/DownloadButton';
 import { FullscreenButton } from '../buttons/FullscreenButton';
 import { MenuButton } from '../buttons/MenuButton';
@@ -24,6 +25,13 @@ import { NavbarCaption } from './NavbarCaption';
 const AVAILABLE_BUTTONS = {};
 
 /**
+ * @summary List of available buttons
+ * @type {Object<string, Array<Class<PSV.buttons.AbstractButton>>>}
+ * @private
+ */
+const AVAILABLE_GROUPS = {};
+
+/**
  * @summary Register a new button available for all viewers
  * @param {Class<PSV.buttons.AbstractButton>} button
  * @param {'start' | 'end' | '[id]:left' | '[id]:right'} [defaultPosition]
@@ -36,6 +44,11 @@ export function registerButton(button, defaultPosition) {
   }
 
   AVAILABLE_BUTTONS[button.id] = button;
+
+  if (button.groupId) {
+    AVAILABLE_GROUPS[button.groupId] = AVAILABLE_GROUPS[button.groupId] || [];
+    AVAILABLE_GROUPS[button.groupId].push(button);
+  }
 
   if (typeof defaultPosition === 'string') {
     switch (defaultPosition) {
@@ -54,13 +67,14 @@ export function registerButton(button, defaultPosition) {
 
 [
   AutorotateButton,
-  ZoomInButton,
-  ZoomRangeButton,
   ZoomOutButton,
+  ZoomRangeButton,
+  ZoomInButton,
+  DescriptionButton,
   DownloadButton,
   FullscreenButton,
-  MoveRightButton,
   MoveLeftButton,
+  MoveRightButton,
   MoveUpButton,
   MoveDownButton,
 ].forEach(registerButton);
@@ -102,27 +116,26 @@ export class Navbar extends AbstractComponent {
     this.children.slice().forEach(item => item.destroy());
     this.children.length = 0;
 
+    const cleanedButtons = this.__cleanButtons(buttons);
+
+    // force description button if caption is present (used on narrow screens)
+    if (cleanedButtons.indexOf(NavbarCaption.id) !== -1 && cleanedButtons.indexOf(DescriptionButton.id) === -1) {
+      cleanedButtons.splice(cleanedButtons.indexOf(NavbarCaption.id), 0, DescriptionButton.id);
+    }
+
     /* eslint-disable no-new */
-    this.__cleanButtons(buttons).forEach((button) => {
+    cleanedButtons.forEach((button) => {
       if (typeof button === 'object') {
         new CustomButton(this, button);
       }
       else if (AVAILABLE_BUTTONS[button]) {
         new AVAILABLE_BUTTONS[button](this);
       }
-      else if (button === 'caption') {
+      else if (AVAILABLE_GROUPS[button]) {
+        AVAILABLE_GROUPS[button].forEach(buttonCtor => new buttonCtor(this)); // eslint-disable-line new-cap
+      }
+      else if (button === NavbarCaption.id) {
         new NavbarCaption(this, this.psv.config.caption);
-      }
-      else if (button === 'zoom') {
-        new ZoomOutButton(this);
-        new ZoomRangeButton(this);
-        new ZoomInButton(this);
-      }
-      else if (button === 'move') {
-        new MoveLeftButton(this);
-        new MoveRightButton(this);
-        new MoveUpButton(this);
-        new MoveDownButton(this);
       }
       else {
         throw new PSVError('Unknown button ' + button);
@@ -144,7 +157,7 @@ export class Navbar extends AbstractComponent {
    * @param {string} html
    */
   setCaption(html) {
-    const caption = this.getButton('caption', false);
+    const caption = this.getButton(NavbarCaption.id, false);
     caption?.setCaption(html);
   }
 

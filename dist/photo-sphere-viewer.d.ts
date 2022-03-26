@@ -1,4 +1,4 @@
-import { Texture, Vector3, Euler, Mesh, Intersection } from 'three';
+import { Texture, Vector3, Euler, Intersection, Mesh } from 'three';
 import { EventEmitter, Event } from 'uevent';
 
 /**
@@ -161,11 +161,6 @@ declare function hasParent(el: HTMLElement, parent: HTMLElement): boolean;
 declare function getClosest(el: HTMLElement | SVGElement, selector: string): HTMLElement;
 
 /**
- * @summary Returns the key name of a KeyboardEvent
- */
-declare function getEventKey(evt: KeyboardEvent): string;
-
-/**
  * @summary Detects if fullscreen is enabled
  */
 declare function isFullscreenEnabled(elt: HTMLElement): boolean;
@@ -269,6 +264,7 @@ type PanoDataProvider = (image: HTMLImageElement) => PanoData;
  */
 type PanoramaOptions = (ExtendedPosition | {}) & {
   caption?: string;
+  description?: string;
   transition?: boolean | number;
   showLoader?: boolean;
   zoom?: number;
@@ -465,148 +461,6 @@ declare function createTexture(img: HTMLImageElement | HTMLCanvasElement): Textu
  */
 declare function applyEulerInverse(vector: Vector3, euler: Euler);
 
-declare const index_d_toggleClass: typeof toggleClass;
-declare const index_d_addClasses: typeof addClasses;
-declare const index_d_removeClasses: typeof removeClasses;
-declare const index_d_hasParent: typeof hasParent;
-declare const index_d_getClosest: typeof getClosest;
-declare const index_d_getEventKey: typeof getEventKey;
-declare const index_d_isFullscreenEnabled: typeof isFullscreenEnabled;
-declare const index_d_requestFullscreen: typeof requestFullscreen;
-declare const index_d_exitFullscreen: typeof exitFullscreen;
-declare const index_d_getStyle: typeof getStyle;
-declare const index_d_normalizeWheel: typeof normalizeWheel;
-declare const index_d_bound: typeof bound;
-declare const index_d_isInteger: typeof isInteger;
-declare const index_d_sum: typeof sum;
-declare const index_d_distance: typeof distance;
-declare const index_d_getShortestArc: typeof getShortestArc;
-declare const index_d_getAngle: typeof getAngle;
-declare const index_d_greatArcDistance: typeof greatArcDistance;
-declare const index_d_dasherize: typeof dasherize;
-declare const index_d_throttle: typeof throttle;
-declare const index_d_isPlainObject: typeof isPlainObject;
-declare const index_d_deepmerge: typeof deepmerge;
-declare const index_d_clone: typeof clone;
-declare const index_d_isEmpty: typeof isEmpty;
-declare const index_d_each: typeof each;
-declare const index_d_intersect: typeof intersect;
-declare const index_d_isNil: typeof isNil;
-declare const index_d_firstNonNull: typeof firstNonNull;
-declare const index_d_logWarn: typeof logWarn;
-declare const index_d_isExtendedPosition: typeof isExtendedPosition;
-declare const index_d_getXMPValue: typeof getXMPValue;
-declare const index_d_parsePosition: typeof parsePosition;
-declare const index_d_cleanPosition: typeof cleanPosition;
-declare const index_d_parseSpeed: typeof parseSpeed;
-declare const index_d_parseAngle: typeof parseAngle;
-declare const index_d_createTexture: typeof createTexture;
-declare const index_d_applyEulerInverse: typeof applyEulerInverse;
-declare namespace index_d {
-  export {
-    index_d_toggleClass as toggleClass,
-    index_d_addClasses as addClasses,
-    index_d_removeClasses as removeClasses,
-    index_d_hasParent as hasParent,
-    index_d_getClosest as getClosest,
-    index_d_getEventKey as getEventKey,
-    index_d_isFullscreenEnabled as isFullscreenEnabled,
-    index_d_requestFullscreen as requestFullscreen,
-    index_d_exitFullscreen as exitFullscreen,
-    index_d_getStyle as getStyle,
-    index_d_normalizeWheel as normalizeWheel,
-    index_d_bound as bound,
-    index_d_isInteger as isInteger,
-    index_d_sum as sum,
-    index_d_distance as distance,
-    index_d_getShortestArc as getShortestArc,
-    index_d_getAngle as getAngle,
-    index_d_greatArcDistance as greatArcDistance,
-    index_d_dasherize as dasherize,
-    index_d_throttle as throttle,
-    index_d_isPlainObject as isPlainObject,
-    index_d_deepmerge as deepmerge,
-    index_d_clone as clone,
-    index_d_isEmpty as isEmpty,
-    index_d_each as each,
-    index_d_intersect as intersect,
-    index_d_isNil as isNil,
-    index_d_firstNonNull as firstNonNull,
-    index_d_logWarn as logWarn,
-    index_d_isExtendedPosition as isExtendedPosition,
-    index_d_getXMPValue as getXMPValue,
-    index_d_parsePosition as parsePosition,
-    index_d_cleanPosition as cleanPosition,
-    index_d_parseSpeed as parseSpeed,
-    index_d_parseAngle as parseAngle,
-    index_d_createTexture as createTexture,
-    index_d_applyEulerInverse as applyEulerInverse,
-  };
-}
-
-/**
- * @summary Base adapters class
- * @template T type of the panorama configuration object
- */
-declare abstract class AbstractAdapter<T> {
-
-  /**
-   * @summary Unique identifier of the adapter
-   */
-  static id: string;
-
-  /**
-   * @summary Indicates if the adapter supports panorama download natively
-   */
-  static supportsDownload: boolean;
-
-  constructor(parent: Viewer);
-
-  /**
-   * @summary Destroys the adapter
-   */
-  destroy();
-
-  /**
-   * @summary Indicates if the adapter supports transitions between panoramas
-   */
-  supportsTransition(panorama: T): boolean;
-
-  /**
-   * @summary Indicates if the adapter supports preload of a panorama
-   */
-  supportsPreload(panorama: T): boolean;
-
-  /**
-   * @summary Loads the panorama texture(s)
-   */
-  loadTexture(panorama: T, newPanoData?: PanoData | PanoDataProvider): Promise<TextureData>;
-
-  /**
-   * @summary Creates the cube mesh
-   * @param {number} [scale=1]
-   */
-  createMesh(scale?: number): Mesh;
-
-  /**
-   * @summary Applies the texture to the mesh
-   */
-  setTexture(mesh: Mesh, textureData: TextureData, transition?: boolean);
-
-  /**
-   * @summary Changes the opacity of the mesh
-   */
-  setTextureOpacity(mesh: Mesh, opacity: number);
-
-  /**
-   * @abstract
-   */
-  disposeTexture(textureData: TextureData);
-
-}
-
-type AdapterConstructor<T extends AbstractAdapter<any>> = new (psv: Viewer, options?: any) => T;
-
 type AnimationOptions<T> = {
   properties: { [key in keyof T]: { start: number, end: number } };
   duration: number;
@@ -649,6 +503,88 @@ declare class Animation<T> implements PromiseLike<boolean> {
    */
   static resolve(): Animation<unknown>;
 
+}
+
+declare const index_d_toggleClass: typeof toggleClass;
+declare const index_d_addClasses: typeof addClasses;
+declare const index_d_removeClasses: typeof removeClasses;
+declare const index_d_hasParent: typeof hasParent;
+declare const index_d_getClosest: typeof getClosest;
+declare const index_d_isFullscreenEnabled: typeof isFullscreenEnabled;
+declare const index_d_requestFullscreen: typeof requestFullscreen;
+declare const index_d_exitFullscreen: typeof exitFullscreen;
+declare const index_d_getStyle: typeof getStyle;
+declare const index_d_normalizeWheel: typeof normalizeWheel;
+declare const index_d_bound: typeof bound;
+declare const index_d_isInteger: typeof isInteger;
+declare const index_d_sum: typeof sum;
+declare const index_d_distance: typeof distance;
+declare const index_d_getShortestArc: typeof getShortestArc;
+declare const index_d_getAngle: typeof getAngle;
+declare const index_d_greatArcDistance: typeof greatArcDistance;
+declare const index_d_dasherize: typeof dasherize;
+declare const index_d_throttle: typeof throttle;
+declare const index_d_isPlainObject: typeof isPlainObject;
+declare const index_d_deepmerge: typeof deepmerge;
+declare const index_d_clone: typeof clone;
+declare const index_d_isEmpty: typeof isEmpty;
+declare const index_d_each: typeof each;
+declare const index_d_intersect: typeof intersect;
+declare const index_d_isNil: typeof isNil;
+declare const index_d_firstNonNull: typeof firstNonNull;
+declare const index_d_logWarn: typeof logWarn;
+declare const index_d_isExtendedPosition: typeof isExtendedPosition;
+declare const index_d_getXMPValue: typeof getXMPValue;
+declare const index_d_parsePosition: typeof parsePosition;
+declare const index_d_cleanPosition: typeof cleanPosition;
+declare const index_d_parseSpeed: typeof parseSpeed;
+declare const index_d_parseAngle: typeof parseAngle;
+declare const index_d_createTexture: typeof createTexture;
+declare const index_d_applyEulerInverse: typeof applyEulerInverse;
+type index_d_AnimationOptions<T> = AnimationOptions<T>;
+type index_d_Animation<T> = Animation<T>;
+declare const index_d_Animation: typeof Animation;
+declare namespace index_d {
+  export {
+    index_d_toggleClass as toggleClass,
+    index_d_addClasses as addClasses,
+    index_d_removeClasses as removeClasses,
+    index_d_hasParent as hasParent,
+    index_d_getClosest as getClosest,
+    index_d_isFullscreenEnabled as isFullscreenEnabled,
+    index_d_requestFullscreen as requestFullscreen,
+    index_d_exitFullscreen as exitFullscreen,
+    index_d_getStyle as getStyle,
+    index_d_normalizeWheel as normalizeWheel,
+    index_d_bound as bound,
+    index_d_isInteger as isInteger,
+    index_d_sum as sum,
+    index_d_distance as distance,
+    index_d_getShortestArc as getShortestArc,
+    index_d_getAngle as getAngle,
+    index_d_greatArcDistance as greatArcDistance,
+    index_d_dasherize as dasherize,
+    index_d_throttle as throttle,
+    index_d_isPlainObject as isPlainObject,
+    index_d_deepmerge as deepmerge,
+    index_d_clone as clone,
+    index_d_isEmpty as isEmpty,
+    index_d_each as each,
+    index_d_intersect as intersect,
+    index_d_isNil as isNil,
+    index_d_firstNonNull as firstNonNull,
+    index_d_logWarn as logWarn,
+    index_d_isExtendedPosition as isExtendedPosition,
+    index_d_getXMPValue as getXMPValue,
+    index_d_parsePosition as parsePosition,
+    index_d_cleanPosition as cleanPosition,
+    index_d_parseSpeed as parseSpeed,
+    index_d_parseAngle as parseAngle,
+    index_d_createTexture as createTexture,
+    index_d_applyEulerInverse as applyEulerInverse,
+    index_d_AnimationOptions as AnimationOptions,
+    index_d_Animation as Animation,
+  };
 }
 
 /**
@@ -702,6 +638,11 @@ declare abstract class AbstractButton extends AbstractComponent {
    * @summary Unique identifier of the button
    */
   static id: string;
+
+  /**
+   * @summary Identifier to declare a group of buttons
+   */
+  static groupId?: string;
 
   /**
    * @summary SVG icon name injected in the button
@@ -780,6 +721,7 @@ declare class Navbar extends AbstractComponent {
 }
 
 type NotificationOptions = {
+  id?: string;
   content: string;
   timeout?: number;
 };
@@ -1025,6 +967,7 @@ type ViewerOptions = {
   panorama?: any;
   adapter?: AdapterConstructor<any> | [AdapterConstructor<any>, any];
   caption?: string;
+  description?: string;
   downloadUrl?: string;
   loadingImg?: string;
   loadingTxt?: string;
@@ -1331,7 +1274,7 @@ declare class Viewer extends EventEmitter {
   /**
    * @summary Triggered when the notification is hidden
    */
-  on(e: 'hide-notification', cb: (e: Event) => void): this;
+  on(e: 'hide-notification', cb: (e: Event, id: string | undefined) => void): this;
   /**
    * @summary Triggered when the overlay is hidden
    */
@@ -1340,6 +1283,10 @@ declare class Viewer extends EventEmitter {
    * @summary Triggered when the tooltip is hidden
    */
   on(e: 'hide-tooltip', cb: (e: Event, data: any) => void): this;
+  /**
+   * @summary Triggered when a key is pressed, can be cancelled
+   */
+  on(e: 'key-press', cb: (e: Event, key: string) => void): this;
   /**
    * @summary Triggered when the loader value changes
    */
@@ -1351,7 +1298,7 @@ declare class Viewer extends EventEmitter {
   /**
    * @summary Triggered when a panorama image has been loaded
    */
-  on(e: 'panorama-loaded', cb: (e: Event) => void): this;
+  on(e: 'panorama-loaded', cb: (e: Event, textureData: TextureData) => void): this;
   /**
    * @summary Triggered when the view longitude and/or latitude changes
    */
@@ -1363,7 +1310,7 @@ declare class Viewer extends EventEmitter {
   /**
    * @summary Trigered when the notification is shown
    */
-  on(e: 'show-notification', cb: (e: Event) => void): this;
+  on(e: 'show-notification', cb: (e: Event, id: string | undefined) => void): this;
   /**
    * @summary Trigered when the overlay is shown
    */
@@ -1388,6 +1335,82 @@ declare class Viewer extends EventEmitter {
 }
 
 /**
+ * @summary Base adapters class
+ * @template T type of the panorama configuration object
+ */
+declare abstract class AbstractAdapter<T> {
+
+  /**
+   * @summary Unique identifier of the adapter
+   */
+  static id: string;
+
+  /**
+   * @summary Indicates if the adapter supports panorama download natively
+   */
+  static supportsDownload: boolean;
+
+  constructor(parent: Viewer);
+
+  /**
+   * @summary Destroys the adapter
+   */
+  destroy();
+
+  /**
+   * @summary Indicates if the adapter supports transitions between panoramas
+   */
+  supportsTransition(panorama: T): boolean;
+
+  /**
+   * @summary Indicates if the adapter supports preload of a panorama
+   */
+  supportsPreload(panorama: T): boolean;
+
+  /**
+   * @summary Loads the panorama texture(s)
+   */
+  loadTexture(panorama: T, newPanoData?: PanoData | PanoDataProvider): Promise<TextureData>;
+
+  /**
+   * @summary Creates the cube mesh
+   * @param {number} [scale=1]
+   */
+  createMesh(scale?: number): Mesh;
+
+  /**
+   * @summary Applies the texture to the mesh
+   */
+  setTexture(mesh: Mesh, textureData: TextureData, transition?: boolean);
+
+  /**
+   * @summary Changes the opacity of the mesh
+   */
+  setTextureOpacity(mesh: Mesh, opacity: number);
+
+  /**
+   * @summary Cleanup a loaded texture, used on load abort
+   */
+  disposeTexture(textureData: TextureData);
+
+}
+
+type AdapterConstructor<T extends AbstractAdapter<any>> = new (psv: Viewer, options?: any) => T;
+
+type EquirectangularAdapterOptions = {
+  resolution?: number,
+};
+
+/**
+ * @summary Adapter for equirectangular panoramas
+ */
+declare class EquirectangularAdapter extends AbstractAdapter<string> {
+
+  constructor(psv: Viewer, options: EquirectangularAdapterOptions);
+
+}
+
+/**
  * @summary Default options
  */
 declare const DEFAULTS: ViewerOptions;
@@ -1406,19 +1429,6 @@ declare const SYSTEM: {
   isTouchEnabled: Promise<boolean>;
 };
 
-type EquirectangularAdapterOptions = {
-  resolution?: number,
-};
-
-/**
- * @summary Adapter for equirectangular panoramas
- */
-declare class EquirectangularAdapter extends AbstractAdapter<string> {
-
-  constructor(psv: Viewer, options: EquirectangularAdapterOptions);
-
-}
-
 /**
  * @summary Custom error used in the lib
  */
@@ -1426,4 +1436,4 @@ declare class PSVError extends Error {
   name: 'PSVError';
 }
 
-export { AbstractAdapter, AbstractButton, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, EquirectangularAdapter, EquirectangularAdapterOptions, ExtendedPosition, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };
+export { AbstractAdapter, AbstractButton, AbstractComponent, AbstractPlugin, AdapterConstructor, AnimateOptions, Animation, AnimationOptions, constants_d as CONSTANTS, ClickData, CssSize, DEFAULTS, DataHelper, EquirectangularAdapter, EquirectangularAdapterOptions, ExtendedPosition, Loader, Navbar, NavbarCustomButton, Notification, NotificationOptions, Overlay, OverlayOptions, PSVError, Panel, PanelOptions, PanoData, PanoDataProvider, PanoramaOptions, PluginConstructor, Point, Position, SYSTEM, Size, SphereCorrection, TextureData, TextureLoader, Tooltip, TooltipOptions, TooltipPosition, TooltipRenderer, Viewer, ViewerOptions, ViewerProps, registerButton, index_d as utils };

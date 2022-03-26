@@ -28,7 +28,7 @@ viewer.once('ready', () => {
 
 ## Main methods
 
-This section describes the most useful methods available, remember to check the <ApiLink page="PSV.Viewer.html"/> for a full list.
+This section describes the most useful methods available.
 
 ### `animate(options): Animation`
 
@@ -39,7 +39,7 @@ viewer.animate({
   longitude: Math.PI / 2,
   latitude: '20deg',
   zoom: 50,
-  speed: '-2rpm',
+  speed: '2rpm',
 })
   .then(() => /* animation complete */);
 ```
@@ -87,7 +87,7 @@ viewer.setOptions({
 });
 ```
 
-### `setPanorama(panorama, options): Promise`
+### `setPanorama(panorama[, options]): Promise`
 
 Change the panorama image with an optional transition animation (enabled by default). See all options on the <ApiLink page="PSV.html#.PanoramaOptions"/>.
 
