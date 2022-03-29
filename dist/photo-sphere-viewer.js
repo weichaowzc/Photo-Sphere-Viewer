@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.0
+* Photo Sphere Viewer 4.6.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -3334,8 +3334,6 @@
 
         if (!supportedOrObject) {
           this.hide();
-        } else {
-          this.show();
         }
       }
     }
@@ -3657,17 +3655,13 @@
        * @property {string} id
        * @property {boolean} collapsable
        * @property {number} width
-       * @property {string} caption
-       * @property {boolean} contentVisible - if the content is visible in the navbar
-       * @property {number} contentWidth - with of the caption content
+       * @property {number} contentWidth - width of the caption content
        */
 
       _this.prop = _extends({}, _this.prop, {
         id: _this.constructor.id,
         collapsable: false,
         width: 0,
-        caption: '',
-        contentVisible: true,
         contentWidth: 0
       });
       /**
@@ -3704,17 +3698,10 @@
     ;
 
     _proto.setCaption = function setCaption(html) {
-      this.prop.caption = html || '';
-      this.content.innerHTML = this.prop.caption;
-
-      if (html) {
-        this.prop.contentWidth = this.content.offsetWidth;
-        this.refreshUi('caption change');
-      } else if (!this.prop.contentVisible) {
-        this.prop.contentVisible = true;
-
-        this.__refreshButton();
-      }
+      this.show();
+      this.content.innerHTML = html;
+      this.prop.contentWidth = html ? this.content.offsetWidth : 0;
+      this.refreshUi();
     }
     /**
      * @summary Toggles content and icon depending on available space
@@ -3725,15 +3712,31 @@
     _proto.refreshUi = function refreshUi() {
       var availableWidth = this.container.offsetWidth;
 
-      if (availableWidth >= this.prop.contentWidth && !this.prop.contentVisible) {
-        this.content.style.display = '';
-        this.prop.contentVisible = true;
-      } else if (availableWidth < this.prop.contentWidth && this.prop.contentVisible) {
-        this.content.style.display = 'none';
-        this.prop.contentVisible = false;
+      if (availableWidth >= this.prop.contentWidth) {
+        this.show();
+      } else if (availableWidth < this.prop.contentWidth) {
+        this.hide();
       }
 
       this.__refreshButton();
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.hide = function hide() {
+      this.content.style.display = 'none';
+      this.prop.visible = false;
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.show = function show() {
+      this.content.style.display = '';
+      this.prop.visible = true;
     }
     /**
      * @private
@@ -3866,7 +3869,7 @@
 
       if (refresh) {
         var caption = this.psv.navbar.getButton(NavbarCaption.id, false);
-        var captionHidden = caption && !caption.prop.contentVisible;
+        var captionHidden = caption && !caption.isVisible();
         var hasDescription = !!this.psv.config.description;
 
         if (captionHidden || hasDescription) {
@@ -3952,19 +3955,11 @@
     }
     /**
      * @override
+     * @description Asks the browser to download the panorama source file
      */
 
 
     var _proto = DownloadButton.prototype;
-
-    _proto.isSupported = function isSupported() {
-      return this.psv.adapter.constructor.supportsDownload || !!this.psv.config.downloadUrl;
-    }
-    /**
-     * @override
-     * @description Asks the browser to download the panorama source file
-     */
-    ;
 
     _proto.onClick = function onClick() {
       var _this = this;
@@ -3977,6 +3972,20 @@
       setTimeout(function () {
         _this.psv.container.removeChild(link);
       }, 100);
+    }
+    /**
+     * @override
+     */
+    ;
+
+    _proto.refreshUi = function refreshUi() {
+      var supported = this.psv.adapter.constructor.supportsDownload || this.psv.config.downloadUrl;
+
+      if (supported && !this.prop.visible) {
+        this.show();
+      } else if (!supported && this.prop.visible) {
+        this.hide();
+      }
     };
 
     return DownloadButton;
@@ -4093,7 +4102,7 @@
 
       _this.psv.on(EVENTS.CLOSE_PANEL, _assertThisInitialized(_this));
 
-      _this.hide();
+      _AbstractButton.prototype.hide.call(_assertThisInitialized(_this));
 
       return _this;
     }
@@ -4190,9 +4199,7 @@
     };
 
     _proto.__hideMenu = function __hideMenu() {
-      if (this.psv.panel) {
-        this.psv.panel.hide(IDS.MENU);
-      }
+      this.psv.panel.hide(IDS.MENU);
     };
 
     return MenuButton;

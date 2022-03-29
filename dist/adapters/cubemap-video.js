@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.0
+* Photo Sphere Viewer 4.6.1
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -302,7 +302,7 @@
   }(photoSphereViewer.AbstractAdapter);
   AbstractVideoAdapter.supportsTransition = false;
   AbstractVideoAdapter.supportsPreload = false;
-  AbstractVideoAdapter.supportsDownload = true;
+  AbstractVideoAdapter.supportsDownload = false;
 
   /**
    * @typedef {Object} PSV.adapters.CubemapVideoAdapter.Video
