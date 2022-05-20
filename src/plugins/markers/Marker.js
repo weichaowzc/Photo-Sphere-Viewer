@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CONSTANTS, PSVError, SYSTEM, utils } from '../..';
+import { CONSTANTS, PSVError, utils } from '../..';
 import { getShortestArc, logWarn } from '../../utils';
 import { MARKER_DATA, SVG_NS } from './constants';
 import { getPolygonCenter, getPolylineCenter } from './utils';
@@ -715,7 +715,7 @@ export class Marker {
         }
 
         // 100 is magic number that gives a coherent size at default zoom level
-        this.$el.scale.set(this.config.width / 100 * SYSTEM.pixelRatio, this.config.height / 100 * SYSTEM.pixelRatio, 1);
+        this.$el.scale.set(this.config.width / 100, this.config.height / 100, 1);
         break;
 
       // no default

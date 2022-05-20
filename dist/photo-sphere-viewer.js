@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.1
+* Photo Sphere Viewer 4.6.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -704,6 +704,7 @@
     KEY_CODES: KEY_CODES
   });
 
+  var LOCALSTORAGE_TOUCH_SUPPORT = VIEWER_DATA + "_touchSupport";
   /**
    * @summary General information about the system
    * @constant
@@ -716,7 +717,7 @@
    * @property {string} mouseWheelEvent
    * @property {string} fullscreenEvent
    * @property {Function} getMaxCanvasWidth - Returns the max width of a canvas allowed by the browser
-   * @property {Promise<boolean>} isTouchEnabled
+   * @property {{initial: boolean, promise: Promise<boolean>}} isTouchEnabled
    */
 
   var SYSTEM = {
@@ -785,27 +786,52 @@
   }
   /**
    * @summary Detects if the user is using a touch screen
-   * @returns {Promise<boolean>}
+   * @returns {{initial: boolean, promise: Promise<boolean>}}
    * @private
    */
 
 
   function isTouchEnabled() {
-    return new Promise(function (resolve) {
-      var listener = function listener(e) {
-        if (e) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
+    var initial = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        window.removeEventListener('touchstart', listener);
+    if (LOCALSTORAGE_TOUCH_SUPPORT in localStorage) {
+      initial = localStorage[LOCALSTORAGE_TOUCH_SUPPORT] === 'true';
+    }
+
+    var promise = new Promise(function (resolve) {
+      var clear;
+
+      var listenerMouse = function listenerMouse() {
+        clear();
+        localStorage[LOCALSTORAGE_TOUCH_SUPPORT] = false;
+        resolve(false);
       };
 
-      window.addEventListener('touchstart', listener, false); // after 10 secs auto-reject the promise
+      var listenerTouch = function listenerTouch() {
+        clear();
+        localStorage[LOCALSTORAGE_TOUCH_SUPPORT] = true;
+        resolve(true);
+      };
 
-      setTimeout(listener, 10000);
+      var listenerTimeout = function listenerTimeout() {
+        clear();
+        localStorage[LOCALSTORAGE_TOUCH_SUPPORT] = initial;
+        resolve(initial);
+      };
+
+      clear = function clear() {
+        window.removeEventListener('mousedown', listenerMouse);
+        window.removeEventListener('touchstart', listenerTouch);
+      };
+
+      window.addEventListener('mousedown', listenerMouse, false);
+      window.addEventListener('touchstart', listenerTouch, false);
+      setTimeout(listenerTimeout, 10000);
     });
+    return {
+      initial: initial,
+      promise: promise
+    };
   }
   /**
    * @summary Gets max texture width in WebGL context
@@ -4393,8 +4419,8 @@
 
     _proto.isSupported = function isSupported() {
       return {
-        initial: true,
-        promise: SYSTEM.isTouchEnabled.then(function (enabled) {
+        initial: !SYSTEM.isTouchEnabled.initial,
+        promise: SYSTEM.isTouchEnabled.promise.then(function (enabled) {
           return !enabled;
         })
       };
@@ -4634,8 +4660,8 @@
 
     _proto.isSupported = function isSupported() {
       return {
-        initial: true,
-        promise: SYSTEM.isTouchEnabled.then(function (enabled) {
+        initial: !SYSTEM.isTouchEnabled.initial,
+        promise: SYSTEM.isTouchEnabled.promise.then(function (enabled) {
           return !enabled;
         })
       };
@@ -4847,8 +4873,8 @@
 
     _proto.isSupported = function isSupported() {
       return {
-        initial: true,
-        promise: SYSTEM.isTouchEnabled.then(function (enabled) {
+        initial: !SYSTEM.isTouchEnabled.initial,
+        promise: SYSTEM.isTouchEnabled.promise.then(function (enabled) {
           return !enabled;
         })
       };
@@ -6489,8 +6515,8 @@
         return i.object.userData[MESH_USER_DATA];
       });
 
-      if (sphereIntersect) {
-        return sphereIntersect.point;
+      if (sphereIntersect.length) {
+        return sphereIntersect[0].point;
       } else {
         return null;
       }
@@ -8763,7 +8789,8 @@
         _this.setPanorama(_this.config.panorama);
       }
 
-      SYSTEM.isTouchEnabled.then(function (enabled) {
+      toggleClass(_this.container, 'psv--is-touch', SYSTEM.isTouchEnabled.initial);
+      SYSTEM.isTouchEnabled.promise.then(function (enabled) {
         return toggleClass(_this.container, 'psv--is-touch', enabled);
       }); // enable GUI after first render
 

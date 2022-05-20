@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.1
+* Photo Sphere Viewer 4.6.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -521,9 +521,8 @@
             window.removeEventListener('deviceorientation', listener);
           };
 
-          window.addEventListener('deviceorientation', listener, false); // after 2 secs, auto-reject the promise
-
-          setTimeout(listener, 2000);
+          window.addEventListener('deviceorientation', listener, false);
+          setTimeout(listener, 10000);
         });
       } else {
         return Promise.resolve(false);

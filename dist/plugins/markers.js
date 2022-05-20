@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.1
+* Photo Sphere Viewer 4.6.2
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1065,7 +1065,7 @@
           } // 100 is magic number that gives a coherent size at default zoom level
 
 
-          this.$el.scale.set(this.config.width / 100 * photoSphereViewer.SYSTEM.pixelRatio, this.config.height / 100 * photoSphereViewer.SYSTEM.pixelRatio, 1);
+          this.$el.scale.set(this.config.width / 100, this.config.height / 100, 1);
           break;
         // no default
       }
