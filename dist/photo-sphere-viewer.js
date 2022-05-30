@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.2
+* Photo Sphere Viewer 4.6.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1737,7 +1737,7 @@
         case 'degrees per minute':
         case 'dps':
         case 'degrees per second':
-          parsed = THREE.Math.degToRad(speedValue);
+          parsed = THREE.MathUtils.degToRad(speedValue);
           break;
         // Radians per minute / second
 
@@ -1801,7 +1801,7 @@
         switch (unit) {
           case 'deg':
           case 'degs':
-            parsed = THREE.Math.degToRad(value);
+            parsed = THREE.MathUtils.degToRad(value);
             break;
 
           case 'rad':
@@ -6389,7 +6389,7 @@
     ;
 
     _proto.vFovToHFov = function vFovToHFov(vFov) {
-      return THREE.Math.radToDeg(2 * Math.atan(Math.tan(THREE.Math.degToRad(vFov) / 2) * this.prop.aspect));
+      return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(vFov) / 2) * this.prop.aspect));
     }
     /**
      * @summary Converts a speed into a duration from current position to a new position
@@ -6601,9 +6601,9 @@
 
     _proto.cleanPanoramaPose = function cleanPanoramaPose(panoData) {
       return {
-        pan: THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0),
-        tilt: THREE.Math.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0),
-        roll: THREE.Math.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0)
+        pan: THREE.MathUtils.degToRad((panoData == null ? void 0 : panoData.poseHeading) || 0),
+        tilt: THREE.MathUtils.degToRad((panoData == null ? void 0 : panoData.posePitch) || 0),
+        roll: THREE.MathUtils.degToRad((panoData == null ? void 0 : panoData.poseRoll) || 0)
       };
     };
 
@@ -7452,8 +7452,8 @@
         var x = evt.clientX;
         var y = evt.clientY;
         var rotation = {
-          longitude: (x - this.state.mouseX) / this.prop.size.width * this.config.moveSpeed * THREE.Math.degToRad(this.prop.hFov),
-          latitude: (y - this.state.mouseY) / this.prop.size.height * this.config.moveSpeed * THREE.Math.degToRad(this.prop.vFov)
+          longitude: (x - this.state.mouseX) / this.prop.size.width * this.config.moveSpeed * THREE.MathUtils.degToRad(this.prop.hFov),
+          latitude: (y - this.state.mouseY) / this.prop.size.height * this.config.moveSpeed * THREE.MathUtils.degToRad(this.prop.vFov)
         };
         var currentPosition = this.psv.getPosition();
         this.psv.rotate({
@@ -9557,7 +9557,7 @@
 
     _proto.__updateSpeeds = function __updateSpeeds() {
       this.dynamics.zoom.setSpeed(this.config.zoomSpeed * 50);
-      this.dynamics.position.setSpeed(THREE.Math.degToRad(this.config.moveSpeed * 50));
+      this.dynamics.position.setSpeed(THREE.MathUtils.degToRad(this.config.moveSpeed * 50));
     };
 
     return Viewer;

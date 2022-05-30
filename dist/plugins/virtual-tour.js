@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.2
+* Photo Sphere Viewer 4.6.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -1162,8 +1162,8 @@
 
     _proto.__getLinkPosition = function __getLinkPosition(node, link) {
       if (this.isGps()) {
-        var p1 = [THREE.Math.degToRad(node.position[0]), THREE.Math.degToRad(node.position[1])];
-        var p2 = [THREE.Math.degToRad(link.position[0]), THREE.Math.degToRad(link.position[1])];
+        var p1 = [THREE.MathUtils.degToRad(node.position[0]), THREE.MathUtils.degToRad(node.position[1])];
+        var p2 = [THREE.MathUtils.degToRad(link.position[0]), THREE.MathUtils.degToRad(link.position[1])];
         var h1 = node.position[2] !== undefined ? node.position[2] : link.position[2] || 0;
         var h2 = link.position[2] !== undefined ? link.position[2] : node.position[2] || 0;
         var latitude = 0;

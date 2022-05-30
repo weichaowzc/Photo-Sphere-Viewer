@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.2
+* Photo Sphere Viewer 4.6.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -278,7 +278,7 @@
 
       if (this.config.longitudeRange) {
         range = photoSphereViewer.utils.clone(this.config.longitudeRange);
-        offset = THREE.Math.degToRad(this.psv.prop.hFov) / 2;
+        offset = THREE.MathUtils.degToRad(this.psv.prop.hFov) / 2;
         range[0] = photoSphereViewer.utils.parseAngle(range[0] + offset);
         range[1] = photoSphereViewer.utils.parseAngle(range[1] - offset);
 
@@ -305,7 +305,7 @@
 
       if (this.config.latitudeRange) {
         range = photoSphereViewer.utils.clone(this.config.latitudeRange);
-        offset = THREE.Math.degToRad(this.psv.prop.vFov) / 2;
+        offset = THREE.MathUtils.degToRad(this.psv.prop.vFov) / 2;
         range[0] = photoSphereViewer.utils.parseAngle(Math.min(range[0] + offset, range[1]), true);
         range[1] = photoSphereViewer.utils.parseAngle(Math.max(range[1] - offset, range[0]), true);
 

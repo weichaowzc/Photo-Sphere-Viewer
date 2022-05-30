@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.2
+* Photo Sphere Viewer 4.6.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -606,7 +606,7 @@
 
       if (Array.isArray(this.config.scale.longitude)) {
         var _bounds = this.config.scale.longitude;
-        var halfFov = THREE.Math.degToRad(this.psv.prop.hFov) / 2;
+        var halfFov = THREE.MathUtils.degToRad(this.psv.prop.hFov) / 2;
         var arc = Math.abs(getShortestArc(this.props.position.longitude, position.longitude));
         scale *= _bounds[1] + (_bounds[0] - _bounds[1]) * photoSphereViewer.CONSTANTS.EASINGS.outQuad(Math.max(0, (halfFov - arc) / halfFov));
       }

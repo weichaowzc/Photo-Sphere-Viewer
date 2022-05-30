@@ -1,5 +1,5 @@
 /*!
-* Photo Sphere Viewer 4.6.2
+* Photo Sphere Viewer 4.6.3
 * @copyright 2014-2015 Jérémy Heleine
 * @copyright 2015-2022 Damien "Mistic" Sorel
 * @licence MIT (https://opensource.org/licenses/MIT)
@@ -312,7 +312,7 @@
       var context = this.canvas.getContext('2d');
       context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       var longitude = this.psv.getPosition().longitude;
-      var fov = THREE.Math.degToRad(this.psv.prop.hFov);
+      var fov = THREE.MathUtils.degToRad(this.psv.prop.hFov);
 
       this.__drawCone(context, this.config.coneColor, longitude, fov);
 
